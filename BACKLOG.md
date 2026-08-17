@@ -25,23 +25,23 @@ Cocher les tâches au fur et à mesure. Consigner tout écart en fin de fichier.
 
 ## Lot 1 : prévision de base et cascade
 
-- [ ] `domain/time.ts` avec ses tests, dont les deux cas de changement d'heure
-- [ ] `domain/modelCascade.ts` avec ses tests, toutes les bornes
-- [ ] `domain/terrain.ts` avec ses tests, plus génération de `coastline-fr.json`
-- [ ] `data/clients/http.ts` avec `HttpResult`, backoff, tests MSW
-- [ ] `data/clients/geocoding.ts`, filtré `country_code=FR`
-- [ ] `data/clients/openMeteo.ts` et `buildForecastUrl`
-- [ ] `data/mappers/openMeteoMapper.ts`, avec l'invariant de timeline commune
-- [ ] `data/cache/db.ts`, magasins `forecasts` et `geocoding`, repli mémoire
-- [ ] `data/queue.ts`, déduplication
-- [ ] `data/repository.ts`, `getForecast` et `searchPlaces`
-- [ ] Vérifier les identifiants de modèle Open-Meteo contre la documentation réelle
-- [ ] UI : recherche de commune, géolocalisation navigateur
-- [ ] UI : bloc « maintenant » selon `DESIGN.md` 6.1, avec le modèle affiché
-- [ ] UI : timeline 48 h avec badge de modèle et marqueur de transition
-- [ ] UI : vue 7 jours
-- [ ] UI : les quatre états `loading`, `ready`, `empty`, `error`
-- [ ] Fixtures `nominal-summer`, `arome-truncated`, `dst-spring`, `dst-autumn`
+- [x] `domain/time.ts` avec ses tests, dont les deux cas de changement d'heure
+- [x] `domain/modelCascade.ts` avec ses tests, toutes les bornes
+- [x] `domain/terrain.ts` avec ses tests, plus génération de `coastline-fr.json`
+- [x] `data/clients/http.ts` avec `HttpResult`, backoff, tests MSW
+- [x] `data/clients/geocoding.ts`, filtré `country_code=FR`
+- [x] `data/clients/openMeteo.ts` et `buildForecastUrl`
+- [x] `data/mappers/openMeteoMapper.ts`, avec l'invariant de timeline commune
+- [x] `data/cache/db.ts`, magasins `forecasts` et `geocoding`, repli mémoire
+- [x] `data/queue.ts`, déduplication
+- [x] `data/repository.ts`, `getForecast` et `searchPlaces`
+- [x] Vérifier les identifiants de modèle Open-Meteo contre la documentation réelle
+- [x] UI : recherche de commune, géolocalisation navigateur
+- [x] UI : bloc « maintenant » selon `DESIGN.md` 6.1, avec le modèle affiché
+- [x] UI : timeline 48 h avec badge de modèle et marqueur de transition
+- [x] UI : vue 7 jours
+- [x] UI : les quatre états `loading`, `ready`, `empty`, `error`
+- [x] Fixtures `nominal-summer`, `arome-truncated`, `dst-spring`, `dst-autumn`
 
 **Sortie** : couverture 100 % sur `src/domain/`. La transition AROME vers ARPEGE est visible à l'écran. Aucun `?? 0` sur une mesure dans tout le dépôt.
 
@@ -181,3 +181,4 @@ Consigner ici toute divergence entre la spécification et la réalité, avec la 
 | 2026-08-17 | BACKLOG.md, Lot 0 | Le déploiement automatique sur Cloudflare Pages nécessite de connecter le dépôt GitHub depuis le tableau de bord Cloudflare de l'utilisateur (identifiants hors de portée de l'agent). | Reste une action manuelle ponctuelle pour l'utilisateur : créer un projet Pages, connecter `lachand/releve-meteo`, build `npm run build`, dossier `dist`. Le reste du Lot 0 ne dépend pas de cette étape. |
 | 2026-08-17 | AGENTS.md, stack imposée | TypeScript 7 et ESLint 10 (dernières versions publiées) ne sont pas encore supportés par `@typescript-eslint` 8.67 (`peer typescript: >=4.8.4 <6.1.0`) ni par `eslint-plugin-jsx-a11y` 6.10 (`peer eslint: ^3..^9`). | TypeScript fixé à `~6.0.3` et ESLint à `^9.39.5`, les plus récentes versions compatibles avec l'outillage de lint. À relever dans un futur lot quand l'écosystème `typescript-eslint` supportera TS 7. |
 | 2026-08-17 | ARCHITECTURE.md §4.2 | `fetchForecast` y est documenté avec un retour `Promise<RawForecastResponse>` non enveloppé, incohérent avec le principe non négociable §4.3 (« aucune exception n'est levée pour un échec réseau »), que respecte tout le reste de la couche données (`request`, `repository.getForecast`). | Implémenté en `Promise<HttpResult<RawForecastResponse>>`, cohérent avec le reste du fichier. Les identifiants de modèle `OPEN_METEO_MODEL_IDS` (§4.1) ont été vérifiés contre l'API réelle le même jour : les quatre valeurs sont exactes. |
+| 2026-08-17 | TESTING.md §5, scénario 1 | Le scénario e2e demande de rechercher « Val de Virieu » ; en pratique la géocodification Open-Meteo (filtrée `countryCode=FR`) ne retourne aucun résultat pour cette chaîne exacte, vérifié en direct. Seul « Virieu » (la commune, `admin2: Isère`) est résolu. | `tests/e2e/forecast.spec.ts` recherche « Virieu ». La cascade AROME → ARPEGE avec marqueur de transition est vérifiée visuellement en conditions réelles (captures light/dark, desktop/mobile), y compris une mesure `pressure_msl` réellement `null` chez AROME sur ce point, affichée en tiret et non en 0. |

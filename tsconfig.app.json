@@ -19,7 +19,9 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "types": ["vite/client", "@testing-library/jest-dom"]
   },
   "include": ["src"]
 }

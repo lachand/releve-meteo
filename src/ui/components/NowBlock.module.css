@@ -1,0 +1,53 @@
+.block {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-6);
+  padding: var(--esp-6) 0;
+  flex-wrap: wrap;
+}
+
+.readings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+}
+
+.temperature {
+  font-family: var(--font-donnee);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--pas-xxl);
+  color: var(--encre);
+  line-height: 1;
+}
+
+.rule {
+  width: 2.5em;
+  border: none;
+  border-top: var(--filet);
+  margin: var(--esp-2) 0;
+}
+
+.secondary {
+  display: flex;
+  gap: var(--esp-4);
+  font-family: var(--font-donnee);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
+.badge {
+  border: var(--filet);
+  border-radius: var(--rayon);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--papier-haut);
+  min-width: 10em;
+}
+
+.modelName {
+  font-family: var(--font-display);
+  font-size: var(--pas-m);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}

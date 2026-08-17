@@ -10,12 +10,14 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 
 ## État du projet
 
-Lot 0 (socle technique) en place : projet Vite + TypeScript strict, ESLint
-avec garde-fou d'architecture, Vitest, Playwright, polices et icônes
-auto-hébergées, page Sources et licences, CI GitHub Actions. Aucune
-prévision météo réelle encore : voir [BACKLOG.md](BACKLOG.md) pour le
-découpage en lots et l'avancement, et [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
-pour l'ordre de construction retenu.
+Lot 0 (socle technique) et Lot 1 (prévision de base et cascade) terminés :
+recherche de commune, géolocalisation, cascade AROME → ARPEGE → ICON-EU →
+GFS avec transition visible, timeline 48 h, vue 7 jours, cache IndexedDB
+avec repli mémoire, les quatre états d'interface. Pas encore de bande
+d'incertitude ni de mode comparaison (Lot 2), pas de fonctionnement hors
+ligne (Lot 3, PWA). Voir [BACKLOG.md](BACKLOG.md) pour le découpage en lots
+et l'avancement, et [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour
+l'ordre de construction retenu.
 
 Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
 GitHub (build `npm run build`, dossier de sortie `dist`).

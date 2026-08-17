@@ -1,0 +1,74 @@
+.wrapper {
+  position: relative;
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--esp-2);
+}
+
+.inputRow input {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 var(--esp-3);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  font-size: var(--pas-m);
+}
+
+.locateButton {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--esp-3);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  cursor: pointer;
+}
+
+.locateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: var(--esp-2);
+  color: var(--encre-faible);
+  font-size: var(--pas-s);
+}
+
+.results {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + var(--esp-1));
+  left: 0;
+  right: 0;
+  background: var(--papier-haut);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  max-height: 16em;
+  overflow-y: auto;
+}
+
+.results li + li {
+  border-top: 1px solid var(--grille-faible);
+}
+
+.results button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--esp-2) var(--esp-3);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--encre);
+}
+
+.results button:hover {
+  background: var(--grille-faible);
+}

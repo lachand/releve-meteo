@@ -1,0 +1,90 @@
+.page {
+  max-width: var(--largeur-max);
+  margin: 0 auto;
+  padding: var(--esp-4) var(--esp-4) var(--esp-12);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  padding-bottom: var(--esp-4);
+  border-bottom: var(--filet);
+}
+
+.header h1 {
+  font-family: var(--font-display);
+  font-size: var(--pas-l);
+  margin: 0;
+}
+
+.header .searchColumn {
+  width: min(100%, 22em);
+}
+
+.section {
+  padding: var(--esp-6) 0;
+  border-bottom: var(--filet);
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.staleBanner {
+  margin-top: var(--esp-4);
+  padding: var(--esp-3) var(--esp-4);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre-faible);
+  font-size: var(--pas-s);
+}
+
+.emptyState,
+.errorState {
+  padding: var(--esp-12) var(--esp-4);
+  text-align: center;
+  color: var(--encre-faible);
+}
+
+.errorState button {
+  margin-top: var(--esp-4);
+  min-height: 44px;
+  padding: 0 var(--esp-6);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  cursor: pointer;
+}
+
+.skeleton {
+  height: 4em;
+  border-radius: var(--rayon);
+  background: linear-gradient(
+    90deg,
+    var(--papier-haut) 25%,
+    var(--grille-faible) 37%,
+    var(--papier-haut) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
