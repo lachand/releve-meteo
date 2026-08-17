@@ -62,6 +62,13 @@ describe('Timeline48h', () => {
     expect(screen.getAllByText('AROME').length).toBeGreaterThan(0);
   });
 
+  it('inclut la condition meteo dans la table accessible', () => {
+    const bundle = buildBundle();
+    render(<CascadeHarness bundle={bundle} />);
+    expect(screen.getByText('Condition')).toBeInTheDocument();
+    expect(screen.getAllByText('Peu nuageux').length).toBeGreaterThan(0);
+  });
+
   it('rend un canvas avec un libelle accessible', () => {
     const bundle = buildBundle();
     render(<CascadeHarness bundle={bundle} />);

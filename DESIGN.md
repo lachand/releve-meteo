@@ -139,6 +139,9 @@ Cette table est normative. Aucun composant ne doit inventer un autre encodage.
 | Transition de modèle | Filet vertical tireté + étiquette verticale | Aucun marqueur |
 | Vigilance | Bandeau pleine largeur, couleur `--alerte` | Icône seule |
 | Donnée périmée | Bandeau d'horodatage en haut du contenu | Griser le contenu |
+| Condition météo (code WMO) | Étiquette texte courte en `--font-corps`, `--encre-faible` (ex. « Pluie légère », « Orage ») | Icône ou pictogramme, couleur dédiée |
+
+Condition météo : le code WMO (`weatherCode`) est traduit en étiquette texte française (table dans `src/ui/weatherCodePresentation.ts`), jamais en icône, pour rester cohérent avec le principe section 1 (pas de grandes icônes soleil-nuage stylisées). Affichée à côté de la température dans le bloc « maintenant », par jour dans la vue 7 jours, et par heure dans l'infobulle et la table de données équivalente de la timeline 48 h. Un code absent ou inconnu n'affiche aucune étiquette plutôt qu'un texte par défaut trompeur.
 
 ## 6. Maquettes
 

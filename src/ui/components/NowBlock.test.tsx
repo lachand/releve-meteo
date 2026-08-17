@@ -38,4 +38,15 @@ describe('NowBlock', () => {
     render(<NowBlock point={null} model={null} />);
     expect(screen.getByText(/Aucune echeance/)).toBeInTheDocument();
   });
+
+  it('affiche la condition meteo en etiquette texte', () => {
+    render(<NowBlock point={point} model="arome" />);
+    expect(screen.getByText('Peu nuageux')).toBeInTheDocument();
+  });
+
+  it("n'affiche aucune etiquette de condition quand le code est absent", () => {
+    const withoutCode: HourlyPoint = { ...point, weatherCode: null };
+    const { container } = render(<NowBlock point={withoutCode} model="arome" />);
+    expect(container.querySelector('[class*="condition"]')).not.toBeInTheDocument();
+  });
 });

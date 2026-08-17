@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import type { ForecastBundle, ModelId } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { MODEL_LABELS, modelColor } from '../modelPresentation';
+import { weatherCodeLabel } from '../weatherCodePresentation';
 import styles from './Timeline48h.module.css';
 
 Chart.register(CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip);
@@ -23,6 +24,7 @@ interface WindowPoint {
   readonly time: string;
   readonly model: ModelId | null;
   readonly value: number | null;
+  readonly weatherCode: number | null;
 }
 
 function windowPoints(
@@ -39,8 +41,10 @@ function windowPoints(
     }
     const segment = cascade.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
     const series = segment ? bundle.series[segment.model] : undefined;
-    const value = series?.hourly[i]?.temperature.value ?? null;
-    points.push({ index: i, time, model: segment?.model ?? null, value });
+    const hourly = series?.hourly[i];
+    const value = hourly?.temperature.value ?? null;
+    const weatherCode = hourly?.weatherCode ?? null;
+    points.push({ index: i, time, model: segment?.model ?? null, value, weatherCode });
   }
   return points;
 }
@@ -128,7 +132,9 @@ export function Timeline48h({ bundle, cascade }: Timeline48hProps) {
                 point?.model !== null && point?.model !== undefined
                   ? MODEL_LABELS[point.model]
                   : '';
-              return `${item.formattedValue} °C (${modelLabel})`;
+              const condition = weatherCodeLabel(point?.weatherCode ?? null);
+              const suffix = condition !== null ? ` · ${condition}` : '';
+              return `${item.formattedValue} °C (${modelLabel})${suffix}`;
             },
           },
         },
@@ -180,6 +186,7 @@ export function Timeline48h({ bundle, cascade }: Timeline48hProps) {
             <th scope="col">Heure</th>
             <th scope="col">Temperature</th>
             <th scope="col">Modele</th>
+            <th scope="col">Condition</th>
           </tr>
         </thead>
         <tbody>
@@ -188,6 +195,7 @@ export function Timeline48h({ bundle, cascade }: Timeline48hProps) {
               <td>{point.time}</td>
               <td>{point.value === null ? '—' : `${point.value} °C`}</td>
               <td>{point.model === null ? '—' : MODEL_LABELS[point.model]}</td>
+              <td>{weatherCodeLabel(point.weatherCode) ?? '—'}</td>
             </tr>
           ))}
         </tbody>

@@ -39,4 +39,9 @@ describe('SevenDayView', () => {
     render(<SevenDayView days={[]} />);
     expect(screen.getByText(/Aucune prevision quotidienne/)).toBeInTheDocument();
   });
+
+  it('affiche la condition meteo du jour en etiquette texte', () => {
+    render(<SevenDayView days={[day('2026-08-17', 22, 12, 0)]} />);
+    expect(screen.getByText('Peu nuageux')).toBeInTheDocument();
+  });
 });

@@ -21,6 +21,13 @@
   line-height: 1;
 }
 
+.condition {
+  font-family: var(--font-corps);
+  font-size: var(--pas-m);
+  color: var(--encre-faible);
+  margin: 0;
+}
+
 .rule {
   width: 2.5em;
   border: none;

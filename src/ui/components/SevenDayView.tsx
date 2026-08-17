@@ -1,4 +1,5 @@
 import type { DailyPoint } from '../../domain/types';
+import { weatherCodeLabel } from '../weatherCodePresentation';
 import styles from './SevenDayView.module.css';
 
 interface SevenDayViewProps {
@@ -40,6 +41,7 @@ export function SevenDayView({ days }: SevenDayViewProps) {
             <span className={styles.barTrack} aria-hidden="true">
               <span className={styles.bar} style={{ height: `${barHeight}%` }} />
             </span>
+            <span className={styles.condition}>{weatherCodeLabel(day.weatherCode) ?? ''}</span>
             <span className={styles.range} data-donnee>
               {day.tempMax.value === null ? '—' : `${Math.round(day.tempMax.value)}°`}
               {' / '}

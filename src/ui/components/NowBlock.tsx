@@ -1,5 +1,6 @@
 import type { HourlyPoint, ModelId } from '../../domain/types';
 import { MODEL_LABELS, modelColor } from '../modelPresentation';
+import { weatherCodeLabel } from '../weatherCodePresentation';
 import styles from './NowBlock.module.css';
 
 interface NowBlockProps {
@@ -33,6 +34,7 @@ export function NowBlock({ point, model }: NowBlockProps) {
   }
 
   const direction = point.windDirection.value;
+  const condition = weatherCodeLabel(point.weatherCode);
 
   return (
     <div className={styles.block}>
@@ -40,6 +42,7 @@ export function NowBlock({ point, model }: NowBlockProps) {
         <span className={styles.temperature} data-donnee>
           {formatMeasure(point.temperature.value, '°C')}
         </span>
+        {condition !== null && <p className={styles.condition}>{condition}</p>}
         <hr className={styles.rule} />
         <div className={styles.secondary}>
           <span>
