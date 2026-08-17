@@ -1,0 +1,29 @@
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# tests
+coverage/
+playwright-report/
+test-results/
+tests/e2e/visual/**/*-actual.png
+tests/e2e/visual/**/*-diff.png
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# os
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
