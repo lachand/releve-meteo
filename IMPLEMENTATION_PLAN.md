@@ -55,18 +55,18 @@ backlog seul :
 
 ```mermaid
 graph LR
-  L0["Lot 0 — Socle"] --> L1["Lot 1 — Prevision et cascade"]
-  L1 --> L2["Lot 2 — Confiance"]
-  L2 --> L3["Lot 3 — PWA"]
-  L1 --> L4["Lot 4 — Observe vs estime"]
-  L2 -.derived.ts.-> L4
-  L1 --> L5["Lot 5 — Multi-lieux"]
-  L2 -.derived.ts.-> L5
-  L0 --> L6["Lot 6 — Radar et vigilance"]
-  L3 -."cache tiles" du SW.-> L6
-  L1 --> L7["Lot 7 — Fiabilite et alertes"]
-  L3 -."sw.ts existant".-> L7
-  L2 -.derived.ts.-> L8["Lot 8 — Solaire"]
+  L0["Lot 0 - Socle"] --> L1["Lot 1 - Prevision et cascade"]
+  L1 --> L2["Lot 2 - Confiance"]
+  L2 --> L3["Lot 3 - PWA"]
+  L1 --> L4["Lot 4 - Observe vs estime"]
+  L2 -.->|derived.ts| L4
+  L1 --> L5["Lot 5 - Multi-lieux"]
+  L2 -.->|derived.ts| L5
+  L0 --> L6["Lot 6 - Radar et vigilance"]
+  L3 -.->|cache tiles du SW| L6
+  L1 --> L7["Lot 7 - Fiabilite et alertes"]
+  L3 -.->|sw.ts existant| L7
+  L2 -.->|derived.ts| L8["Lot 8 - Solaire"]
 ```
 
 Les trois écarts à connaître avant de commencer :

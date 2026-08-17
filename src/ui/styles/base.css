@@ -1,0 +1,73 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--papier);
+  color: var(--encre);
+  font-family: var(--font-corps);
+  font-size: var(--pas-m);
+  line-height: 1.5;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--encre) 4%, transparent) 0 1px,
+      transparent 1px 8px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--encre) 4%, transparent) 0 1px,
+      transparent 1px 8px
+    );
+}
+
+* {
+  font-variant-numeric: normal;
+}
+
+.num,
+[data-donnee] {
+  font-family: var(--font-donnee);
+  font-variant-numeric: tabular-nums;
+}
+
+a,
+button,
+input,
+select,
+textarea,
+[tabindex] {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--encre);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body {
+    background-image: none;
+  }
+}

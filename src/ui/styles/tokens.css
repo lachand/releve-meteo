@@ -1,0 +1,73 @@
+:root {
+  /* Surfaces */
+  --papier: #e9edea; /* fond, gris-vert tres pale, papier d'enregistreur */
+  --papier-haut: #f4f6f3; /* cartes, panneaux */
+  --grille: #c3ccc8; /* lignes de grille, filets */
+  --grille-faible: #d8dfdb; /* grille secondaire */
+
+  /* Encre */
+  --encre: #16232b; /* texte principal, axes */
+  --encre-faible: #5a6b72; /* labels, unites, texte secondaire */
+
+  /* Traces de modele (Okabe-Ito, assombri pour tenir sur fond clair) */
+  --arome: #005b8f; /* bleu */
+  --arpege: #b35300; /* vermillon fonce */
+  --icon-eu: #007a5a; /* vert bleute */
+  --gfs: #9b4e7e; /* pourpre */
+
+  /* Signaux */
+  --alerte: #a32020; /* vigilance, seuil franchi */
+  --observe: #16232b; /* provenance mesuree: encre pleine */
+  --estime: #5a6b72; /* provenance estimee: encre affaiblie */
+
+  --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;
+  --font-corps: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-donnee: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --pas-xs: 0.6875rem; /* 11px, etiquettes d'axe, unites */
+  --pas-s: 0.8125rem; /* 13px, corps secondaire */
+  --pas-m: 1rem; /* 16px, corps */
+  --pas-l: 1.375rem; /* 22px, valeurs secondaires */
+  --pas-xl: 2.5rem; /* 40px, valeur principale */
+  --pas-xxl: 4rem; /* 64px, temperature du moment */
+
+  --u: 4px;
+  --esp-1: calc(var(--u) * 1); /*  4px */
+  --esp-2: calc(var(--u) * 2); /*  8px */
+  --esp-3: calc(var(--u) * 3); /* 12px */
+  --esp-4: calc(var(--u) * 4); /* 16px */
+  --esp-6: calc(var(--u) * 6); /* 24px */
+  --esp-8: calc(var(--u) * 8); /* 32px */
+  --esp-12: calc(var(--u) * 12); /* 48px */
+
+  --rayon: 2px; /* quasi nul: c'est un releve, pas une carte de visite */
+  --filet: 1px solid var(--grille);
+  --largeur-max: 1120px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papier: #10181c;
+    --papier-haut: #18232a;
+    --grille: #2c3a42;
+    --grille-faible: #212c33;
+    --encre: #dce5e2;
+    --encre-faible: #8fa1a8;
+    --arome: #4ba3dc;
+    --arpege: #e8863a;
+    --icon-eu: #34b48c;
+    --gfs: #c784ac;
+    --alerte: #e05252;
+    --observe: #dce5e2;
+    --estime: #8fa1a8;
+  }
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}

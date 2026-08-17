@@ -1,0 +1,17 @@
+dist
+coverage
+playwright-report
+test-results
+public/fonts
+node_modules
+
+# Documents de specification normative : le contenu et la mise en forme
+# appartiennent a leur auteur, pas au formateur de code.
+AGENTS.md
+ARCHITECTURE.md
+BACKLOG.md
+DESIGN.md
+SERVICE_WORKER.md
+TESTING.md
+IMPLEMENTATION_PLAN.md
+README.md

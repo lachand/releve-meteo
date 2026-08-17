@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sources et licences — Relevé</title>
+    <style>
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-600.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        src: url('/fonts/plex-mono-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      :root {
+        --papier: #e9edea;
+        --papier-haut: #f4f6f3;
+        --grille: #c3ccc8;
+        --encre: #16232b;
+        --encre-faible: #5a6b72;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --papier: #10181c;
+          --papier-haut: #18232a;
+          --grille: #2c3a42;
+          --encre: #dce5e2;
+          --encre-faible: #8fa1a8;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--papier);
+        color: var(--encre);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      p.lead {
+        color: var(--encre-faible);
+        margin-top: 4px;
+      }
+      section {
+        margin-top: 40px;
+      }
+      h2 {
+        font-size: 1rem;
+        border-bottom: 1px solid var(--grille);
+        padding-bottom: 8px;
+      }
+      dl {
+        margin: 0;
+      }
+      dt {
+        font-weight: 600;
+        margin-top: 16px;
+      }
+      dd {
+        margin: 4px 0 0;
+        color: var(--encre-faible);
+      }
+      code {
+        font-family: 'IBM Plex Mono', ui-monospace, monospace;
+        font-size: 0.9em;
+      }
+      a {
+        color: var(--encre);
+      }
+      .retour {
+        display: inline-block;
+        margin-top: 48px;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sources et licences</h1>
+      <p class="lead">Attribution des données, cartes et polices utilisées par Relevé.</p>
+
+      <section>
+        <h2>Données météo</h2>
+        <dl>
+          <dt>Open-Meteo</dt>
+          <dd>
+            Prévisions horaires et journalières (modèles AROME, ARPEGE, ICON-EU, GFS) et géocodage
+            des communes, via <a href="https://open-meteo.com/">open-meteo.com</a>. Données sous
+            licence
+            <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons BY 4.0</a>.
+          </dd>
+          <dt>Météo-France</dt>
+          <dd>
+            Producteur des modèles numériques AROME et ARPEGE distribués par Open-Meteo, et de l'API
+            Vigilance (<a href="https://vigilance.meteofrance.fr/">vigilance.meteofrance.fr</a>,
+            optionnelle, activée par une clé saisie dans les réglages). Données publiques sous
+            <a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/"
+              >Licence Ouverte / Open Licence Etalab 2.0</a
+            >.
+          </dd>
+          <dt>Infoclimat</dt>
+          <dd>
+            Relevés observés par un réseau de stations bénévoles, via
+            <a href="https://www.infoclimat.fr/">infoclimat.fr</a> (optionnel, activé par une clé
+            saisie dans les réglages).
+          </dd>
+          <dt>RainViewer</dt>
+          <dd>
+            Overlay radar de précipitations, via
+            <a href="https://www.rainviewer.com/">rainviewer.com</a>.
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Fond de carte</h2>
+        <dl>
+          <dt>OpenStreetMap</dt>
+          <dd>
+            © les contributeurs d'OpenStreetMap, disponible sous licence
+            <a href="https://opendatacommons.org/licenses/odbl/">Open Database License (ODbL)</a>.
+            Voir <a href="https://www.openstreetmap.org/copyright">openstreetmap.org/copyright</a>.
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>Polices</h2>
+        <dl>
+          <dt>IBM Plex Sans, IBM Plex Sans Condensed, IBM Plex Mono</dt>
+          <dd>
+            © IBM Corp., sous licence
+            <a href="https://openfontlicense.org/">SIL Open Font License 1.1</a>. Auto-hébergées,
+            sous-ensemblées en latin étendu. Voir <code>/fonts/LICENSE-OFL.txt</code>.
+          </dd>
+        </dl>
+      </section>
+
+      <a class="retour" href="/">← Retour à Relevé</a>
+    </main>
+  </body>
+</html>

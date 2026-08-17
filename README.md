@@ -10,8 +10,23 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 
 ## État du projet
 
-Phase de spécification. Aucun code applicatif n'existe encore, voir
-[BACKLOG.md](BACKLOG.md) pour le découpage en lots et l'avancement.
+Lot 0 (socle technique) en place : projet Vite + TypeScript strict, ESLint
+avec garde-fou d'architecture, Vitest, Playwright, polices et icônes
+auto-hébergées, page Sources et licences, CI GitHub Actions. Aucune
+prévision météo réelle encore : voir [BACKLOG.md](BACKLOG.md) pour le
+découpage en lots et l'avancement, et [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
+pour l'ordre de construction retenu.
+
+Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
+GitHub (build `npm run build`, dossier de sortie `dist`).
+
+## Développement
+
+```
+npm install
+npm run dev       # serveur de développement
+npm run verify    # lint, format, typecheck, tests, build, e2e
+```
 
 ## Documentation
 
