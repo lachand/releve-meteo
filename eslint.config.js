@@ -27,6 +27,17 @@ const domainBoundary = {
       { name: 'localStorage', message: 'domain/ est pur : pas de localStorage.' },
       { name: 'indexedDB', message: "domain/ est pur : pas d'indexedDB." },
     ],
+  },
+};
+
+// Aucun new Date(str) ou new Date(number) hors de domain/time.ts : toute
+// arithmetique de dates du domaine doit passer par ce module (ARCHITECTURE.md
+// section 3.8). Les tests peuvent construire des Date librement pour fabriquer
+// un instant "now" a injecter.
+const dateConstructionGuard = {
+  files: ['src/domain/**/*.{ts,tsx}'],
+  ignores: ['src/domain/time.ts', 'src/domain/**/*.test.{ts,tsx}'],
+  rules: {
     'no-restricted-syntax': [
       'error',
       {
@@ -78,6 +89,7 @@ export default [
     },
   },
   domainBoundary,
+  dateConstructionGuard,
   {
     files: ['*.config.{js,ts}', 'tests/**/*.{ts,tsx}'],
     languageOptions: {

@@ -3,6 +3,8 @@ coverage
 playwright-report
 test-results
 public/fonts
+public/data/coastline-fr.json
+src/domain/franceBoundary.ts
 node_modules
 
 # Documents de specification normative : le contenu et la mise en forme
