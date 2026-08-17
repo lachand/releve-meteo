@@ -12,6 +12,8 @@ export interface CascadeView {
   readonly transitions: readonly number[];
   readonly nowIndex: number;
   readonly activeModel: ModelId | null;
+  /** Modeles presents dans le bundle, pas seulement ceux qui gagnent un segment de cascade. */
+  readonly available: readonly ModelId[];
 }
 
 function modelAt(segments: readonly CascadeSegment[], index: number): ModelId | null {
@@ -42,6 +44,7 @@ export function useCascadeView(
       transitions: transitionIndices(segments),
       nowIndex,
       activeModel: nowIndex === -1 ? null : modelAt(segments, nowIndex),
+      available,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` change a chaque rendu par defaut ; seul un changement de bundle doit recalculer la cascade.
   }, [bundle]);

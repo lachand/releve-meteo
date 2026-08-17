@@ -61,6 +61,31 @@
   cursor: pointer;
 }
 
+.detailLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--esp-6);
+}
+
+.sidePanel {
+  border-top: var(--filet);
+  padding-top: var(--esp-6);
+}
+
+@media (min-width: 1024px) {
+  .detailLayout {
+    grid-template-columns: 1fr 20em;
+    align-items: start;
+  }
+
+  .sidePanel {
+    border-top: none;
+    border-left: var(--filet);
+    padding-top: 0;
+    padding-left: var(--esp-6);
+  }
+}
+
 .skeleton {
   height: 4em;
   border-radius: var(--rayon);

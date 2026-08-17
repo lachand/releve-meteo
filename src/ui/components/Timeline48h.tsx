@@ -14,7 +14,7 @@ import { spreadBand } from '../../domain/confidence';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { ForecastBundle, ModelId } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
-import { MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
+import { CONFIDENCE_LEVEL_LABELS, MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
 import { weatherCodeLabel } from '../weatherCodePresentation';
 import styles from './Timeline48h.module.css';
 
@@ -150,16 +150,24 @@ function conditionLabelsPlugin(points: readonly WindowPoint[]): Plugin<'line'> {
       ctx.font = '10px "IBM Plex Sans", system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
+      // Un nouveau "episode" au sens strict (code different du precedent)
+      // peut survenir toutes les heures si le code oscille (51 -> 53 -> 51).
+      // Sans marge minimale entre deux etiquettes, ces episodes courts se
+      // chevauchent visuellement : on n'affiche donc une etiquette que si
+      // elle laisse assez de place apres la precedente.
+      const MIN_LABEL_GAP_PX = 55;
       let previousCode: number | null = null;
+      let nextAllowedX = -Infinity;
       for (const [index, point] of points.entries()) {
         const code = point.weatherCode;
         const isSignificant = code !== null && code >= SIGNIFICANT_WEATHER_CODE_MIN;
         const isNewEpisode = isSignificant && code !== previousCode;
         if (isNewEpisode) {
           const label = weatherCodeLabel(code);
-          if (label !== null) {
-            const x = xScale.getPixelForValue(index);
+          const x = xScale.getPixelForValue(index);
+          if (label !== null && x >= nextAllowedX) {
             ctx.fillText(label, Math.min(x + 2, chartArea.right - 2), chartArea.top - 16);
+            nextAllowedX = x + ctx.measureText(label).width + MIN_LABEL_GAP_PX;
           }
         }
         previousCode = code;
@@ -233,8 +241,11 @@ export function Timeline48h({ bundle, cascade, confidence }: Timeline48hProps) {
                   : '';
               const condition = weatherCodeLabel(point?.weatherCode ?? null);
               const conditionSuffix = condition !== null ? ` · ${condition}` : '';
+              const confidenceLevel = point?.confidence?.level;
               const confidenceLabel =
-                point?.confidence !== null ? ` · confiance ${point?.confidence?.level}` : '';
+                confidenceLevel !== undefined
+                  ? ` · confiance ${CONFIDENCE_LEVEL_LABELS[confidenceLevel].toLowerCase()}`
+                  : '';
               return `${item.formattedValue} °C (${modelLabel})${conditionSuffix}${confidenceLabel}`;
             },
           },
@@ -343,7 +354,11 @@ export function Timeline48h({ bundle, cascade, confidence }: Timeline48hProps) {
                 <td>{point.time}</td>
                 <td>{point.value === null ? '—' : `${point.value} °C`}</td>
                 <td>{point.model === null ? '—' : MODEL_LABELS[point.model]}</td>
-                <td>{point.confidence?.level ?? '—'}</td>
+                <td>
+                  {point.confidence !== null
+                    ? CONFIDENCE_LEVEL_LABELS[point.confidence.level]
+                    : '—'}
+                </td>
                 <td>{spreadText}</td>
                 <td>{weatherCodeLabel(point.weatherCode) ?? '—'}</td>
               </tr>

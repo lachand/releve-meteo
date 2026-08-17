@@ -5,8 +5,11 @@ import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
 import { useForecast } from '../hooks/useForecast';
 import { useTerrain } from '../hooks/useTerrain';
+import { ComparisonView } from '../components/ComparisonView';
+import { ModelInfoPanel } from '../components/ModelInfoPanel';
 import { NowBlock } from '../components/NowBlock';
 import { PlaceSearch } from '../components/PlaceSearch';
+import { PrecipitationChart } from '../components/PrecipitationChart';
 import { SevenDayView } from '../components/SevenDayView';
 import { Timeline48h } from '../components/Timeline48h';
 import styles from './App.module.css';
@@ -25,6 +28,7 @@ function formatFetchedAt(epochMs: number): string {
 
 export function App() {
   const [place, setPlace] = useState<Place | null>(null);
+  const [comparing, setComparing] = useState(false);
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
   const cascade = useCascadeView(bundle);
@@ -92,15 +96,47 @@ export function App() {
                 <NowBlock point={nowPoint} model={cascade.activeModel} />
               </section>
 
-              <section className={styles.section}>
-                <p className="eyebrow">48 heures</p>
-                <Timeline48h bundle={bundle} cascade={cascade} confidence={confidence} />
-              </section>
+              {comparing ? (
+                <section className={styles.section}>
+                  <ComparisonView
+                    bundle={bundle}
+                    nowIndex={cascade.nowIndex}
+                    onClose={() => setComparing(false)}
+                  />
+                </section>
+              ) : (
+                <div className={styles.detailLayout}>
+                  <div>
+                    <section className={styles.section}>
+                      <p className="eyebrow">48 heures</p>
+                      <Timeline48h bundle={bundle} cascade={cascade} confidence={confidence} />
+                    </section>
 
-              <section className={styles.section}>
-                <p className="eyebrow">7 jours</p>
-                <SevenDayView days={blendDaily(bundle)} />
-              </section>
+                    <section className={styles.section}>
+                      <p className="eyebrow">Précipitations</p>
+                      <PrecipitationChart bundle={bundle} cascade={cascade} />
+                    </section>
+
+                    <section className={styles.section}>
+                      <p className="eyebrow">7 jours</p>
+                      <SevenDayView days={blendDaily(bundle)} />
+                    </section>
+                  </div>
+
+                  {cascade.activeModel !== null && terrain !== null && cascade.nowIndex !== -1 && (
+                    <aside className={styles.sidePanel}>
+                      <ModelInfoPanel
+                        bundle={bundle}
+                        nowIndex={cascade.nowIndex}
+                        activeModel={cascade.activeModel}
+                        available={cascade.available}
+                        terrain={terrain}
+                        onCompareClick={() => setComparing(true)}
+                      />
+                    </aside>
+                  )}
+                </div>
+              )}
             </>
           )}
       </main>

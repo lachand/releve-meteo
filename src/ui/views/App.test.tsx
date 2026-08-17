@@ -106,4 +106,33 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reessayer' })).toBeInTheDocument();
   });
+
+  it('bascule vers le mode comparaison et revient en arriere', async () => {
+    server.use(
+      http.get('https://geocoding-api.open-meteo.com/v1/search', () =>
+        HttpResponse.json({
+          results: [
+            { latitude: 45.49, longitude: 5.47, name: 'Virieu', elevation: 415, admin2: 'Isère' },
+          ],
+        }),
+      ),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json(forecastPayload()),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(screen.getByLabelText('Chercher une commune'), 'Virieu');
+    const option = await screen.findByRole('button', { name: 'Virieu, Isère' });
+    await user.click(option);
+
+    await screen.findByText('14,0 °C');
+    await user.click(await screen.findByRole('button', { name: 'Comparer les modèles' }));
+
+    expect(screen.getByRole('heading', { name: 'Comparer les modèles' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Fermer' }));
+    expect(screen.queryByRole('heading', { name: 'Comparer les modèles' })).not.toBeInTheDocument();
+  });
 });
