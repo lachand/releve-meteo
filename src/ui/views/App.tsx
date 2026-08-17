@@ -2,7 +2,9 @@ import { useState } from 'react';
 import type { Place } from '../../domain/types';
 import { blendDaily } from '../dailyBlend';
 import { useCascadeView } from '../hooks/useCascadeView';
+import { useConfidenceView } from '../hooks/useConfidenceView';
 import { useForecast } from '../hooks/useForecast';
+import { useTerrain } from '../hooks/useTerrain';
 import { NowBlock } from '../components/NowBlock';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { SevenDayView } from '../components/SevenDayView';
@@ -26,6 +28,8 @@ export function App() {
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
   const cascade = useCascadeView(bundle);
+  const terrain = useTerrain(place);
+  const confidence = useConfidenceView(bundle, terrain);
 
   const nowPoint =
     bundle !== null && cascade !== null && cascade.activeModel !== null && cascade.nowIndex !== -1
@@ -90,7 +94,7 @@ export function App() {
 
               <section className={styles.section}>
                 <p className="eyebrow">48 heures</p>
-                <Timeline48h bundle={bundle} cascade={cascade} />
+                <Timeline48h bundle={bundle} cascade={cascade} confidence={confidence} />
               </section>
 
               <section className={styles.section}>

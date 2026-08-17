@@ -14,6 +14,8 @@ JSON (le JSON n'en supporte pas).
 | `dst-spring.json` | 2026-08-17 | La timeline traverse le passage à l'heure d'été du 29/03/2026 : l'heure 02:00 est absente, la série saute directement à 03:00. |
 | `dst-autumn.json` | 2026-08-17 | La timeline traverse le passage à l'heure d'hiver du 25/10/2026 : l'heure 02:00 apparaît deux fois. |
 | `malformed-lengths.json` | 2026-08-17 | La série `temperature_2m` d'ARPEGE n'a que 3 valeurs pour une timeline de 6 heures. |
+| `all-dry.json` | 2026-08-17 | Précipitations nulles chez les 4 modèles à chaque heure : coefficient de variation à 0, pas de `NaN`, confiance élevée. |
+| `high-divergence.json` | 2026-08-17 | Écart de température de 8 à 9 °C entre modèles à chaque heure (offsets fixes par modèle) : confiance basse, bande d'incertitude large. |
 
 Régénérées par un script ad hoc non versionné (même approche que
 `scripts/generate-coastline.py`) ; à reconstruire à la main si une nouvelle
