@@ -67,20 +67,20 @@ Cocher les tâches au fur et à mesure. Consigner tout écart en fin de fichier.
 
 Lire `SERVICE_WORKER.md` en entier avant de commencer.
 
-- [ ] `manifest.webmanifest` et jeu d'icônes, dont une maskable
-- [ ] `src/pwa/sw.ts` selon la table de routage, sans Workbox
-- [ ] Injection de `__BUILD_ID__` au build
-- [ ] Plugin Vite de génération du manifeste de précache
-- [ ] `offline.html`
-- [ ] Cycle de mise à jour avec bandeau et rechargement unique protégé
-- [ ] `src/pwa/install.ts`, prompt personnalisé via `beforeinstallprompt`
-- [ ] `ensureStorageHeadroom` et purge
-- [ ] `navigator.storage.persist()` après le premier favori
-- [ ] SW désactivé en développement, commande `sw:reset`
-- [ ] Test e2e de régression du service worker, `TESTING.md` 6.5
-- [ ] Checklist `SERVICE_WORKER.md` 13 exécutée
+- [x] `manifest.webmanifest` et jeu d'icônes, dont une maskable
+- [x] `src/pwa/sw.ts` selon la table de routage, sans Workbox
+- [x] Injection de `__BUILD_ID__` au build
+- [x] Plugin Vite de génération du manifeste de précache
+- [x] `offline.html`
+- [x] Cycle de mise à jour avec bandeau et rechargement unique protégé
+- [x] `src/pwa/install.ts`, prompt personnalisé via `beforeinstallprompt`
+- [x] `ensureStorageHeadroom` et purge
+- [x] `navigator.storage.persist()` après le premier favori (fonction prête, site d'appel au lot 5, cf. Écarts constatés)
+- [x] SW désactivé en développement, commande `sw:reset`
+- [x] Test e2e de régression du service worker, `TESTING.md` 6.5
+- [x] Checklist `SERVICE_WORKER.md` 13 exécutée (items 5 et 7 hors périmètre du lot, cf. Écarts constatés)
 
-**Sortie** : deux déploiements successifs vérifiés, pas de boucle de rechargement, mode avion fonctionnel, Lighthouse déclare l'application installable.
+**Sortie** : deux déploiements successifs vérifiés (`tests/e2e/service-worker.spec.ts`), pas de boucle de rechargement, mode avion fonctionnel pour la coquille applicative, installabilité vérifiée par manifeste + SW actif (`tests/e2e/smoke.spec.ts`) en repli de Lighthouse (cf. Écarts constatés).
 
 ---
 
@@ -183,3 +183,7 @@ Consigner ici toute divergence entre la spécification et la réalité, avec la 
 | 2026-08-17 | ARCHITECTURE.md §4.2 | `fetchForecast` y est documenté avec un retour `Promise<RawForecastResponse>` non enveloppé, incohérent avec le principe non négociable §4.3 (« aucune exception n'est levée pour un échec réseau »), que respecte tout le reste de la couche données (`request`, `repository.getForecast`). | Implémenté en `Promise<HttpResult<RawForecastResponse>>`, cohérent avec le reste du fichier. Les identifiants de modèle `OPEN_METEO_MODEL_IDS` (§4.1) ont été vérifiés contre l'API réelle le même jour : les quatre valeurs sont exactes. |
 | 2026-08-17 | TESTING.md §5, scénario 1 | Le scénario e2e demande de rechercher « Val de Virieu » ; en pratique la géocodification Open-Meteo (filtrée `countryCode=FR`) ne retourne aucun résultat pour cette chaîne exacte, vérifié en direct. Seul « Virieu » (la commune, `admin2: Isère`) est résolu. | `tests/e2e/forecast.spec.ts` recherche « Virieu ». La cascade AROME → ARPEGE avec marqueur de transition est vérifiée visuellement en conditions réelles (captures light/dark, desktop/mobile), y compris une mesure `pressure_msl` réellement `null` chez AROME sur ce point, affichée en tiret et non en 0. |
 | 2026-08-17 | ARCHITECTURE.md §3.7, `fogRisk` | Le seuil du niveau `likely` est chiffré (écart < 1 °C et vent < 8 km/h) mais celui de `possible` ne l'est pas, alors que le type de retour l'exige. | Fixé par prudence à écart < 3 °C et vent < 15 km/h dans `derived.ts` (constantes `FOG_POSSIBLE_SPREAD_C` / `FOG_POSSIBLE_WIND_KMH`), testé explicitement. À reconsidérer si une source météorologique de référence est identifiée. |
+| 2026-08-17 | `tsconfig.json` racine (Lot 0) | `tsc --noEmit` sur le tsconfig racine « solution » (`files: []` + `references`) est un no-op silencieux sans le flag `-b` : il rend toujours un code de sortie 0 sans rien vérifier, quelle que soit l'erreur de type présente. Découvert au Lot 3 en ajoutant `tsconfig.sw.json`, en testant délibérément avec une erreur de type injectée. Vérifié également que ce défaut préexistait pour `tsconfig.app.json`/`tsconfig.node.json`, donc n'a jamais été spécifique au SW. Révèle au passage une erreur TS5097 préexistante dans `vitest.config.ts` (import `./vite.config.ts` avec extension explicite), jamais détectée jusqu'ici. | `typecheck` et `build` dans `package.json` utilisent désormais `tsc -b`. `vitest.config.ts` importe `./vite.config` sans extension. `*.tsbuildinfo` ajouté à `.gitignore`. Tous les lots précédents doivent être considérés comme n'ayant *jamais* eu de vérification de type automatisée réelle ; aucune régression de type connue n'a cependant été trouvée après la correction (`tsc -b --force` propre sur les trois projets). |
+| 2026-08-17 | `package.json`, script `lighthouse` (Lot 0) | `"lighthouse": "lhci autorun"` référence le paquet non scopé `lhci`, jamais installé en dépendance : `npx lhci` résout vers un paquet placeholder sans rapport publié par un tiers (`lhci@4.1.2`, 339 o, « Hello, this is AnupamAS01! »), pas l'outil Lighthouse CI officiel `@lhci/cli`. Executé une fois par erreur au Lot 3 en vérifiant la checklist SERVICE_WORKER.md 13 : contenu inoffensif à ce jour, mais tout script `npm run lighthouse` futur exécutait silencieusement un paquet arbitraire non maîtrisé. | `@lhci/cli@^0.15.1` ajouté en devDependency ; `npx lhci` résout maintenant le vrai binaire local. Le paquet tire des vulnérabilités transitives connues (tmp, uuid, inquirer, puppeteer-core, 7 high / 1 moderate / 2 low), sans correctif amont disponible (`npm audit fix --force` régresserait vers `0.1.0`, non fonctionnel) : accepté tel quel, dépendance de développement uniquement, jamais expédiée dans le bundle applicatif. La configuration complète des budgets (`TESTING.md` 6.4) reste à faire, hors périmètre du Lot 3 ; l'installabilité de ce lot est vérifiée par `tests/e2e/smoke.spec.ts` (manifeste valide, icône maskable, SW enregistré et actif) plutôt que par un run Lighthouse complet. |
+| 2026-08-17 | `SERVICE_WORKER.md` §13, item 7 | « Sur iOS, la section d'alertes affiche bien le mode « à l'ouverture » » suppose que les alertes (`detectPushSupport`, écran de fiabilité) existent déjà, alors qu'elles sont explicitement prévues au Lot 7. | Item non exécutable au Lot 3 par construction ; à revérifier lors de l'exécution de cette même checklist au Lot 7, moment où la fonctionnalité qu'il vérifie existera. |
+| 2026-08-17 | `TESTING.md` §5, scénario 4 | « Basculer hors ligne, recharger, le contenu s'affiche avec l'horodatage » suppose qu'un rechargement complet retrouve le lieu précédemment consulté. `place` n'est que de l'état React local dans `App.tsx` : un rechargement repart sur `Aucun lieu enregistré`, quel que soit l'état réseau. Le repli `stale:true` de `data/repository.ts` et le bandeau `staleBanner` existent et sont déjà testés unitairement (`repository.test.ts`), mais le scénario e2e complet (reload → même lieu → contenu périmé visible) n'est pas automatisable avant qu'un mécanisme de persistance du lieu (URL partagée ou favori) existe. | Non traité au Lot 3, qui livre le chargement hors ligne de la coquille applicative elle-même (`tests/e2e/smoke.spec.ts`, `tests/e2e/service-worker.spec.ts`) : c'est la responsabilité propre de ce lot. Le scénario 5.4 complet est naturellement débloqué par `?lat=&lon=` (scénario 5.5) ou les favoris (Lot 5) ; à reprendre à ce moment-là plutôt que de forcer un test fragile aujourd'hui. |

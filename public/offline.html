@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#16232B" />
+    <link rel="icon" type="image/svg+xml" href="/icons/mark.svg" />
+    <title>Relevé · Hors ligne</title>
+    <style>
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Sans Condensed';
+        src: url('/fonts/plex-sans-condensed-600.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+
+      :root {
+        --papier: #e9edea;
+        --papier-haut: #f4f6f3;
+        --grille: #c3ccc8;
+        --encre: #16232b;
+        --encre-faible: #5a6b72;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --papier: #10181c;
+          --papier-haut: #18232a;
+          --grille: #2c3a42;
+          --encre: #dce5e2;
+          --encre-faible: #8fa1a8;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: var(--papier);
+        color: var(--encre);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      }
+
+      main {
+        max-width: 28rem;
+        padding: 2rem;
+        border: 1px solid var(--grille);
+        border-radius: 2px;
+        background: var(--papier-haut);
+        text-align: center;
+      }
+
+      p.eyebrow {
+        margin: 0 0 0.5rem;
+        font-family: 'IBM Plex Sans Condensed', system-ui, sans-serif;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--encre-faible);
+      }
+
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1.375rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--encre-faible);
+        line-height: 1.5;
+      }
+
+      button {
+        margin-top: 1.5rem;
+        min-height: 44px;
+        padding: 0 1.5rem;
+        border: 1px solid var(--grille);
+        border-radius: 2px;
+        background: var(--papier);
+        color: var(--encre);
+        font-family: 'IBM Plex Sans Condensed', system-ui, sans-serif;
+        font-size: 0.6875rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Relevé</p>
+      <h1>Hors ligne</h1>
+      <p>
+        Impossible de charger l'application. Verifiez la connexion, puis reessayez. Une prevision
+        deja consultee reste disponible hors ligne une fois l'application chargee.
+      </p>
+      <button type="button" onclick="location.reload()">Reessayer</button>
+    </main>
+  </body>
+</html>

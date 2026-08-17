@@ -1,0 +1,28 @@
+{
+  "name": "Relevé, prevision multi-modeles",
+  "short_name": "Relevé",
+  "description": "Previsions pour la France metropolitaine, avec le modele et la confiance affiches.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#E9EDEA",
+  "theme_color": "#16232B",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["weather", "utilities"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Ma position", "url": "/?geo=1" },
+    { "name": "Comparer les modeles", "url": "/?view=compare" }
+  ]
+}

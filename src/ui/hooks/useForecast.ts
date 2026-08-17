@@ -3,6 +3,7 @@ import type { ModelId, Place } from '../../domain/types';
 import type { HttpFailure, HttpResult } from '../../data/clients/http';
 import type { ForecastResult } from '../../data/repository';
 import { getForecast } from '../../data/repository';
+import { ensureStorageHeadroom } from '../../pwa/storage';
 
 const ALL_MODELS: readonly ModelId[] = ['arome', 'arpege', 'icon_eu', 'gfs'];
 
@@ -32,6 +33,10 @@ export function useForecast(place: Place | null): ForecastState | null {
     getForecast({ place, models: ALL_MODELS }).then((outcome) => {
       if (!cancelled) {
         setSettled({ place, outcome });
+      }
+      if (outcome.ok) {
+        // Ecriture importante en cache : verifie le quota (SERVICE_WORKER.md 8).
+        void ensureStorageHeadroom(Date.now());
       }
     });
     return () => {

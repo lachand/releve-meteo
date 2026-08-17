@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ensureStorageHeadroom } from './pwa/storage';
 import { App } from './ui/views/App';
 import './ui/styles/tokens.css';
 import './ui/styles/base.css';
@@ -14,3 +15,5 @@ createRoot(container).render(
     <App />
   </StrictMode>,
 );
+
+void ensureStorageHeadroom(Date.now());

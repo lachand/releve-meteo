@@ -50,7 +50,18 @@ const dateConstructionGuard = {
 };
 
 export default [
-  { ignores: ['dist/**', 'coverage/**', 'playwright-report/**', 'test-results/**', 'public/**'] },
+  {
+    // scripts/ : outillage ponctuel hors du pipeline TypeScript strict
+    // (deja le cas des scripts Python du dossier, jamais lintes non plus).
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
+      'public/**',
+      'scripts/**',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
@@ -93,6 +104,20 @@ export default [
   },
   domainBoundary,
   dateConstructionGuard,
+  {
+    // Bundle separe (vite.config.ts), execute hors DOM. `no-undef` ignore
+    // les types globaux specifiques au service worker (ServiceWorkerGlobalScope,
+    // FetchEvent...) faute de les connaitre independamment de tsconfig.sw.json ;
+    // TypeScript verifie deja ces references, cf. pratique standard des projets
+    // typescript-eslint.
+    files: ['src/pwa/sw.ts'],
+    languageOptions: {
+      globals: { ...globals.serviceworker },
+    },
+    rules: {
+      'no-undef': 'off',
+    },
+  },
   {
     files: ['*.config.{js,ts}', 'tests/**/*.{ts,tsx}'],
     languageOptions: {

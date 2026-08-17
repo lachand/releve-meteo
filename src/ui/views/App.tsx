@@ -4,14 +4,18 @@ import { blendDaily } from '../dailyBlend';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
 import { useForecast } from '../hooks/useForecast';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { useServiceWorkerUpdate } from '../hooks/useServiceWorkerUpdate';
 import { useTerrain } from '../hooks/useTerrain';
 import { ComparisonView } from '../components/ComparisonView';
+import { InstallPrompt } from '../components/InstallPrompt';
 import { ModelInfoPanel } from '../components/ModelInfoPanel';
 import { NowBlock } from '../components/NowBlock';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { PrecipitationChart } from '../components/PrecipitationChart';
 import { SevenDayView } from '../components/SevenDayView';
 import { Timeline48h } from '../components/Timeline48h';
+import { UpdateBanner } from '../components/UpdateBanner';
 import styles from './App.module.css';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
@@ -29,6 +33,8 @@ function formatFetchedAt(epochMs: number): string {
 export function App() {
   const [place, setPlace] = useState<Place | null>(null);
   const [comparing, setComparing] = useState(false);
+  const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
+  const { available: installAvailable, promptInstall } = useInstallPrompt();
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
   const cascade = useCascadeView(bundle);
@@ -42,6 +48,14 @@ export function App() {
 
   return (
     <div className={styles.page}>
+      {updateAvailable && <UpdateBanner onRefresh={applyUpdate} />}
+      {!updateAvailable && installAvailable && (
+        <InstallPrompt
+          onInstall={() => {
+            void promptInstall();
+          }}
+        />
+      )}
       <header className={styles.header}>
         <div>
           <p className="eyebrow">Relevé</p>

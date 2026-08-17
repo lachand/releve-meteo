@@ -1,15 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "WebWorker"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react-jsx",
 
     "strict": true,
     "noImplicitAny": true,
@@ -21,8 +18,7 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
 
-    "types": ["vite/client", "@testing-library/jest-dom"]
+    "types": []
   },
-  "include": ["src"],
-  "exclude": ["src/pwa/sw.ts"]
+  "include": ["src/pwa/sw.ts", "src/pwa/cacheNames.ts"]
 }

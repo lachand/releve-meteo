@@ -10,13 +10,14 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 
 ## État du projet
 
-Lot 0 (socle technique) et Lot 1 (prévision de base et cascade) terminés :
-recherche de commune, géolocalisation, cascade AROME → ARPEGE → ICON-EU →
-GFS avec transition visible, timeline 48 h, vue 7 jours, cache IndexedDB
-avec repli mémoire, les quatre états d'interface. Pas encore de bande
-d'incertitude ni de mode comparaison (Lot 2), pas de fonctionnement hors
-ligne (Lot 3, PWA). Voir [BACKLOG.md](BACKLOG.md) pour le découpage en lots
-et l'avancement, et [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour
+Lots 0 à 3 terminés : recherche de commune, géolocalisation, cascade
+AROME → ARPEGE → ICON-EU → GFS avec transition visible, timeline 48 h, vue
+7 jours, bande d'incertitude, mode comparaison, panneau modèle/confiance,
+cache IndexedDB avec repli mémoire, les quatre états d'interface, et
+fonctionnement hors ligne complet (service worker, manifeste installable,
+bandeau de mise à jour). Pas encore d'observé/estimé (Lot 4) ni de fiabilité
+locale (Lot 7). Voir [BACKLOG.md](BACKLOG.md) pour le découpage en lots et
+l'avancement, et [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour
 l'ordre de construction retenu.
 
 Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
@@ -29,6 +30,13 @@ npm install
 npm run dev       # serveur de développement
 npm run verify    # lint, format, typecheck, tests, build, e2e
 ```
+
+Le service worker est désactivé en développement (`npm run dev`), sauf avec
+`VITE_SW=1 npm run dev`. En cas de comportement inexplicable côté PWA
+(contenu périmé, écran blanc après une modification), commencer par
+« Application » puis « Unregister » dans les outils de développement du
+navigateur avant toute autre investigation, ou lancer `npm run sw:reset`
+(voir [SERVICE_WORKER.md](SERVICE_WORKER.md) section 11).
 
 ## Documentation
 
