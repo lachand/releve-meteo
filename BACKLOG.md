@@ -49,15 +49,15 @@ Cocher les tâches au fur et à mesure. Consigner tout écart en fin de fichier.
 
 ## Lot 2 : confiance et comparaison
 
-- [ ] `domain/confidence.ts` avec ses tests, dont les cas de pénalité terrain
-- [ ] `domain/derived.ts` avec ses tests
-- [ ] Encodage de la confiance par texture de trait dans Chart.js
-- [ ] Bande d'incertitude hachurée, motif SVG diagonal, pas d'aplat translucide
-- [ ] Panneau latéral « modèle actif » et « confiance » de `DESIGN.md` 6.2
-- [ ] Mode comparaison de `DESIGN.md` 6.3, avec sa légende propre
-- [ ] Texte explicatif « pourquoi ce modèle »
-- [ ] Table de données équivalente accessible pour chaque graphique
-- [ ] Fixtures `all-dry`, `high-divergence`, `arome-missing`
+- [x] `domain/confidence.ts` avec ses tests, dont les cas de pénalité terrain
+- [x] `domain/derived.ts` avec ses tests
+- [x] Encodage de la confiance par texture de trait dans Chart.js
+- [x] Bande d'incertitude hachurée, motif SVG diagonal, pas d'aplat translucide (motif Canvas, seul mécanisme de remplissage répété disponible pour un `fill` Chart.js ; rendu diagonal identique, jamais un aplat)
+- [x] Panneau latéral « modèle actif » et « confiance » de `DESIGN.md` 6.2
+- [x] Mode comparaison de `DESIGN.md` 6.3, avec sa légende propre
+- [x] Texte explicatif « pourquoi ce modèle »
+- [x] Table de données équivalente accessible pour chaque graphique
+- [x] Fixtures `all-dry`, `high-divergence`, `arome-missing`
 
 **Sortie** : la bande d'incertitude s'ouvre visiblement sur `high-divergence` et disparaît sur un cas d'accord. La légende est permanente.
 
