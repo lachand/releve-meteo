@@ -8,16 +8,16 @@ Cocher les tâches au fur et à mesure. Consigner tout écart en fin de fichier.
 
 ## Lot 0 : socle technique
 
-- [ ] Initialiser Vite, TypeScript `strict` avec `noUncheckedIndexedAccess`
-- [ ] Configurer ESLint, dont `import/no-restricted-paths` interdisant `domain -> data` et `domain -> ui`
-- [ ] Configurer Prettier, Vitest avec seuils de couverture, Playwright
-- [ ] Créer l'arborescence de `ARCHITECTURE.md` section 2, avec fichiers vides
-- [ ] Écrire `src/domain/constants.ts` et `src/domain/types.ts` en entier
-- [ ] Écrire `src/ui/styles/tokens.css` depuis `DESIGN.md`
-- [ ] Auto-héberger les quatre fichiers de police en `woff2`, sous-ensemble latin étendu
-- [ ] Pipeline CI complet, y compris sur un dépôt sans code applicatif
-- [ ] Déploiement statique automatique sur la branche principale
-- [ ] Page « Sources et licences » avec les attributions Open-Meteo, Météo-France, OpenStreetMap
+- [x] Initialiser Vite, TypeScript `strict` avec `noUncheckedIndexedAccess`
+- [x] Configurer ESLint, dont `import/no-restricted-paths` interdisant `domain -> data` et `domain -> ui`
+- [x] Configurer Prettier, Vitest avec seuils de couverture, Playwright
+- [x] Créer l'arborescence de `ARCHITECTURE.md` section 2, avec fichiers vides
+- [x] Écrire `src/domain/constants.ts` et `src/domain/types.ts` en entier
+- [x] Écrire `src/ui/styles/tokens.css` depuis `DESIGN.md`
+- [x] Auto-héberger les quatre fichiers de police en `woff2`, sous-ensemble latin étendu
+- [x] Pipeline CI complet, y compris sur un dépôt sans code applicatif
+- [ ] Déploiement statique automatique sur la branche principale (voir Écarts constatés)
+- [x] Page « Sources et licences » avec les attributions Open-Meteo, Météo-France, OpenStreetMap
 
 **Sortie** : `npm run verify` passe sur un projet vide. Le déploiement est en ligne.
 
@@ -178,4 +178,5 @@ Consigner ici toute divergence entre la spécification et la réalité, avec la 
 
 | Date | Document | Écart | Décision |
 |---|---|---|---|
-| | | | |
+| 2026-08-17 | BACKLOG.md, Lot 0 | Le déploiement automatique sur Cloudflare Pages nécessite de connecter le dépôt GitHub depuis le tableau de bord Cloudflare de l'utilisateur (identifiants hors de portée de l'agent). | Reste une action manuelle ponctuelle pour l'utilisateur : créer un projet Pages, connecter `lachand/releve-meteo`, build `npm run build`, dossier `dist`. Le reste du Lot 0 ne dépend pas de cette étape. |
+| 2026-08-17 | AGENTS.md, stack imposée | TypeScript 7 et ESLint 10 (dernières versions publiées) ne sont pas encore supportés par `@typescript-eslint` 8.67 (`peer typescript: >=4.8.4 <6.1.0`) ni par `eslint-plugin-jsx-a11y` 6.10 (`peer eslint: ^3..^9`). | TypeScript fixé à `~6.0.3` et ESLint à `^9.39.5`, les plus récentes versions compatibles avec l'outillage de lint. À relever dans un futur lot quand l'écosystème `typescript-eslint` supportera TS 7. |
