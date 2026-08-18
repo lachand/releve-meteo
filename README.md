@@ -10,15 +10,20 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 
 ## État du projet
 
-Lots 0 à 3 terminés : recherche de commune, géolocalisation, cascade
+Lots 0 à 3 et 5 terminés : recherche de commune, géolocalisation, cascade
 AROME → ARPEGE → ICON-EU → GFS avec transition visible, timeline 48 h, vue
 7 jours, bande d'incertitude, mode comparaison, panneau modèle/confiance,
-cache IndexedDB avec repli mémoire, les quatre états d'interface, et
+cache IndexedDB avec repli mémoire, les quatre états d'interface,
 fonctionnement hors ligne complet (service worker, manifeste installable,
-bandeau de mise à jour). Pas encore d'observé/estimé (Lot 4) ni de fiabilité
-locale (Lot 7). Voir [BACKLOG.md](BACKLOG.md) pour le découpage en lots et
-l'avancement, et [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour
-l'ordre de construction retenu.
+bandeau de mise à jour), favoris réordonnables avec alias, URL partageable
+`?lat=&lon=`, réglages (unité de vent, thème, purge des données locales), et
+les enrichissements dérivés (pression 72 h, point de rosée, risques de gel
+et de brouillard, rose des vents, UV, lever/coucher du soleil). Le Lot 4
+(observé contre estimé) est en attente d'un compte Infoclimat pour mener le
+spike CORS bloquant ; pas encore de fiabilité locale (Lot 7). Voir
+[BACKLOG.md](BACKLOG.md) pour le découpage en lots et l'avancement, et
+[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour l'ordre de
+construction retenu.
 
 Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
 GitHub (build `npm run build`, dossier de sortie `dist`).

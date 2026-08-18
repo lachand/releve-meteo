@@ -12,16 +12,19 @@ import { useTerrain } from '../hooks/useTerrain';
 import { TERRAIN_KIND_LABELS } from '../modelPresentation';
 import { parseSharedPlace, sharedPlaceSearch } from '../sharedPlace';
 import { ComparisonView } from '../components/ComparisonView';
+import { ConditionsPanel } from '../components/ConditionsPanel';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { ModelInfoPanel } from '../components/ModelInfoPanel';
 import { NowBlock } from '../components/NowBlock';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { PlaceSwitcher } from '../components/PlaceSwitcher';
 import { PrecipitationChart } from '../components/PrecipitationChart';
+import { PressureChart } from '../components/PressureChart';
 import { Settings } from '../components/Settings';
 import { SevenDayView } from '../components/SevenDayView';
 import { Timeline48h } from '../components/Timeline48h';
 import { UpdateBanner } from '../components/UpdateBanner';
+import { WindRose } from '../components/WindRose';
 import styles from './App.module.css';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
@@ -211,6 +214,16 @@ export function App() {
                         <p className="eyebrow">7 jours</p>
                         <SevenDayView days={blendDaily(bundle)} />
                       </section>
+
+                      <section className={styles.section}>
+                        <p className="eyebrow">Pression</p>
+                        <PressureChart bundle={bundle} cascade={cascade} />
+                      </section>
+
+                      <section className={styles.section}>
+                        <p className="eyebrow">Vent</p>
+                        <WindRose bundle={bundle} cascade={cascade} />
+                      </section>
                     </div>
 
                     {cascade.activeModel !== null &&
@@ -225,6 +238,13 @@ export function App() {
                             terrain={terrain}
                             onCompareClick={() => setComparing(true)}
                           />
+                          <section className={styles.section}>
+                            <p className="eyebrow">Repères du jour</p>
+                            <ConditionsPanel
+                              nowPoint={nowPoint}
+                              today={blendDaily(bundle)[0] ?? null}
+                            />
+                          </section>
                         </aside>
                       )}
                   </div>

@@ -105,10 +105,10 @@ Lire `SERVICE_WORKER.md` en entier avant de commencer.
 - [x] Alias personnalisés par lieu
 - [x] URL partageable `?lat=&lon=`, avec validation métropole
 - [x] Barre de bascule entre lieux, `DESIGN.md` 6.1 bas d'écran
-- [ ] Courbe de pression sur 72 h
-- [ ] Point de rosée, risque de gel, risque de brouillard
-- [ ] Rose des vents avec direction, sans animation décorative
-- [ ] UV, lever et coucher du soleil
+- [x] Courbe de pression sur 72 h
+- [x] Point de rosée, risque de gel, risque de brouillard
+- [x] Rose des vents avec direction, sans animation décorative
+- [x] UV, lever et coucher du soleil
 - [x] Réglages : unités, thème, purge des données locales
 
 **Sortie** : bascule entre deux lieux sans rechargement complet, URL partagée fonctionnelle.

@@ -1,0 +1,32 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Titre du tableau porte par le eyebrow de section dans App.tsx, comme les
+   autres blocs : la caption reste dans le DOM pour les lecteurs d'ecran. */
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--esp-2) 0;
+  border-top: var(--filet);
+  font-size: var(--pas-s);
+}
+
+.table td:first-child {
+  color: var(--encre-faible);
+}
+
+.table td:last-child {
+  text-align: right;
+  font-family: var(--font-donnee);
+  font-variant-numeric: tabular-nums;
+  color: var(--encre);
+}
