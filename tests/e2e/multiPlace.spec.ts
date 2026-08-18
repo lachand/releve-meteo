@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { stubTileRequests } from './tileStub';
 
 // "Virieu" et non "Val de Virieu" : voir forecast.spec.ts et BACKLOG.md
 // "Ecarts constates" pour la raison. "Virieu" seul (sans exact:true) matche
@@ -13,6 +14,7 @@ async function selectPlace(page: Page, query: string, resultLabel: string): Prom
 }
 
 test('ajouter un favori, recharger, le favori est la (TESTING.md 5.2)', async ({ page }) => {
+  await stubTileRequests(page);
   await page.goto('/');
   await selectPlace(page, 'Virieu', 'Virieu, Isère');
 
@@ -26,6 +28,7 @@ test('ajouter un favori, recharger, le favori est la (TESTING.md 5.2)', async ({
 test('ajouter un deuxieme lieu, reordonner, recharger, l ordre tient (TESTING.md 5.3)', async ({
   page,
 }) => {
+  await stubTileRequests(page);
   await page.goto('/');
   await selectPlace(page, 'Virieu', 'Virieu, Isère');
   await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
@@ -55,6 +58,7 @@ test('URL partagee ?lat=&lon= charge le bon lieu et le classe cotier (TESTING.md
   // Vannes, tete du Golfe du Morbihan : voir BACKLOG.md "Ecarts constates"
   // du 2026-08-18, les coordonnees litterales de TESTING.md 5.5 tombent en
   // pleine eau et sont hors du polygone metropolitain embarque.
+  await stubTileRequests(page);
   await page.goto('/?lat=47.6559&lon=-2.7603');
 
   await expect(page.getByText(/°C/).first()).toBeVisible({ timeout: 15000 });
@@ -64,6 +68,7 @@ test('URL partagee ?lat=&lon= charge le bon lieu et le classe cotier (TESTING.md
 test('modifier une preference d unite, elle s applique et persiste (TESTING.md 5.8)', async ({
   page,
 }) => {
+  await stubTileRequests(page);
   await page.goto('/');
   await selectPlace(page, 'Virieu', 'Virieu, Isère');
 

@@ -20,6 +20,7 @@ import { PlaceSearch } from '../components/PlaceSearch';
 import { PlaceSwitcher } from '../components/PlaceSwitcher';
 import { PrecipitationChart } from '../components/PrecipitationChart';
 import { PressureChart } from '../components/PressureChart';
+import { RadarMap } from '../components/RadarMap';
 import { Settings } from '../components/Settings';
 import { SevenDayView } from '../components/SevenDayView';
 import { Timeline48h } from '../components/Timeline48h';
@@ -223,6 +224,11 @@ export function App() {
                       <section className={styles.section}>
                         <p className="eyebrow">Vent</p>
                         <WindRose bundle={bundle} cascade={cascade} />
+                      </section>
+
+                      <section className={styles.section}>
+                        <p className="eyebrow">Radar</p>
+                        <RadarMap key={place.id} place={place} />
                       </section>
                     </div>
 

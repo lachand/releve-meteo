@@ -36,10 +36,11 @@ const STATIC_PREFIXES = ['/fonts/', '/icons/', '/data/'];
 
 const API_HOSTS = new Set(['api.open-meteo.com', 'geocoding-api.open-meteo.com']);
 
-// Vide au lot 3 : peuple au lot 6 avec les hotes de tuiles carte/radar.
-// La regle de routage existe des maintenant pour ne pas re-toucher la
-// table au lot 6, seul cet ensemble change alors.
-const TILE_HOSTS = new Set<string>();
+// Vide au lot 3, peuple au lot 6 : fond de carte OpenStreetMap et overlay
+// radar RainViewer (data/clients/rainviewer.ts construit les URLs de
+// tuiles sur cet hote). La regle de routage existait deja au lot 3, seul
+// cet ensemble change ici.
+const TILE_HOSTS = new Set(['tile.openstreetmap.org', 'tilecache.rainviewer.com']);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -118,22 +119,45 @@ async function cacheFirstWithExpiry(
       return cached;
     }
   }
-  const response = await fetch(request);
-  // Les tuiles cross-origine sans CORS remontent des reponses opaques :
-  // response.ok y vaut toujours false, mais elles restent legitimes a
-  // mettre en cache (piege 1). response.clone() avant toute lecture (piege 3).
-  if (response.ok || response.type === 'opaque') {
-    const toStore = response.clone();
-    const stamped = new Response(toStore.body, {
-      status: toStore.status,
-      statusText: toStore.statusText,
-      headers: new Headers(toStore.headers),
-    });
-    stamped.headers.set(CACHED_AT_HEADER, String(Date.now()));
-    await cache.put(request, stamped);
-    await trimCache(cacheName, TILE_CACHE_MAX_ENTRIES);
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const toStore = response.clone();
+      const stamped = new Response(toStore.body, {
+        status: toStore.status,
+        statusText: toStore.statusText,
+        headers: new Headers(toStore.headers),
+      });
+      stamped.headers.set(CACHED_AT_HEADER, String(Date.now()));
+      await cache.put(request, stamped);
+      await trimCache(cacheName, TILE_CACHE_MAX_ENTRIES);
+    } else if (response.type === 'opaque') {
+      // Reponse opaque (cross-origine sans CORS) : status vaut toujours 0
+      // et les en-tetes sont illisibles. Construire une Response avec
+      // status: 0 leve une RangeError (200-599 exiges), ce qui faisait
+      // echouer silencieusement toute tuile passant par cette branche
+      // avant ce correctif. Sans horodatage possible a y accrocher, elle
+      // est mise en cache telle quelle, sans suivi de fraicheur : repli
+      // pour un hote de tuiles futur sans CORS. Les deux hotes actuels
+      // (OSM, RainViewer) envoient tous deux Access-Control-Allow-Origin,
+      // et RadarMap.tsx force crossOrigin sur les calques Leaflet : cette
+      // branche n'est donc pas exercee en pratique aujourd'hui (piege 1).
+      await cache.put(request, response.clone());
+      await trimCache(cacheName, TILE_CACHE_MAX_ENTRIES);
+    }
+    return response;
+  } catch (error) {
+    // Hors ligne : une tuile perimee reste utilisable, plutot que rien du
+    // tout (BACKLOG.md Lot 6, "la carte fonctionne hors ligne sur les
+    // tuiles deja visitees"). Sans ce repli, une tuile visitee il y a plus
+    // de TILE_TTL_MS echouait purement et simplement des que le reseau
+    // manquait, ce que rien avant le Lot 6 n'avait pu exercer (TILE_HOSTS
+    // etait vide jusqu'ici).
+    if (cached !== undefined) {
+      return cached;
+    }
+    throw error;
   }
-  return response;
 }
 
 async function handleNavigate(event: FetchEvent): Promise<Response> {
