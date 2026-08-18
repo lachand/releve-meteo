@@ -1,4 +1,4 @@
-import type { ConfidenceLevel, ModelId } from '../domain/types';
+import type { ConfidenceLevel, ModelId, TerrainKind } from '../domain/types';
 
 // DESIGN.md section 7 : "AROME", "ARPEGE", "ICON-EU", "GFS" sont conserves
 // tels quels, jamais traduits ni vulgarises.
@@ -39,6 +39,14 @@ export const CONFIDENCE_LEVEL_LABELS: Readonly<Record<ConfidenceLevel, string>> 
   medium: 'Moyenne',
   low: 'Faible',
   unavailable: 'Indisponible',
+};
+
+// DESIGN.md maquette 6.2 : le fil "Nom . Departement . Altitude . Terrain".
+export const TERRAIN_KIND_LABELS: Readonly<Record<TerrainKind, string>> = {
+  coastal: 'côtier',
+  mountain: 'montagne',
+  plateau: 'plateau',
+  plain: 'plaine',
 };
 
 /** Lit une variable CSS resolue (respecte le theme clair/sombre actif). */

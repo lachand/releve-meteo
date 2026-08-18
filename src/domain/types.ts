@@ -70,3 +70,23 @@ export interface ForecastBundle {
   readonly timeline: readonly LocalIsoHour[]; // axe commun a toutes les series
   readonly series: Partial<Record<ModelId, ModelSeries>>;
 }
+
+/** Stockage localStorage, cle unique `meteo-fr:prefs`. ARCHITECTURE.md section 4.6. */
+export interface Preferences {
+  readonly version: 1;
+  readonly favourites: readonly Place[]; // ordre significatif
+  readonly units: { readonly temperature: 'C'; readonly wind: 'kmh' | 'kt' };
+  readonly theme: 'auto' | 'light' | 'dark';
+  readonly solar: { readonly peakKwp: number | null };
+  readonly apiKeys: { readonly vigilance: string | null; readonly infoclimat: string | null };
+  readonly alerts: readonly AlertRule[];
+}
+
+export interface AlertRule {
+  readonly id: string;
+  readonly placeId: string;
+  readonly variable: WeatherVariable;
+  readonly comparator: 'lt' | 'gt';
+  readonly threshold: number;
+  readonly enabled: boolean;
+}

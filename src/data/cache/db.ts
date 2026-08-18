@@ -65,12 +65,13 @@ export function resetDbConnection(): void {
 }
 
 /**
- * Ferme et supprime entierement la base. Reserve aux tests : la suite
- * partage une seule instance d'indexedDB (fake ou reelle) entre les cas de
- * test, isoler chaque test exige de repartir d'une base vide plutot que de
- * seulement oublier la reference en memoire.
+ * Ferme et supprime entierement la base. Deux appelants : la purge des
+ * donnees locales dans les reglages (BACKLOG.md Lot 5), et les tests, qui
+ * partagent une seule instance d'indexedDB (fake ou reelle) entre les cas
+ * de test et doivent repartir d'une base vide plutot que de seulement
+ * oublier la reference en memoire.
  */
-export async function deleteDbForTests(): Promise<void> {
+export async function clearAllLocalData(): Promise<void> {
   const db = await getDb();
   db?.close();
   resetDbConnection();
@@ -78,3 +79,5 @@ export async function deleteDbForTests(): Promise<void> {
     await deleteDB(DB_NAME);
   }
 }
+
+export { clearAllLocalData as deleteDbForTests };

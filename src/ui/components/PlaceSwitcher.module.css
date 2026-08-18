@@ -1,0 +1,77 @@
+.bar {
+  position: sticky;
+  bottom: 0;
+  margin-top: var(--esp-6);
+  padding-top: var(--esp-4);
+  border-top: var(--filet);
+  background: var(--papier);
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-1);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+}
+
+.placeButton {
+  min-height: 44px;
+  padding: 0 var(--esp-3);
+  border: none;
+  background: transparent;
+  color: var(--encre);
+  font-size: var(--pas-s);
+  cursor: pointer;
+}
+
+.placeButton[aria-pressed='true'] {
+  font-weight: 600;
+}
+
+.aliasInput {
+  min-height: 44px;
+  padding: 0 var(--esp-3);
+  border: none;
+  background: transparent;
+  color: var(--encre);
+  font-size: var(--pas-s);
+  width: 10em;
+}
+
+.itemControls {
+  display: flex;
+  gap: 1px;
+  padding-right: var(--esp-1);
+}
+
+.controlButton {
+  min-height: 32px;
+  min-width: 32px;
+  border: none;
+  border-radius: var(--rayon);
+  background: transparent;
+  color: var(--encre-faible);
+  cursor: pointer;
+  font-size: var(--pas-xs);
+}
+
+.controlButton:hover:not(:disabled) {
+  background: var(--grille-faible);
+  color: var(--encre);
+}
+
+.controlButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

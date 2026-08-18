@@ -6,6 +6,7 @@ import { server } from '../../../tests/msw';
 import { deleteDbForTests } from '../../data/cache/db';
 import { resetMemoryForecastStore } from '../../data/cache/forecastStore';
 import { resetMemoryGeocodingStore } from '../../data/cache/geocodingStore';
+import { resetMemoryPreferencesForTests } from '../../data/cache/preferences';
 import { App } from './App';
 
 function forecastPayload() {
@@ -51,6 +52,9 @@ beforeEach(async () => {
   await deleteDbForTests();
   resetMemoryForecastStore();
   resetMemoryGeocodingStore();
+  localStorage.clear();
+  resetMemoryPreferencesForTests();
+  window.history.replaceState(null, '', '/');
 });
 
 describe('App', () => {

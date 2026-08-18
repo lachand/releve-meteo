@@ -1,11 +1,13 @@
-import type { HourlyPoint, ModelId } from '../../domain/types';
+import type { HourlyPoint, ModelId, Preferences } from '../../domain/types';
 import { MODEL_LABELS, modelColor } from '../modelPresentation';
 import { weatherCodeLabel } from '../weatherCodePresentation';
+import { convertWindSpeed, windUnitLabel } from '../windUnit';
 import styles from './NowBlock.module.css';
 
 interface NowBlockProps {
   readonly point: HourlyPoint | null;
   readonly model: ModelId | null;
+  readonly windUnit?: Preferences['units']['wind'];
 }
 
 const COMPASS_ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
@@ -24,7 +26,7 @@ function formatMeasure(value: number | null, unit: string, format = numberFr): s
   return value === null ? '—' : `${format.format(value)} ${unit}`;
 }
 
-export function NowBlock({ point, model }: NowBlockProps) {
+export function NowBlock({ point, model, windUnit = 'kmh' }: NowBlockProps) {
   if (point === null || model === null) {
     return (
       <p style={{ color: 'var(--encre-faible)' }}>
@@ -35,6 +37,7 @@ export function NowBlock({ point, model }: NowBlockProps) {
 
   const direction = point.windDirection.value;
   const condition = weatherCodeLabel(point.weatherCode);
+  const unitLabel = windUnitLabel(windUnit);
 
   return (
     <div className={styles.block}>
@@ -47,11 +50,13 @@ export function NowBlock({ point, model }: NowBlockProps) {
         <div className={styles.secondary}>
           <span>
             {direction !== null ? `${arrowForDegrees(direction)} ` : ''}
-            {formatMeasure(point.windSpeed.value, 'km/h')}
+            {formatMeasure(convertWindSpeed(point.windSpeed.value, windUnit), unitLabel)}
           </span>
         </div>
         <div className={styles.secondary}>
-          <span>raf. {formatMeasure(point.windGust.value, 'km/h')}</span>
+          <span>
+            raf. {formatMeasure(convertWindSpeed(point.windGust.value, windUnit), unitLabel)}
+          </span>
         </div>
         <div className={styles.secondary}>
           <span>{formatMeasure(point.pressure.value, 'hPa', new Intl.NumberFormat('fr-FR'))}</span>

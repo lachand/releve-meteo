@@ -49,4 +49,10 @@ describe('NowBlock', () => {
     const { container } = render(<NowBlock point={withoutCode} model="arome" />);
     expect(container.querySelector('[class*="condition"]')).not.toBeInTheDocument();
   });
+
+  it('convertit la vitesse du vent en noeuds quand demande', () => {
+    const { container } = render(<NowBlock point={point} model="arome" windUnit="kt" />);
+    expect(container.textContent).toContain('6,5 kt');
+    expect(container.textContent).toContain('raf. 13,0 kt');
+  });
 });

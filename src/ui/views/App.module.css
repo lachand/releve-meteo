@@ -20,8 +20,37 @@
   margin: 0;
 }
 
+.placeMeta {
+  margin: var(--esp-1) 0 0;
+  color: var(--encre-faible);
+  font-size: var(--pas-s);
+}
+
 .header .searchColumn {
   width: min(100%, 22em);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.iconButton {
+  min-height: 44px;
+  min-width: 44px;
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  font-size: var(--pas-l);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.iconButton[aria-pressed='true'] {
+  color: var(--alerte);
+  border-color: var(--alerte);
 }
 
 .section {

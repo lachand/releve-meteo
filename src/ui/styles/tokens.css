@@ -70,8 +70,15 @@
   --largeur-max: 1120px;
 }
 
+/*
+ * Theme "auto" (par defaut, aucun attribut) suit prefers-color-scheme.
+ * Le reglage manuel des Reglages (BACKLOG.md Lot 5) pose data-theme sur
+ * <html> : :not([data-theme='light']) laisse l'auto sombre l'emporter tant
+ * que rien ne force le clair, et le bloc [data-theme='dark'] force le
+ * sombre meme sur un systeme clair.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --papier: #10181c;
     --papier-haut: #18232a;
     --grille: #2c3a42;
@@ -86,6 +93,22 @@
     --observe: #dce5e2;
     --estime: #8fa1a8;
   }
+}
+
+:root[data-theme='dark'] {
+  --papier: #10181c;
+  --papier-haut: #18232a;
+  --grille: #2c3a42;
+  --grille-faible: #212c33;
+  --encre: #dce5e2;
+  --encre-faible: #8fa1a8;
+  --arome: #4ba3dc;
+  --arpege: #e8863a;
+  --icon-eu: #34b48c;
+  --gfs: #c784ac;
+  --alerte: #e05252;
+  --observe: #dce5e2;
+  --estime: #8fa1a8;
 }
 
 .eyebrow {
