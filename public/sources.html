@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sources et licences : Relevé</title>
+    <title>Sources, licences et méthode : Relevé</title>
+    <meta
+      name="description"
+      content="Comment Relevé choisit le modèle de prévision, vérifie les modèles contre les mesures, et d'où viennent ses données."
+    />
     <style>
       @font-face {
         font-family: 'IBM Plex Sans';
@@ -23,48 +27,87 @@
         font-weight: 400;
         font-display: swap;
       }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/garamond-600-normal.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/garamond-400-italic.woff2') format('woff2');
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
       :root {
-        --papier: #e9edea;
-        --papier-haut: #f4f6f3;
-        --grille: #c3ccc8;
-        --encre: #16232b;
-        --encre-faible: #5a6b72;
+        --papier: #f2ede2;
+        --papier-haut: #fbf8f1;
+        --grille: #d6ccb8;
+        --encre: #1c2733;
+        --encre-faible: #5b6570;
+        --marge: #ac4336;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --papier: #10181c;
-          --papier-haut: #18232a;
-          --grille: #2c3a42;
-          --encre: #dce5e2;
-          --encre-faible: #8fa1a8;
+          --papier: #131920;
+          --papier-haut: #1a222b;
+          --grille: #2f3a45;
+          --encre: #e8e1d2;
+          --encre-faible: #a39a8b;
+          --marge: #e0715f;
         }
       }
       body {
         margin: 0;
-        background: var(--papier);
+        background-color: var(--papier);
+        background-image:
+          repeating-linear-gradient(
+            0deg,
+            color-mix(in srgb, var(--grille) 45%, transparent) 0 1px,
+            transparent 1px 40px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--grille) 45%, transparent) 0 1px,
+            transparent 1px 40px
+          );
         color: var(--encre);
         font-family: 'IBM Plex Sans', system-ui, sans-serif;
-        line-height: 1.55;
+        line-height: 1.6;
       }
       main {
-        max-width: 640px;
-        margin: 0 auto;
-        padding: 48px 24px 80px;
+        max-width: 720px;
+        margin: 32px auto 80px;
+        padding: 40px 28px 56px;
+        background: var(--papier-haut);
+        border: 1px solid var(--grille);
+        border-left: 2px solid var(--marge);
+      }
+      h1,
+      h2 {
+        font-family: 'EB Garamond', Georgia, serif;
+        font-weight: 600;
+        line-height: 1.15;
       }
       h1 {
-        font-size: 1.5rem;
+        font-size: 2.4rem;
+        margin: 0;
       }
       p.lead {
+        font-family: 'EB Garamond', Georgia, serif;
+        font-style: italic;
+        font-size: 1.15rem;
         color: var(--encre-faible);
-        margin-top: 4px;
+        margin-top: 6px;
       }
       section {
         margin-top: 40px;
       }
       h2 {
-        font-size: 1rem;
-        border-bottom: 1px solid var(--grille);
-        padding-bottom: 8px;
+        font-size: 1.45rem;
+        border-bottom: 1px solid var(--encre);
+        padding-bottom: 6px;
       }
       dl {
         margin: 0;
@@ -77,64 +120,177 @@
         margin: 4px 0 0;
         color: var(--encre-faible);
       }
+      ol li,
+      ul li {
+        margin-top: 8px;
+      }
       code {
         font-family: 'IBM Plex Mono', ui-monospace, monospace;
         font-size: 0.9em;
       }
       a {
         color: var(--encre);
+        text-decoration-color: var(--marge);
+        text-underline-offset: 0.2em;
       }
       .retour {
         display: inline-block;
         margin-top: 48px;
         font-size: 0.9rem;
       }
+      @media (max-width: 640px) {
+        main {
+          margin: 0;
+          border: none;
+        }
+      }
     </style>
   </head>
   <body>
     <main>
-      <h1>Sources et licences</h1>
-      <p class="lead">Attribution des données, cartes et polices utilisées par Relevé.</p>
+      <h1>Sources, licences et méthode</h1>
+      <p class="lead">
+        Relevé ne dit jamais seulement « il fera 14 °C » : il dit quel modèle l’annonce, pourquoi ce
+        modèle, et avec quelle confiance. Voici comment.
+      </p>
+
+      <section>
+        <h2>Le choix du modèle</h2>
+        <p>
+          Sept modèles déterministes sont interrogés pour chaque lieu : AROME 1,3 km, AROME France
+          2,5 km et ARPEGE (Météo-France), ICON-D2 et ICON-EU (service météorologique allemand,
+          DWD), ECMWF IFS (Centre européen) et GFS (NOAA). À chaque échéance, un score explicable
+          désigne le modèle retenu :
+        </p>
+        <ol>
+          <li>
+            <strong>Maille et terrain.</strong> Une maille fine compte d’autant plus que le relief
+            ou le littoral créent des effets locaux, et que l’échéance est proche. Son poids décroît
+            avec l’échéance.
+          </li>
+          <li>
+            <strong>Moyenne échéance.</strong> Au-delà de deux ou trois jours, la qualité des grands
+            modèles globaux prime ; ECMWF y est la référence selon les vérifications
+            internationales.
+          </li>
+          <li>
+            <strong>Erreur mesurée ici.</strong> Chaque modèle est vérifié sur les 30 derniers jours
+            contre ce qui s’est réellement produit près du lieu (voir ci-dessous). Un modèle plus
+            juste que ses pairs gagne des points, un modèle moins juste en perd, avec une prudence
+            proportionnée au nombre d’heures vérifiées.
+          </li>
+        </ol>
+        <p>
+          Un modèle n’est retenu que s’il a réellement des données à l’instant considéré. Les
+          changements de modèle restent visibles, marqués d’un filet tireté ; jamais lissés. Vous
+          pouvez imposer un modèle dans l’onglet « Modèles » : au-delà de sa portée, la sélection
+          automatique reprend la main, là encore de façon visible.
+        </p>
+        <p>
+          Quand le modèle retenu ne fournit pas une grandeur (AROME 1,3 km ne donne ni nébulosité,
+          ni pression, ni code de temps), elle est prise au modèle le plus fin qui la fournit, et
+          l’interface le dit en toutes lettres.
+        </p>
+      </section>
+
+      <section>
+        <h2>La vérification contre le réel</h2>
+        <p>
+          Les prévisions émises la veille, l’avant-veille et jusqu’à sept jours avant sont
+          conservées par Open-Meteo. Relevé les compare, heure par heure, à des mesures :
+        </p>
+        <ul>
+          <li>
+            <strong>Station d’observation</strong> la plus proche, si elle est à moins de 30 km et à
+            moins de 200 m de dénivelé : observations METAR et rapports du DWD publiés par
+            Meteostat. Les valeurs <em>prévues</em> que Meteostat mêle à ses fichiers pour combler
+            les trous sont écartées une à une. La prévision est alors vérifiée au point même de la
+            station, pour ne pas pénaliser un modèle fin qui représente l’îlot de chaleur d’un
+            centre-ville face à la mesure d’un aéroport.
+          </li>
+          <li>
+            <strong>Réanalyse ERA5</strong> à défaut de station, ou pour les cumuls de pluie que les
+            messages METAR ne donnent pas. C’est une estimation, signalée comme telle : produite par
+            l’ECMWF sur une maille d’environ 30 km, elle avantage ECMWF et pénalise les modèles fins
+            en ville ou en relief.
+          </li>
+        </ul>
+        <p>
+          Le calcul se fait sur votre appareil ; aucune donnée personnelle n’est envoyée nulle part.
+        </p>
+      </section>
+
+      <section>
+        <h2>Au-delà de dix jours</h2>
+        <p>
+          L’ensemble ECMWF relance le modèle 51 fois avec des états initiaux légèrement différents.
+          Relevé en tire la fourchette dans laquelle se trouvent 8 trajectoires sur 10, et la part
+          des membres qui annoncent de la pluie : l’incertitude devient une forme, pas un chiffre
+          trompeur.
+        </p>
+      </section>
 
       <section>
         <h2>Données météo</h2>
         <dl>
           <dt>Open-Meteo</dt>
           <dd>
-            Prévisions horaires et journalières (modèles AROME, ARPEGE, ICON-EU, GFS) et géocodage
-            des communes, via <a href="https://open-meteo.com/">open-meteo.com</a>. Données sous
-            licence
+            Prévisions, ensemble, prévisions passées, réanalyse, qualité de l’air et géocodage, via
+            <a href="https://open-meteo.com/">open-meteo.com</a>, sous licence
             <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons BY 4.0</a>.
           </dd>
           <dt>Météo-France</dt>
           <dd>
-            Producteur des modèles numériques AROME et ARPEGE distribués par Open-Meteo, et de l'API
-            Vigilance (<a href="https://vigilance.meteofrance.fr/">vigilance.meteofrance.fr</a>,
-            optionnelle, activée par une clé saisie dans les réglages). Données publiques sous
+            Producteur des modèles AROME et ARPEGE. Données publiques sous
             <a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/"
               >Licence Ouverte / Open Licence Etalab 2.0</a
             >.
           </dd>
-          <dt>Infoclimat</dt>
+          <dt>Deutscher Wetterdienst (DWD)</dt>
           <dd>
-            Relevés observés par un réseau de stations bénévoles, via
-            <a href="https://www.infoclimat.fr/">infoclimat.fr</a> (optionnel, activé par une clé
-            saisie dans les réglages).
+            Producteur des modèles ICON-D2 et ICON-EU,
+            <a href="https://www.dwd.de/opendata">données ouvertes du DWD</a> (CC BY 4.0).
+          </dd>
+          <dt>ECMWF</dt>
+          <dd>
+            Modèle IFS et ensemble ENS,
+            <a href="https://www.ecmwf.int/en/forecasts/datasets/open-data">données ouvertes</a>
+            sous licence CC BY 4.0. Contient des données de l’ECMWF.
+          </dd>
+          <dt>NOAA</dt>
+          <dd>Modèle GFS, National Centers for Environmental Prediction, domaine public.</dd>
+          <dt>Copernicus</dt>
+          <dd>
+            Réanalyse ERA5 : contient des informations modifiées du Copernicus Climate Change
+            Service. Qualité de l’air et pollens : contient des informations modifiées du Copernicus
+            Atmosphere Monitoring Service (CAMS). Ni la Commission européenne ni l’ECMWF ne sont
+            responsables de l’usage qui en est fait.
+          </dd>
+          <dt>Meteostat</dt>
+          <dd>
+            Observations horaires des stations, via
+            <a href="https://meteostat.net/">meteostat.net</a>, sous licence
+            <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a> (usage non
+            commercial).
           </dd>
           <dt>RainViewer</dt>
           <dd>
-            Overlay radar de précipitations, via
+            Images radar de précipitations, via
             <a href="https://www.rainviewer.com/">rainviewer.com</a>.
+          </dd>
+          <dt>Infoclimat, Vigilance Météo-France</dt>
+          <dd>
+            Sources optionnelles, activées par une clé saisie dans les réglages (non requises).
           </dd>
         </dl>
       </section>
 
       <section>
-        <h2>Fond de carte</h2>
+        <h2>Fond de carte et géographie</h2>
         <dl>
           <dt>OpenStreetMap</dt>
           <dd>
-            © les contributeurs d'OpenStreetMap, disponible sous licence
+            © les contributeurs d’OpenStreetMap, sous licence
             <a href="https://opendatacommons.org/licenses/odbl/">Open Database License (ODbL)</a>.
             Voir <a href="https://www.openstreetmap.org/copyright">openstreetmap.org/copyright</a>.
           </dd>
@@ -148,18 +304,28 @@
       </section>
 
       <section>
-        <h2>Polices</h2>
+        <h2>Symboles et polices</h2>
         <dl>
+          <dt>Symboles de temps</dt>
+          <dd>
+            Dessinés d’après les symboles synoptiques de l’Organisation météorologique mondiale
+            (temps présent, nébulosité en huitièmes, barbules de vent).
+          </dd>
           <dt>IBM Plex Sans, IBM Plex Sans Condensed, IBM Plex Mono</dt>
           <dd>
             © IBM Corp., sous licence
-            <a href="https://openfontlicense.org/">SIL Open Font License 1.1</a>. Auto-hébergées,
-            sous-ensemblées en latin étendu. Voir <code>/fonts/LICENSE-OFL.txt</code>.
+            <a href="https://openfontlicense.org/">SIL Open Font License 1.1</a>. Voir
+            <code>/fonts/LICENSE-OFL.txt</code>.
+          </dd>
+          <dt>EB Garamond</dt>
+          <dd>
+            © The EB Garamond Project Authors, sous licence SIL Open Font License 1.1. Voir
+            <code>/fonts/LICENSE-OFL-EBGaramond.txt</code>.
           </dd>
         </dl>
       </section>
 
-      <a class="retour" href="/">← Retour à Relevé</a>
+      <a class="retour" href="/">Retour au relevé</a>
     </main>
   </body>
 </html>

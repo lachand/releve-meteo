@@ -2,127 +2,84 @@
 
 ## 1. Direction
 
-**Sujet** : un instrument de mesure, pas une application météo grand public. L'audience sait déjà ce qu'est un modèle de prévision, ou vient l'apprendre. Le travail de la page est de rendre lisible ce qui est mesuré, ce qui est estimé et ce qui est incertain.
+**Sujet** : le carnet d'un météorologue. Un instrument de mesure tenu à la plume, pas une application météo grand public. L'audience sait déjà ce qu'est un modèle de prévision, ou vient l'apprendre. Le travail de la page est de rendre lisible ce qui est mesuré, ce qui est estimé, ce qui est incertain, et quel modèle parle.
 
-**Le vocabulaire visuel vient du monde du sujet** : papier millimétré des barographes, tracés d'émagramme, légendes d'axes, chiffres alignés en colonnes. Pas de grandes icônes soleil-nuage stylisées, pas de dégradés de ciel, pas de photo de fond. L'interface a l'aspect d'un relevé, parce que c'est ce qu'elle est.
+**Le vocabulaire visuel vient du monde du sujet** : papier de registre quadrillé, filet de marge rouge, encre bleu-noir de stylo-plume, symboles synoptiques de l'OMM tels qu'on les trace sur une carte d'observation, tampon d'encre, annotations en italique. Pas d'icônes soleil-nuage stylisées, pas de dégradés de ciel, pas de photo de fond. L'interface a l'aspect d'un relevé, parce que c'est ce qu'elle est. (Évolution du 2026-09-28, demande explicite de pictogrammes de prévision : les symboles OMM remplacent l'étiquette texte seule, voir section 5.)
 
-**Élément signature** : la bande d'incertitude en hachures diagonales. Là où toutes les applications météo tracent une courbe unique et confiante, celle-ci trace la courbe du modèle actif sur une bande hachurée représentant l'écart entre modèles. Quand les modèles s'accordent, la bande disparaît presque. Quand ils divergent, elle s'ouvre visiblement. L'incertitude devient une forme, pas un badge.
+**Élément signature** : la bande d'incertitude en hachures diagonales. Là où toutes les applications météo tracent une courbe unique et confiante, celle-ci trace la courbe du modèle retenu sur une bande hachurée représentant l'écart entre modèles. Quand les modèles s'accordent, la bande disparaît presque. Quand ils divergent, elle s'ouvre visiblement. L'incertitude devient une forme, pas un badge. Le même principe vaut pour l'éventail de l'ensemble ECMWF au-delà de dix jours.
 
-**Risque assumé** : la confiance n'est pas encodée par la couleur. La couleur appartient exclusivement au modèle. La confiance est encodée par la **texture du trait**, comme sur un relevé tracé à la main : trait plein pour élevée, tireté pour moyenne, pointillé pour faible. C'est plus exigeant à lire au premier coup d'oeil qu'un feu tricolore, mais cela libère la couleur pour la seule information qui en a besoin, et cela reste lisible en niveaux de gris et pour un daltonien. Une légende permanente en bas du graphique rend l'apprentissage immédiat.
+**Deuxième signature** : le tampon « MODÈLE RETENU ». Le nom du modèle est aussi visible que la température, à la couleur du modèle, accompagné d'une note manuscrite qui dit pourquoi ce modèle (maille, terrain, erreur mesurée ici).
+
+**Risque assumé** : la confiance n'est pas encodée par la couleur. La couleur appartient exclusivement au modèle. La confiance est encodée par la **texture du trait**, comme sur un relevé tracé à la main : trait plein pour élevée, tireté pour moyenne, pointillé pour faible. Une légende permanente en bas du graphique rend l'apprentissage immédiat.
 
 ## 2. Palette
 
-Les couleurs de tracé sont la palette Okabe-Ito, choisie parce qu'elle est distinguable pour les trois formes principales de daltonisme. Ce n'est pas une préférence esthétique, c'est une contrainte de lisibilité assumée dans un produit qui superpose quatre courbes.
+Papier crème et encre de plume en clair, « carnet de nuit » (encre claire sur papier bleu-noir) en sombre. Les couleurs de tracé des modèles sont dérivées de la palette Okabe-Ito, distinguable pour les trois formes principales de daltonisme. Contraste d'au moins 3:1 sur le papier pour les éléments graphiques (WCAG 1.4.11) ; un nom de modèle composé à sa couleur l'est en grand corps (22 px gras et plus), sinon il est à l'encre avec une pastille de couleur.
 
 ```css
 :root {
-  /* Surfaces */
-  --papier:        #E9EDEA;  /* fond, gris-vert tres pale, papier d'enregistreur */
-  --papier-haut:   #F4F6F3;  /* cartes, panneaux */
-  --grille:        #C3CCC8;  /* lignes de grille, filets */
-  --grille-faible: #D8DFDB;  /* grille secondaire */
+  /* Surfaces : papier de registre */
+  --papier:        #F2EDE2;  /* fond, papier vergé crème */
+  --papier-haut:   #FBF8F1;  /* feuillets, panneaux */
+  --papier-creux:  #E9E2D3;  /* champs, zones en retrait, squelettes */
+  --grille:        #D6CCB8;  /* filets, grille sépia */
+  --grille-faible: #E4DCCB;  /* grille secondaire */
 
   /* Encre */
-  --encre:         #16232B;  /* texte principal, axes */
-  --encre-faible:  #5A6B72;  /* labels, unites, texte secondaire */
+  --encre:         #1C2733;  /* encre bleu-noir */
+  --encre-faible:  #5B6570;  /* annotations, unités */
+  --marge:         #AC4336;  /* filet de marge rouge, onglet actif */
 
-  /* Traces de modele (Okabe-Ito, assombri pour tenir sur fond clair) */
-  --arome:         #005B8F;  /* bleu */
-  --arpege:        #B35300;  /* vermillon fonce */
-  --icon-eu:       #007A5A;  /* vert bleute */
+  /* Tracés de modèle */
+  --arome:         #005B8F;  /* bleu profond */
+  --arome-france:  #2F7FB5;  /* bleu ciel */
+  --icon-d2:       #3B7D4F;  /* vert tendre */
+  --arpege:        #B35300;  /* vermillon foncé */
+  --icon-eu:       #00664B;  /* vert bleuté */
+  --ecmwf:         #7D6300;  /* ocre */
   --gfs:           #9B4E7E;  /* pourpre */
 
   /* Signaux */
   --alerte:        #A32020;  /* vigilance, seuil franchi */
-  --observe:       #16232B;  /* provenance mesuree: encre pleine */
-  --estime:        #5A6B72;  /* provenance estimee: encre affaiblie */
+  --observe:       #1C2733;  /* provenance mesurée : encre pleine */
+  --estime:        #5B6570;  /* provenance estimée : encre affaiblie */
+  --risque-faible: #6D6455;  /* niveaux de risque : intensité d'encre */
+  --risque-modere: #9A4B21;
+  --risque-fort:   #A32020;
 }
 ```
 
-Mode sombre, activé par `prefers-color-scheme` et surchargeable dans les réglages :
+Mode sombre, activé par `prefers-color-scheme` et surchargeable dans les réglages : papier `#131920`, feuillet `#1A222B`, encre `#E8E1D2`, encre faible `#A39A8B`, marge `#E0715F`, modèles éclaircis (`--arome #5AB0E8`, `--arome-france #8FC6EA`, `--icon-d2 #7FC78F`, `--arpege #EE9150`, `--icon-eu #3FBF98`, `--ecmwf #D9B640`, `--gfs #D08FB8`). Valeurs complètes dans `src/ui/styles/tokens.css`, seule source de vérité.
 
-```css
-@media (prefers-color-scheme: dark) {
-  :root {
-    --papier:        #10181C;
-    --papier-haut:   #18232A;
-    --grille:        #2C3A42;
-    --grille-faible: #212C33;
-    --encre:         #DCE5E2;
-    --encre-faible:  #8FA1A8;
-    --arome:         #4BA3DC;
-    --arpege:        #E8863A;
-    --icon-eu:       #34B48C;
-    --gfs:           #C784AC;
-    --alerte:        #E05252;
-    --observe:       #DCE5E2;
-    --estime:        #8FA1A8;
-  }
-}
-```
-
-Contraste : toute paire texte sur fond doit atteindre AA (4.5:1 pour le corps, 3:1 pour le texte large). À vérifier en CI, voir `TESTING.md`.
+Contraste : toute paire texte sur fond atteint AA (4,5:1 pour le corps, 3:1 pour le texte large).
 
 ## 3. Typographie
 
-Trois rôles, trois coupes de la même famille. IBM Plex est retenue parce qu'elle vient du dessin technique et documentaire, dispose d'une coupe condensée et d'une coupe monospace cohérentes, et possède de vrais chiffres tabulaires.
+Quatre rôles.
 
 ```css
 :root {
-  --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;
-  --font-corps:   'IBM Plex Sans', system-ui, sans-serif;
-  --font-donnee:  'IBM Plex Mono', ui-monospace, monospace;
+  --font-titre:   'EB Garamond', 'Iowan Old Style', Georgia, serif;  /* titres, annotations */
+  --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;  /* étiquettes, capitales */
+  --font-corps:   'IBM Plex Sans', system-ui, sans-serif;            /* texte courant */
+  --font-donnee:  'IBM Plex Mono', ui-monospace, monospace;          /* valeurs */
 }
 ```
 
-**Règle centrale** : toute valeur mesurée ou prévue est composée en `--font-donnee`, avec `font-variant-numeric: tabular-nums`, à un corps supérieur à son étiquette. Les chiffres ne bougent pas quand la valeur change. L'interface se lit comme un afficheur, pas comme un article.
+- **Titres** (nom du lieu, titres de feuillet) en EB Garamond 600 : le serif à contraste des registres imprimés.
+- **Annotations du météorologue** (justification du modèle, notes, états calmes) en EB Garamond italique. Jamais une fonte cursive fantaisie.
+- **Règle centrale inchangée** : toute valeur mesurée ou prévue est composée en `--font-donnee`, avec `font-variant-numeric: tabular-nums`, à un corps supérieur à son étiquette. Les chiffres ne bougent pas quand la valeur change.
+- Étiquettes d'axe, surtitres et en-têtes de colonne en `--font-display`, capitales, interlettrage large.
 
-Les titres de section et les étiquettes d'axe sont en `--font-display`, en capitales, avec un interlettrage large, comme les mentions portées sur un axe de graphique.
+Pas : `--pas-xs` 11 px, `--pas-s` 13 px, `--pas-m` 16 px, `--pas-l` 22 px, `--pas-xl` 40 px, `--pas-xxl` 64 px (température du moment).
 
-```css
-:root {
-  --pas-xs:  0.6875rem;  /* 11px, etiquettes d'axe, unites */
-  --pas-s:   0.8125rem;  /* 13px, corps secondaire */
-  --pas-m:   1rem;       /* 16px, corps */
-  --pas-l:   1.375rem;   /* 22px, valeurs secondaires */
-  --pas-xl:  2.5rem;     /* 40px, valeur principale */
-  --pas-xxl: 4rem;       /* 64px, temperature du moment */
-
-  --eyebrow: {
-    font-family: var(--font-display);
-    font-size: var(--pas-xs);
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--encre-faible);
-  }
-}
-```
-
-Chargement : les trois coupes en `woff2`, auto-hébergées dans `public/fonts/`, `font-display: swap`, sous-ensemble latin étendu. Pas d'appel à un CDN de polices, cela casserait le fonctionnement hors ligne.
+Chargement : `woff2` auto-hébergés dans `public/fonts/`, `font-display: swap`, sous-ensemble latin (qui couvre le français, « œ » compris), précachés par le service worker. Pas de CDN de polices : cela casserait le hors ligne.
 
 ## 4. Grille et espacement
 
-```css
-:root {
-  --u: 4px;
-  --esp-1: calc(var(--u) * 1);   /*  4px */
-  --esp-2: calc(var(--u) * 2);   /*  8px */
-  --esp-3: calc(var(--u) * 3);   /* 12px */
-  --esp-4: calc(var(--u) * 4);   /* 16px */
-  --esp-6: calc(var(--u) * 6);   /* 24px */
-  --esp-8: calc(var(--u) * 8);   /* 32px */
-  --esp-12: calc(var(--u) * 12); /* 48px */
+Unité de 4 px (`--esp-1` à `--esp-12`), `--rayon` 2 px (un relevé, pas une carte de visite), `--largeur-max` 1180 px. Points de rupture 640 px et 1024 px, conception mobile d'abord.
 
-  --rayon: 2px;          /* quasi nul: c'est un releve, pas une carte de visite */
-  --filet: 1px solid var(--grille);
-  --largeur-max: 1120px;
-}
-```
-
-Points de rupture : `640px` et `1024px`. Conception mobile d'abord.
-
-Le fond de page porte une grille millimétrée discrète, en `background-image` de gradients répétés, opacité très basse, désactivée sous `prefers-reduced-motion` inutile ici mais désactivée à l'impression. C'est le seul ornement autorisé de la page.
+Le fond de page est un papier de registre : grille sépia (pas majeur 40 px, mineur 8 px) et grain très léger (bruit SVG à 5 %), retirés à l'impression. Sur grand écran, un filet de marge rouge vertical court à gauche de la colonne. Le contenu est posé sur des **feuillets** (`Section`) : papier plus clair, filet d'encre sous le titre, ombre de papier à peine perceptible.
 
 ## 5. Encodages visuels, table de référence
 
@@ -130,194 +87,173 @@ Cette table est normative. Aucun composant ne doit inventer un autre encodage.
 
 | Information | Encodage | Jamais |
 |---|---|---|
-| Modèle | Couleur du tracé | Autre chose que la couleur |
+| Modèle | Couleur du tracé ; en texte, pastille de couleur ou tampon en grand corps | Autre chose que la couleur |
+| Modèle retenu à l'instant présent | Tampon encadré double filet, incliné de -2,5°, « MODÈLE RETENU » ou « CHOIX MANUEL » | Badge anonyme |
+| Justification du choix | Note en italique, une phrase par critère réel du score | Formule générique |
 | Confiance | Texture du trait : plein, tireté 6-3, pointillé 2-3 | Couleur, emoji, feu tricolore |
-| Dispersion inter-modèles | Bande hachurée diagonale à 45° | Aplat translucide |
+| Dispersion inter-modèles, éventail d'ensemble | Bande hachurée diagonale à 45° | Aplat translucide |
 | Provenance observée | Encre pleine, pastille circulaire pleine | Vert |
 | Provenance estimée | Encre affaiblie, pastille circulaire creuse | Rouge, orange |
 | Provenance prévue | Encre normale, sans pastille | Pastille |
-| Transition de modèle | Filet vertical tireté + étiquette verticale | Aucun marqueur |
+| Donnée complétée par un autre modèle | Mention « Complété, faute de donnée chez X : champ : Y » | Complément silencieux |
+| Transition de modèle | Filet vertical tireté (graphiques, ruban horaire, frise) + nom du nouveau modèle | Aucun marqueur |
+| Condition météo (code WMO) | Symbole synoptique OMM au trait, une encre, + étiquette texte française (visible ou accessible) | Pictogramme coloré, icône sans texte |
+| Nébulosité | Cercle de station rempli par huitièmes, ombrage hachuré | Aplat de couleur |
+| Vent | Barbule synoptique (demi-trait 5 nœuds, trait 10, fanion 50, double cercle si calme) + vitesse chiffrée | Flèche décorative animée |
+| Niveau de risque d'un phénomène | Intensité d'encre (`--risque-*`) + mot « faible », « modéré », « fort » | Feu tricolore |
 | Vigilance | Bandeau pleine largeur, couleur `--alerte` | Icône seule |
 | Donnée périmée | Bandeau d'horodatage en haut du contenu | Griser le contenu |
-| Condition météo (code WMO) | Étiquette texte courte en `--font-corps`, `--encre-faible` (ex. « Pluie légère », « Orage ») | Icône ou pictogramme, couleur dédiée |
 
-Condition météo : le code WMO (`weatherCode`) est traduit en étiquette texte française (table dans `src/ui/weatherCodePresentation.ts`), jamais en icône, pour rester cohérent avec le principe section 1 (pas de grandes icônes soleil-nuage stylisées). Affichée à côté de la température dans le bloc « maintenant », par jour dans la vue 7 jours, et par heure dans l'infobulle et la table de données équivalente de la timeline 48 h. Un code absent ou inconnu n'affiche aucune étiquette plutôt qu'un texte par défaut trompeur.
+Condition météo : le code WMO est traduit en symbole (`src/ui/symbols/WeatherSymbol.tsx`) et en étiquette (`src/ui/weatherCodePresentation.ts`). Le symbole n'est jamais la seule information : il porte l'étiquette comme nom accessible, ou l'étiquette est affichée à côté. Un code absent ou inconnu n'affiche aucun symbole plutôt qu'un symbole par défaut trompeur. Une planche de légende complète est présente dans l'onglet « Heure par heure ».
 
 ## 6. Maquettes
 
-### 6.1 Accueil, mobile (largeur 380)
+### 6.0 Structure
+
+Un carnet à intercalaires. En-tête « page de registre » (marque, recherche, favori, réglages ; puis nom du lieu en serif, fil département · altitude · terrain · coordonnées, date du relevé en italique), puis six onglets collants, puis la vue active. L'onglet ouvert est dans l'URL (`?vue=`), avec le lieu (`?lat=&lon=&nom=&alt=&dep=`).
+
+| Onglet | Contenu |
+|---|---|
+| Aujourd'hui | Maintenant (symbole, température, relevé chiffré, tampon, justification) ; pluie au quart d'heure (2 h) ; phénomènes sur 72 h ; ruban 24 h ; tendance 5 jours ; repères du jour ; qualité de l'air et pollens |
+| Heure par heure | Température 48 h et bande d'incertitude ; précipitations 48 h ; ruban 72 h ; ruban 3 h jusqu'à 10 jours ; pression ; rose des vents ; légende des symboles |
+| 15 jours | Liste de 10 jours (modèle retenu chaque jour) ; éventail de l'ensemble ECMWF sur 15 jours |
+| Radar | Carte OpenStreetMap et radar RainViewer |
+| Modèles | Tampon et justification ; frise de la cascade ; classement chiffré par critère ; choix manuel avec points forts et faibles ; comparaison superposée |
+| Fiabilité | Référence (station ou réanalyse) ; erreurs par modèle et par échéance ; courbe de l'erreur selon l'échéance |
+
+Seule la vue « Aujourd'hui » est dans le paquet initial ; les autres sont chargées à la demande.
+
+### 6.1 Aujourd'hui, mobile (largeur 390)
 
 ```
 ┌──────────────────────────────────┐
-│ ≡   VAL DE VIRIEU        ⌕   ⚙   │
-│     Isere · 468 m                │
+│ ▣ Relevé                   ☆  ⚙  │
+│ [ Chercher une commune ]    ⌖    │
+│──────────────────────────────────│
+│ Lyon                             │  EB Garamond
+│ RHÔNE · 170 M · PLAINE · 45,8° N │  petites capitales
+│ Relevé du lundi 28 septembre     │  italique
 ├──────────────────────────────────┤
-│                                  │
-│  MAINTENANT                      │
-│                                  │
-│   14,2 °C          ┌───────────┐ │
-│   ─────────        │  AROME    │ │
-│   ressenti 13,1    │ confiance │ │
-│                    │  elevee   │ │
-│   ↖ 12 km/h        └───────────┘ │
-│   raf. 24 km/h                   │
-│   1014 hPa  ↘                    │
-│                                  │
+│ [AUJ.] [HEURES] [15 J] [RADAR] … │  intercalaires
 ├──────────────────────────────────┤
-│ 48 HEURES                        │
-│                                  │
-│ 18°┤                     ╱▒▒╲    │
-│    │        ╱‾‾╲    ╱▒▒▒╱    ╲   │
-│ 14°┤   ────╱     ╲──╱ ┊         │
-│    │                  ┊          │
-│ 10°┤                  ┊          │
-│    └──┬────┬────┬────┬┊───┬────┬ │
-│      06h  12h  18h  00h┊ 06h  12h│
-│                        ┊         │
-│                    AROME│ARPEGE  │
-│                                  │
-│ ── plein: confiance elevee       │
-│ ▒▒ hachure: ecart entre modeles  │
+│ MAINTENANT                       │
+│  ◍  29,0 °C                      │  symbole OMM + valeur Mono
+│     Couvert · ressenti 26 °C     │
+│ VENT ⌐ S 18   RAFALES 37 km/h    │
+│ HUMIDITÉ 29 % ROSÉE 9,2 °C       │
+│┃ ╔═════════════════╗             │  filet de marge rouge
+│┃ ║  MODÈLE RETENU  ║             │  tampon incliné
+│┃ ║      AROME      ║             │
+│┃ ╚═════════════════╝             │
+│┃ AROME retenu pour ce lieu…      │  note italique
+│┃ • Plus juste ici sur la temp.…  │
+│┃ Complété, faute de donnée chez  │
+│┃ AROME : nébulosité : AROME Fr.  │
+│┃ Pourquoi ce modèle ?            │
 ├──────────────────────────────────┤
-│ 7 JOURS                          │
-│                                  │
-│ Lun 17  ▁▁  22° / 12°   0,0 mm   │
-│ Mar 18  ▃▃  19° / 11°   2,4 mm   │
-│ Mer 19  ▅▅  17° / 10°   6,1 mm ┊ │
-│ Jeu 20  ▂▂  20° /  9°   0,8 mm ┊ │
-│ Ven 21  ▁▁  23° / 11°   0,0 mm ┊ │
-│                                ┊ │
-│              confiance faible ──┘ │
+│ Pluie au quart d'heure           │
+│ Pas de pluie attendue d'ici 2 h  │
 ├──────────────────────────────────┤
-│  ◉ Val de Virieu   ○ Golfe du M. │
+│ Phénomènes à surveiller          │
+├──────────────────────────────────┤
+│ HEURE  16h 17h 18h ┊ 00h …  →    │  ruban défilant
+│ TEMPS   ◍   ◍   ◔  ┊  ●         │
+│ °C     29° 29° 28° ┊ 23°         │
+│ VENT    ⌐   ⌐   ⌐  ┊  ⌐          │  barbules
+│ MODÈLE AROME       ┊ ICON-EU     │  filet tireté = transition
 └──────────────────────────────────┘
 ```
 
-Le bloc « maintenant » ne cache pas quel modèle parle. Le nom du modèle est aussi visible que la température, c'est la thèse du produit.
-
-### 6.2 Détail horaire, desktop (largeur 1120)
+### 6.2 Modèles, desktop (largeur 1180)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│  VAL DE VIRIEU  ·  Isere  ·  468 m  ·  plateau        [ ⌕ lieu ]  [ ⚙ ]   │
+│ SÉLECTION · Quel modèle, et pourquoi                                       │
+│ ╔══════════════╗  AROME retenu pour ce lieu et cette échéance.            │
+│ ║MODÈLE RETENU ║  • Maille de 1,3 km : en plaine, la maille compte…       │
+│ ║    AROME     ║  • Plus juste ici sur la température : 1,2 °C…           │
+│ ╚══════════════╝  − Moins juste ici sur le vent : 4,5 km/h…               │
+│                   Suivant : ICON-D2, 7,9 points contre 9,2.               │
+│ Modèle retenu à chaque échéance                                            │
+│ [ AROME      ┊ ICON-EU                ┊ ECMWF IFS                      ]  │
+│  lun. 28     mar. 29    mer. 30    jeu. 1 …                               │
 ├────────────────────────────────────────────────────────────────────────────┤
-│  ⚠  VIGILANCE JAUNE ORAGES  ·  Isere  ·  jusqu'a mercredi 22h              │
-├──────────────────────────────────────────┬─────────────────────────────────┤
-│                                          │                                 │
-│  TEMPERATURE                             │  MODELE ACTIF                   │
-│                                          │  ─────────────                  │
-│ 22°┤                                     │  AROME 1,3 km                   │
-│    │              ╱▒▒▒▒╲                 │  Meteo-France                   │
-│ 18°┤      ╱‾‾‾╲  ╱▒▒▒▒▒▒╲ ╱┈┈┈           │  echeance 36 h                  │
-│    │  ───╱     ╲╱        ╳   ┈┈┈╲        │                                 │
-│ 14°┤ ╱                  ╱ ╲      ┈┈      │  Choisi parce que l'echeance    │
-│    │                   ┊                 │  demandee est a 12 h. Au dela   │
-│ 10°┤                   ┊                 │  de 36 h, ARPEGE prend le       │
-│    └──┬──────┬──────┬──┊───┬──────┬───   │  relais.                        │
-│      06h    12h    18h ┊  00h    06h     │                                 │
-│                        ┊                 │  CONFIANCE                      │
-│                  AROME │ ARPEGE          │  ─────────                      │
-│                                          │  Elevee jusqu'a mercredi 06h    │
-│  ── plein   confiance elevee             │  Moyenne ensuite                │
-│  ┈┈ pointille  confiance faible          │                                 │
-│  ▒▒ hachure  ecart entre modeles         │  Ecart max entre modeles        │
-│                                          │  temperature   1,2 °C           │
-├──────────────────────────────────────────┤  vent          6 km/h           │
-│                                          │  precipitations faible          │
-│  PRECIPITATIONS                          │                                 │
-│                                          │  ┌───────────────────────────┐  │
-│  6 ┤              ▓                      │  │ COMPARER LES MODELES      │  │
-│  4 ┤            ▓ ▓ ░                    │  └───────────────────────────┘  │
-│  2 ┤        ░   ▓ ▓ ░ ░                  │                                 │
-│  0 ┼────────░───▓─▓─░─░───────           │  RELEVE OBSERVE                 │
-│      06h   12h   18h   00h               │  ────────────────               │
-│                                          │  ● station Bourgoin, 11 km      │
-│  ▓ observe   ░ prevu                     │  24 h      1,8 mm               │
-│                                          │  7 jours   14,2 mm              │
-└──────────────────────────────────────────┴─────────────────────────────────┘
+│ RANG  MODÈLE        SCORE              MAILLE  PORTÉE  ERREUR J+1          │
+│ 1     ● AROME       9,2 ███████▒░      1,3 km  48 h    1,2 °C              │
+│ 2     ● ICON-D2     7,9 ██████▒▒░      2,2 km  48 h    1,1 °C              │
+│ …     █ maille et terrain  ▒ moyenne échéance  ░ erreur mesurée ici        │
+├────────────────────────────────────────────────────────────────────────────┤
+│ ( ) Automatique  RECOMMANDÉ    ( ) ● AROME  Météo-France · 1,3 km · 48 h   │
+│                                    + Maille la plus fine…                  │
+│                                    − Portée courte, 48 h au plus           │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 6.3 Mode comparaison
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│  COMPARER LES MODELES                                          [ fermer ]  │
-├────────────────────────────────────────────────────────────────────────────┤
-│  Variable  [ temperature ▾ ]     Echeance  [ 72 h ▾ ]                      │
-│                                                                            │
+│  COMPARER LES MODÈLES                                                      │
+│  Variable  [ température ▾ ]     Échéance  [ 72 h ▾ ]                      │
 │ 22°┤                          ╱‾‾‾╲                                        │
 │    │                    ╱━━━━╱     ╲━━━                                    │
 │ 18°┤        ╱‾‾‾╲ ╱‾‾‾‾╱  ╱┅┅┅┅╲                                          │
 │    │  ━━━━━╱     ╳      ╳┅       ┅┅┅┅                                     │
 │ 14°┤ ╱           ┅╲    ╱  ╲···········                                    │
-│    │              ┅╲··╱    ╲                                              │
-│ 10°┤                ··       ·······                                      │
 │    └──┬──────┬──────┬──────┬──────┬──────┬──────                          │
-│      06h    18h    06h    18h    06h    18h                               │
-│                                                                            │
-│  ━━ AROME     jusqu'a 36 h                                                 │
-│  ╱╲ ARPEGE    jusqu'a 96 h                                                 │
-│  ┅┅ ICON-EU   jusqu'a 168 h                                                │
-│  ·· GFS       jusqu'a 168 h                                                │
-│                                                                            │
-│  Ecart maximal 4,8 °C mercredi 15h. Les modeles ne s'accordent pas sur     │
-│  le passage de la perturbation.                                            │
+│  ━━ AROME jusqu'à 48 h   ╱╲ ARPEGE jusqu'à 102 h   ┅┅ ECMWF IFS …          │
+│  Écart maximal 4,8 °C mercredi 15h.                                        │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-En mode comparaison, la texture du trait sert à identifier le modèle en complément de la couleur, puisque la confiance n'a plus de sens quand on regarde chaque modèle séparément. Le changement de convention est explicite dans la légende.
+En mode comparaison, la texture du trait sert à identifier le modèle en complément de la couleur (une texture par modèle), puisque la confiance n'a plus de sens quand on regarde chaque modèle séparément. Le changement de convention est explicite dans la légende.
 
 ### 6.4 Fiabilité locale
 
 ```
-┌──────────────────────────────────┐
-│  FIABILITE A VAL DE VIRIEU       │
-│  90 derniers jours               │
-├──────────────────────────────────┤
-│  TEMPERATURE, erreur a 24 h      │
-│                                  │
-│  AROME    0,9 °C   ████░░░░  61  │
-│  ARPEGE   1,4 °C   ██████░░  61  │
-│  ICON-EU  1,7 °C   ███████░  58  │
-│  GFS      2,2 °C   ████████  58  │
-│                                  │
-│  PRECIPITATIONS, erreur a 24 h   │
-│                                  │
-│  AROME    1,2 mm   █████░░░  61  │
-│  ARPEGE   1,8 mm   ███████░  61  │
-│  ICON-EU     ---   collecte   6  │
-│  GFS         ---   collecte   6  │
-│                                  │
-│  Mesure locale, calculee sur cet │
-│  appareil. Aucune donnee ne quit-│
-│  te votre telephone.             │
-└──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ FIABILITÉ LOCALE · Qui a vu juste à Lyon                 │
+│ ● Température : mesures de la station Lyon / Bron        │
+│   (10,2 km, +30 m), du 29 août au 27 septembre.          │
+│ ○ Précipitations : réanalyse ERA5, une estimation…       │
+│ ERA5 avantage ECMWF et pénalise les modèles fins…        │
+├──────────────────────────────────────────────────────────┤
+│ Température   erreur moyenne en °C                       │
+│ MODÈLE      J+1   J+2   J+3   J+5   J+7   BIAIS J+1      │
+│ AROME       1,2    –     –     –     –    +0,8 °C        │
+│ ICON-D2     1̲,̲1̲    –     –     –     –    +0,1 °C        │
+│ ECMWF IFS   1,4   1,5   1,4   1̲,̲8̲   2̲,̲2̲   +0,0 °C        │
+│ [ courbe de l'erreur selon l'échéance ]                  │
+├──────────────────────────────────────────────────────────┤
+│ Calcul effectué sur cet appareil ; ces scores alimentent │
+│ directement le choix automatique du modèle.              │
+└──────────────────────────────────────────────────────────┘
 ```
+
+Le meilleur modèle de chaque colonne est souligné d'un trait de marge.
 
 ### 6.5 États non nominaux
 
 ```
 HORS LIGNE                          ERREUR
-┌────────────────────────┐          ┌────────────────────────┐
-│ ⊘ Hors ligne           │          │ Prevision indisponible │
-│ Releve du 17/08 a 14h  │          │                        │
-├────────────────────────┤          │ Le service de prevision│
-│                        │          │ ne repond pas.         │
-│  [ contenu normal,     │          │                        │
-│    non grise ]         │          │ [ Reessayer ]          │
-│                        │          │                        │
-└────────────────────────┘          └────────────────────────┘
+┌────────────────────────┐          ┌──────────────────────────┐
+│ Hors ligne · Relevé du │          │ Prévision indisponible.  │
+│ 28/09 à 15h27          │          │ Le service de prévision  │
+├────────────────────────┤          │ Open-Meteo ne répond pas.│
+│  [ contenu normal,     │          │ [ Réessayer ]            │
+│    non grisé ]         │          └──────────────────────────┘
+└────────────────────────┘
 
-AUCUN FAVORI                        FIABILITE EN COLLECTE
-┌────────────────────────┐          ┌────────────────────────┐
-│ Aucun lieu enregistre. │          │ Encore 4 releves avant │
-│                        │          │ le premier score.      │
-│ [ Chercher une commune]│          │ Revenez dans 4 jours.  │
-│ [ Utiliser ma position]│          │                        │
-└────────────────────────┘          └────────────────────────┘
+AUCUN LIEU                          VÉRIFICATION INDISPONIBLE
+┌────────────────────────┐          ┌──────────────────────────┐
+│ Aucun lieu au carnet.  │          │ Vérification indisponible│
+│ Cherchez une commune…  │          │ Les prévisions restent   │
+└────────────────────────┘          │ affichées, choisies sur  │
+                                    │ la maille et l'échéance. │
+                                    └──────────────────────────┘
 ```
 
-Le contenu périmé n'est jamais grisé. Griser suggère « désactivé ». L'horodatage suffit à dire ce qu'il en est.
+Le contenu périmé n'est jamais grisé. Griser suggère « désactivé ». L'horodatage suffit à dire ce qu'il en est. Chaque jeu secondaire (ensemble, vérification, qualité de l'air, nowcast) a ses propres états : son absence ne bloque jamais la prévision principale.
 
 ## 7. Rédaction de l'interface
 
@@ -326,13 +262,16 @@ Le contenu périmé n'est jamais grisé. Griser suggère « désactivé ». L'ho
 - Les erreurs ne s'excusent pas et ne sont jamais vagues. Elles disent ce qui a échoué et ce que l'utilisateur peut faire.
 - Les écrans vides invitent à agir.
 - Les unités sont toujours affichées, en `--encre-faible`, à un pas en dessous de la valeur.
-- Les termes techniques `AROME`, `ARPEGE`, `ICON-EU`, `GFS` sont conservés tels quels. Ne pas les traduire ni les vulgariser, l'audience les cherche.
+- Les noms de modèles `AROME`, `AROME France`, `ICON-D2`, `ARPEGE`, `ICON-EU`, `ECMWF IFS`, `GFS` sont conservés tels quels. Ne pas les traduire ni les vulgariser, l'audience les cherche.
+- Une justification dit le vrai critère, chiffré. Un critère défavorable au modèle retenu est dit aussi, à part (« Moins juste ici sur le vent… »).
+- Espaces insécables entre un nombre et son unité, et avant les deux-points.
 
 ## 8. Mouvement
 
 Peu, et seulement au service de la compréhension.
 
 - Transition de la bande d'incertitude quand on change de variable : 180 ms, `ease-out`.
+- Changement d'onglet : fondu de 150 ms.
 - Bascule du mode comparaison : ouverture du panneau, 220 ms.
 - Aucune animation d'entrée en cascade, aucun effet de survol décoratif, aucun compteur qui s'incrémente.
 - `@media (prefers-reduced-motion: reduce)` supprime toute transition, sans exception.

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CASCADE_BOUNDS_HOURS,
   CACHE_TTL_MS,
   CONFIDENCE_THRESHOLDS,
   RELIABILITY,
@@ -9,10 +8,6 @@ import {
 } from './constants';
 
 describe('constants', () => {
-  it('borne la cascade de modeles sur 36 / 96 / 168 h', () => {
-    expect(CASCADE_BOUNDS_HOURS).toEqual({ aromeMax: 36, arpegeMax: 96, mediumRangeMax: 168 });
-  });
-
   it('fixe les seuils de terrain', () => {
     expect(TERRAIN_THRESHOLDS).toEqual({
       mountainElevationM: 900,

@@ -79,7 +79,9 @@ export function NowPanel({
               {point.apparentTemperature.value !== null && (
                 <>
                   {' · '}ressenti{' '}
-                  <span data-donnee>{formatInteger(point.apparentTemperature.value)} °C</span>
+                  <span
+                    data-donnee
+                  >{`${formatInteger(point.apparentTemperature.value)}\u00a0°C`}</span>
                 </>
               )}
             </p>

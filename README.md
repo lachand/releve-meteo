@@ -8,26 +8,34 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 « AROME prévoit 14 °C, les autres modèles s'écartent de 0.8 °C, confiance
 élevée ». Voir [AGENTS.md](AGENTS.md) pour le principe complet.
 
-## État du projet
+## Ce que fait Relevé
 
-Lots 0 à 3 et 5 terminés : recherche de commune, géolocalisation, cascade
-AROME → ARPEGE → ICON-EU → GFS avec transition visible, timeline 48 h, vue
-7 jours, bande d'incertitude, mode comparaison, panneau modèle/confiance,
-cache IndexedDB avec repli mémoire, les quatre états d'interface,
-fonctionnement hors ligne complet (service worker, manifeste installable,
-bandeau de mise à jour), favoris réordonnables avec alias, URL partageable
-`?lat=&lon=`, réglages (unité de vent, thème, purge des données locales), et
-les enrichissements dérivés (pression 72 h, point de rosée, risques de gel
-et de brouillard, rose des vents, UV, lever/coucher du soleil). Lot 6 en
-partie fait : carte Leaflet avec fond OpenStreetMap et overlay radar
-RainViewer, avec cache hors ligne des tuiles déjà visitées ; le bandeau de
-vigilance par département reste bloqué, même contrainte que le Lot 4. Le
-Lot 4 (observé contre estimé) et le reste du Lot 6 (vigilance) attendent
-chacun un compte externe (Infoclimat, Météo-France Vigilance) pour mener
-leur spike CORS bloquant ; pas encore de fiabilité locale (Lot 7). Voir
-[BACKLOG.md](BACKLOG.md) pour le découpage en lots et l'avancement, et
-[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour l'ordre de
-construction retenu.
+- **Choisit le meilleur modèle pour le lieu, et le justifie.** Sept modèles
+  (AROME 1,3 km, AROME France, ICON-D2, ARPEGE, ICON-EU, ECMWF IFS, GFS)
+  sont notés à chaque échéance : maille et terrain, qualité en moyenne
+  échéance, erreur mesurée ici. Le modèle retenu apparaît en tampon, avec
+  une note qui cite ses vrais critères chiffrés. Vous pouvez imposer un
+  modèle ; chaque fiche dit ses points forts et ses points faibles.
+- **Vérifie les modèles contre le réel.** Les prévisions émises jusqu'à
+  sept jours avant sont comparées, sur 30 jours, aux mesures de la station
+  la plus proche (Meteostat), à défaut à la réanalyse ERA5, signalée comme
+  estimation. Ces scores alimentent directement le choix du modèle.
+- **Montre la prévision la plus complète possible** : maintenant, pluie au
+  quart d'heure sur 2 h, phénomènes à surveiller sur 72 h (orage, forte
+  pluie, neige, verglas, gel, brouillard, vent fort, chaleur, avec leurs
+  critères), ruban horaire sur 72 h puis toutes les 3 h jusqu'à 10 jours,
+  10 jours avec le modèle retenu chaque jour, éventail de l'ensemble ECMWF
+  sur 15 jours, pression, rose des vents, radar, qualité de l'air et
+  pollens.
+- **Reste transparent** : chaque valeur dit quel modèle la produit ; une
+  donnée empruntée à un autre modèle est nommée ; les changements de modèle
+  sont marqués, jamais lissés ; l'incertitude est une bande hachurée.
+- **Ressemble à un carnet de météorologue** : papier de registre, encre de
+  plume, symboles synoptiques de l'OMM, barbules de vent, thème sombre.
+- **Fonctionne hors ligne** (PWA installable), sans backend ni clé d'API.
+
+Plan de la refonte : [ROADMAP.md](ROADMAP.md). Avancement par lot et écarts
+constatés : [BACKLOG.md](BACKLOG.md).
 
 Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
 GitHub (build `npm run build`, dossier de sortie `dist`).
@@ -38,7 +46,13 @@ GitHub (build `npm run build`, dossier de sortie `dist`).
 npm install
 npm run dev       # serveur de développement
 npm run verify    # lint, format, typecheck, tests, build, e2e
+python3 scripts/generate-stations.py   # rafraichir la liste des stations
 ```
+
+Les tests e2e ne font aucun appel réseau : ils rejouent des réponses
+réelles enregistrées (`tests/fixtures/live/`) avec une horloge figée. Si
+le Chromium attendu par Playwright n'est pas installé, indiquer le binaire
+disponible par `PW_CHROMIUM_PATH`.
 
 Le service worker est désactivé en développement (`npm run dev`), sauf avec
 `VITE_SW=1 npm run dev`. En cas de comportement inexplicable côté PWA
@@ -57,6 +71,7 @@ navigateur avant toute autre investigation, ou lancer `npm run sw:reset`
 | [SERVICE_WORKER.md](SERVICE_WORKER.md) | Spécification du service worker et du cache |
 | [TESTING.md](TESTING.md) | Tests unitaires, intégration, e2e, non-régression |
 | [BACKLOG.md](BACKLOG.md) | Lots, tâches, critères de sortie |
+| [ROADMAP.md](ROADMAP.md) | Plan de la refonte « Relevé 2 » |
 
 ## Stack
 

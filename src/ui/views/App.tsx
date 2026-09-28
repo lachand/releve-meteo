@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { getAirQuality, getEnsemble, getNowcast, getVerifications } from '../../data/repository';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
@@ -28,14 +28,20 @@ import { TERRAIN_KIND_LABELS } from '../modelPresentation';
 import { explainSelection } from '../selectionExplanation';
 import { parseSharedPlace, sharedPlaceSearch, sharedView } from '../sharedPlace';
 import styles from './App.module.css';
-import { DaysView } from './DaysView';
-import { HoursView } from './HoursView';
-import { MapView } from './MapView';
-import { ModelsView } from './ModelsView';
-import { ReliabilityView } from './ReliabilityView';
 import { PHENOMENA_HORIZON_HOURS, TodayView } from './TodayView';
 import { VIEW_KEYS } from './viewModel';
 import type { ForecastViewModel, ViewKey } from './viewModel';
+
+// Seule la vue « Aujourd'hui » est dans le paquet initial : elle n'utilise
+// ni Chart.js ni Leaflet. Les autres vues sont chargees a la demande (et
+// precachees par le service worker pour le hors ligne).
+const HoursView = lazy(() => import('./HoursView').then((m) => ({ default: m.HoursView })));
+const DaysView = lazy(() => import('./DaysView').then((m) => ({ default: m.DaysView })));
+const MapView = lazy(() => import('./MapView').then((m) => ({ default: m.MapView })));
+const ModelsView = lazy(() => import('./ModelsView').then((m) => ({ default: m.ModelsView })));
+const ReliabilityView = lazy(() =>
+  import('./ReliabilityView').then((m) => ({ default: m.ReliabilityView })),
+);
 
 const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
@@ -332,12 +338,20 @@ export function App() {
                 aria-labelledby={`releve-tab-${view}`}
                 className={styles.panel}
               >
-                {view === 'jour' && <TodayView vm={vm} />}
-                {view === 'heures' && <HoursView vm={vm} />}
-                {view === 'jours' && <DaysView vm={vm} />}
-                {view === 'carte' && <MapView vm={vm} />}
-                {view === 'modeles' && <ModelsView vm={vm} />}
-                {view === 'fiabilite' && <ReliabilityView vm={vm} />}
+                <Suspense
+                  fallback={
+                    <div className={styles.loading} aria-busy="true" aria-label="Chargement">
+                      <div className={styles.skeleton} />
+                    </div>
+                  }
+                >
+                  {view === 'jour' && <TodayView vm={vm} />}
+                  {view === 'heures' && <HoursView vm={vm} />}
+                  {view === 'jours' && <DaysView vm={vm} />}
+                  {view === 'carte' && <MapView vm={vm} />}
+                  {view === 'modeles' && <ModelsView vm={vm} />}
+                  {view === 'fiabilite' && <ReliabilityView vm={vm} />}
+                </Suspense>
               </div>
             </>
           )}

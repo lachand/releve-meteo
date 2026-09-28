@@ -1,11 +1,5 @@
 import type { TerrainKind, WeatherVariable } from './types';
 
-export const CASCADE_BOUNDS_HOURS = {
-  aromeMax: 36,
-  arpegeMax: 96,
-  mediumRangeMax: 168,
-} as const;
-
 export const TERRAIN_THRESHOLDS = {
   mountainElevationM: 900,
   plateauElevationM: 300,

@@ -1,6 +1,7 @@
 import { HourlyStrip } from '../components/HourlyStrip';
 import { PrecipitationChart } from '../components/PrecipitationChart';
 import { PressureChart } from '../components/PressureChart';
+import { SymbolLegend } from '../components/SymbolLegend';
 import { Timeline48h } from '../components/Timeline48h';
 import { WindRose } from '../components/WindRose';
 import { Section } from './Section';
@@ -43,6 +44,9 @@ export function HoursView({ vm }: { readonly vm: ForecastViewModel }) {
           <WindRose bundle={vm.bundle} cascade={vm.cascade} />
         </Section>
       </div>
+      <Section eyebrow="Légende" title="Symboles du relevé">
+        <SymbolLegend />
+      </Section>
     </div>
   );
 }
