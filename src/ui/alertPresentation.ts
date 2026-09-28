@@ -1,7 +1,7 @@
 import type { AlertHit } from '../domain/alerts';
 import type { AlertRule, Preferences, WeatherVariable } from '../domain/types';
 import { formatCompact, formatDayHour } from './format';
-import { MODEL_LABELS } from './modelPresentation';
+import { MODEL_LABELS } from './modelLabels';
 import { convertWindSpeed, windUnitLabel } from './windUnit';
 
 /*

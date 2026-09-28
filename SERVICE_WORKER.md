@@ -230,27 +230,39 @@ Persistance : demander `navigator.storage.persist()` une seule fois, après que 
 
 Les notifications sont une **amélioration progressive**, jamais une promesse de l'interface tant que le support n'est pas vérifié.
 
-```ts
-export type PushSupport = 'full' | 'foreground-only' | 'none';
+Sans serveur, Web Push est exclu. La seule voie est la **veille en arrière-plan** par Periodic Background Sync : le navigateur réveille le service worker de temps en temps, à un rythme qu'il choisit.
 
-export function detectPushSupport(): PushSupport;
+```ts
+// src/pwa/backgroundWatch.ts (page)
+export type WatchStatus = 'unsupported' | 'blocked' | 'needs-install' | 'off' | 'on';
+export function readWatchStatus(): Promise<WatchStatus>;
+export function enableWatch(): Promise<WatchStatus>;   // permission, puis periodicSync.register
+export function disableWatch(): Promise<WatchStatus>;
 ```
 
-- `full` : `Notification`, `PushManager` et `serviceWorker` disponibles, et permission accordable. Cas Chrome et Firefox sur Android et bureau.
-- `foreground-only` : les règles d'alerte sont évaluées à l'ouverture de l'application et affichées en bandeau. Cas iOS et Safari en général, et tout navigateur ayant refusé la permission.
-- `none` : la section des alertes est masquée.
+- `unsupported` : pas de `periodicSync` sur l'enregistrement (Firefox, Safari, iOS). Les alertes sont évaluées à l'ouverture, et les Réglages le disent.
+- `blocked` : notifications refusées pour le site.
+- `needs-install` : Chromium n'accorde `periodic-background-sync` qu'à une application installée.
+- `off`, `on` : la veille peut être activée, ou l'est ; les Réglages donnent l'heure de la dernière veille.
 
-Le texte de l'interface doit refléter le mode réel. En `foreground-only`, l'intitulé est « Alertes à l'ouverture » et non « Notifications », et un texte d'aide explique que l'appareil ne permet pas les alertes en arrière-plan. Promettre une notification qui n'arrivera jamais est le pire défaut possible pour une application météo.
+Le texte de l'interface reflète le mode réel et ne promet jamais de temps réel : le navigateur choisit le moment, souvent quelques fois par jour au plus, jamais sans réseau.
 
-Gestionnaires côté SW, uniquement si `full` :
+Fonctionnement :
+
+1. La page recopie dans IndexedDB (`datasets`, clé `watch.v1|all`, `src/data/cache/watchStore.ts`) les lieux veillés : favoris et lieux portant une règle active, avec les intrants de leur cascade (terrain, vérification en cache, choix manuel), que le service worker ne peut pas recalculer seul (les préférences vivent en `localStorage`).
+2. Sur `periodicsync` (étiquette `releve-veille`), le service worker recharge la prévision de chaque lieu à alertes (4 jours), recalcule la même cascade que la page (`src/ui/cascadeView.ts`, pur), évalue les règles (`domain/alerts.ts`) et lit la vigilance du département (orange et rouge seulement).
+3. Chaque notification a une clé (règle et première heure franchie, ou phénomène, niveau et début de vigilance) ; une clé déjà notifiée, ou déjà montrée dans la page, n'est pas renotifiée. Les clés sont oubliées après 96 h.
+4. Le titre nomme le lieu et la règle ; le corps nomme le modèle de la valeur (« selon AROME ») ou le bulletin Météo-France : la provenance survit à la notification.
 
 ```ts
-self.addEventListener('push', (event) => { /* ... */ });
+self.addEventListener('periodicsync', (event) => { /* tag releve-veille : runWatch() */ });
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(focusOrOpen('/'));
+  // Ouvre ou ramène au premier plan le relevé du lieu (chemin de même origine seulement).
 });
 ```
+
+Un message `RELEVE_VEILLE` de la page lance une veille immédiate (après activation, une fois les lieux recopiés) ; le service worker répond `RELEVE_VEILLE_FAITE` aux pages ouvertes, qui relisent l'heure de la dernière veille.
 
 ## 10. Manifeste
 

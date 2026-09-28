@@ -4,8 +4,8 @@ import type { AlertRule, HourlyPoint, LocalIsoHour, ModelId, WeatherVariable } f
 /*
  * Alertes personnelles : des seuils choisis par l'utilisateur pour un lieu
  * (gel sous 2 °C, rafales au-dessus de 60 km/h...), evalues a chaque
- * ouverture sur la prevision du modele retenu heure par heure. Sans
- * serveur, pas de notification en arriere-plan : l'interface le dit.
+ * ouverture sur la prevision du modele retenu heure par heure, et par le
+ * service worker quand la veille en arriere-plan est active (watch.ts).
  */
 
 /** Horizon d'evaluation, heures. */

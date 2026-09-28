@@ -38,10 +38,18 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
   tous les 12,5 km sur 100 km autour du lieu, valeurs écrites dans les
   cases) et carte des favoris en étiquettes de station, sur un fond de
   carte sépia.
+- **Vigilance Météo-France officielle** du département, sans clé : bandeau
+  en tête du relevé dès le jaune, avec période, heure du bulletin et lien
+  vers la carte officielle ; distincte des phénomènes calculés par Relevé.
 - **Alertes personnelles** : un seuil par lieu (gel, chaleur, pluie,
   rafales), vérifié à chaque ouverture sur 72 h, avec le modèle qui le
-  franchit. Sans serveur, pas de notification quand l'application est
-  fermée : l'interface le dit.
+  franchit.
+- **Veille en arrière-plan**, sans serveur : là où le navigateur le permet
+  (Chrome ou Edge, application installée), le service worker recharge de
+  temps en temps la prévision des favoris et des lieux à alertes, avec la
+  même cascade de modèles, et notifie une alerte franchie ou une vigilance
+  orange ou rouge. Ailleurs, l'interface dit que les alertes sont vérifiées
+  à l'ouverture.
 - **Reste transparent** : chaque valeur dit quel modèle la produit ; une
   donnée empruntée à un autre modèle est nommée ; les changements de modèle
   sont marqués, jamais lissés ; l'incertitude est une bande hachurée.

@@ -8,7 +8,14 @@ import { getDb } from './db';
  */
 
 export type DatasetKind =
-  'ensemble' | 'verification' | 'airQuality' | 'nowcast' | 'station' | 'grid' | 'vigilance';
+  | 'ensemble'
+  | 'verification'
+  | 'airQuality'
+  | 'nowcast'
+  | 'station'
+  | 'grid'
+  | 'vigilance'
+  | 'watch';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -27,6 +34,7 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   station: 2,
   grid: 1,
   vigilance: 1,
+  watch: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

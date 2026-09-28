@@ -137,9 +137,10 @@ Lire `SERVICE_WORKER.md` en entier avant de commencer.
 - [x] Écran de fiabilité, `DESIGN.md` 6.4, avec l'état « en collecte »
 - [x] Mention explicite que le calcul reste sur l'appareil
 - [x] Règles d'alerte : création, activation, suppression, par lieu (température, pluie horaire, rafales ; au-dessus ou en dessous d'un seuil)
-- [ ] `detectPushSupport` et adaptation du texte d'interface
+- [x] Détection du support réel et adaptation du texte d'interface (`src/pwa/backgroundWatch.ts`, section « Veille en arrière-plan » des Réglages) : non pris en charge, notifications bloquées, application à installer, éteinte, active avec l'heure de la dernière veille
 - [x] Évaluation des règles à l'ouverture, sur 72 h, avec le modèle retenu heure par heure : bandeau en tête de la vue Aujourd'hui (`domain/alerts.ts`)
-- [ ] ~~Web Push~~ : impossible sans serveur d'envoi ; l'interface le dit (voir Écarts constatés)
+- [ ] ~~Web Push~~ : impossible sans serveur d'envoi (voir Écarts constatés)
+- [x] Veille en arrière-plan par Periodic Background Sync, sans serveur : le service worker recharge la prévision des favoris et des lieux à alertes, recalcule la même cascade que la page (terrain, vérification en cache et choix manuel recopiés dans IndexedDB), évalue les règles, lit la vigilance, et notifie une fois chaque alerte franchie et chaque vigilance orange ou rouge ; ce que la page a déjà montré n'est pas renotifié ; un clic ouvre le relevé du lieu (`src/pwa/watchRun.ts`, `src/domain/watch.ts`, e2e `tests/e2e/watch.spec.ts` par un vrai événement `periodicsync`)
 - [ ] Test de migration IndexedDB préservant l'archive
 
 **Sortie** : sur un appareil iOS, l'interface annonce « alertes à l'ouverture » et ne promet aucune notification en arrière-plan.
@@ -182,7 +183,8 @@ Plan détaillé dans `ROADMAP.md`. Démarré le 2026-09-28.
 - [x] Favoris sur la carte, en étiquettes de station (symbole, température, modèle), sans chevauchement ; barre des favoris sur une seule ligne, mode « Organiser »
 - [x] Fond de carte sépia commun au radar et à la prévision
 - [x] Accessibilité : les onglets gardent leur nom sous 640 px (régression couverte en e2e)
-- [x] Alertes (Lot 7) : règles par lieu, évaluation à l'ouverture sur 72 h, bandeau nommant le modèle ; pas de notification en arrière-plan (pas de serveur)
+- [x] Alertes (Lot 7) : règles par lieu, évaluation à l'ouverture sur 72 h, bandeau nommant le modèle ; veille en arrière-plan là où le navigateur la permet
+- [x] Vigilance Météo-France officielle, sans clé, par département retrouvé hors ligne
 
 **Sortie** : le modèle retenu est justifié par des critères chiffrés, vérifiés contre des mesures réelles quand une station représentative existe ; `npm run verify` vert.
 
@@ -236,7 +238,7 @@ Consigner ici toute divergence entre la spécification et la réalité, avec la 
 | 2026-09-28 | Fixture du point de station | Le quota Open-Meteo de l'environnement de développement était de nouveau épuisé au moment d'enregistrer la réponse au point de la station Lyon-Bron. | `tests/fixtures/stationPoint.ts` est synthétique, et le dit : valeurs constantes par modèle, distinctes de celles du lieu, pour prouver en test que l'écart est bien calculé au point de la station. |
 | 2026-09-28 | Leaflet et horloge figée | Le fondu d'apparition des tuiles se calcule avec la date courante : sous horloge figée (tests e2e, captures), les tuiles restent invisibles. | Fondu désactivé (`fadeAnimation: false`) : c'est aussi une animation décorative, que `DESIGN.md` exclut. |
 | 2026-09-28 | Radar, alternative à RainViewer | Recherche d'une source radar gratuite, sans clé et lisible depuis un navigateur, sur toute la France : EUMETNET OPERA (meilleures données, 1 km, 5 min, CC BY 4.0) n'envoie aucun en-tête CORS ; DWD et KNMI ne couvrent qu'une frange du nord-est ; les produits satellite d'EUMETSAT et IMERG de la NASA sont trop grossiers ou trop tardifs ; Météo-France exige une clé. | RainViewer conservé, en tuiles de 512 px au zoom 7 (densité du zoom 8 sans agrandissement). Si EUMETNET ouvre le CORS de son stockage, OPERA deviendrait lisible directement ; sinon il faudrait un serveur, contraire au principe sans backend. |
-| 2026-09-28 | Alertes, Web Push | Une notification quand l'application est fermée exige un serveur d'envoi (Web Push), exclu par le principe sans backend. | Alertes évaluées à chaque ouverture, sur 72 h ; la section des alertes le dit en toutes lettres. |
+| 2026-09-28 | Alertes, Web Push | Une notification quand l'application est fermée exige un serveur d'envoi (Web Push), exclu par le principe sans backend. | Alertes évaluées à chaque ouverture, sur 72 h. **Complété le 2026-09-28** par une veille Periodic Background Sync, sans serveur. Limites, dites dans les Réglages : Chrome et Edge seulement, application installée seulement, rythme choisi par le navigateur (souvent pas plus de quelques fois par jour, jamais sans réseau), donc pas une alerte en temps réel. Firefox et Safari (iOS compris) restent en « alertes à l'ouverture ». Vérifié en e2e par un événement `periodicsync` livré par le protocole DevTools ; l'inscription réelle, qui exige une application installée, ne peut pas l'être en test automatisé. |
 
 ---
 

@@ -58,7 +58,11 @@ describe('AlertRulesEditor', () => {
 
   it('dit que les alertes ne sont evaluees qu a l ouverture, faute de serveur', () => {
     renderEditor();
-    expect(screen.getByText(/Sans serveur, Relevé ne peut pas vous prévenir/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Sans serveur, Relevé ne peut vous prévenir application fermée que par la veille/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it('liste les regles du lieu, les active, les desactive et les supprime', async () => {

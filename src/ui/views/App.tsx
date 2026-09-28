@@ -8,6 +8,7 @@ import {
   getVerifications,
 } from '../../data/repository';
 import { evaluateAlerts } from '../../domain/alerts';
+import type { AlertHit } from '../../domain/alerts';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
@@ -27,6 +28,7 @@ import { formatCompact, formatLongDate } from '../format';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
+import { useBackgroundWatch } from '../hooks/useBackgroundWatch';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -53,6 +55,9 @@ const ModelsView = lazy(() => import('./ModelsView').then((m) => ({ default: m.M
 const ReliabilityView = lazy(() =>
   import('./ReliabilityView').then((m) => ({ default: m.ReliabilityView })),
 );
+
+/** Aucune alerte franchie : reference stable pour la veille. */
+const NO_HITS: readonly AlertHit[] = [];
 
 const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
@@ -289,6 +294,24 @@ export function App() {
     preferences.removeAlert,
   ]);
 
+  const watch = useBackgroundWatch({
+    place: bundle?.place ?? null,
+    terrain,
+    verification: verifications,
+    preferred,
+    favourites: preferences.preferences.favourites,
+    rules: preferences.preferences.alerts,
+    windUnit: preferences.preferences.units.wind,
+    alertHits: vm?.alertHits ?? NO_HITS,
+    vigilance:
+      vm !== null &&
+      vm.vigilanceSummary !== null &&
+      vm.vigilance.status === 'ready' &&
+      vm.vigilance.value.department !== null
+        ? { department: vm.vigilance.value.department.code, summary: vm.vigilanceSummary }
+        : null,
+  });
+
   const isFavourite =
     place !== null && preferences.preferences.favourites.some((f) => f.id === place.id);
   const displayName = place === null ? null : (place.alias ?? place.name);
@@ -377,6 +400,7 @@ export function App() {
           onSetTheme={preferences.setTheme}
           onPurge={preferences.purgeLocalData}
           onClose={() => setSettingsOpen(false)}
+          watch={watch}
         />
       )}
 

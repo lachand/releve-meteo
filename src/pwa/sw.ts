@@ -1,4 +1,7 @@
+import { markNotified, readWatchState } from '../data/cache/watchStore';
 import { CACHE_PREFIX, TILE_CACHE_MAX_ENTRIES, TILE_TTL_MS, TILES_CACHE_NAME } from './cacheNames';
+import { collectWatchNotifications } from './watchRun';
+import { WATCH_DONE_MESSAGE, WATCH_RUN_MESSAGE, WATCH_TAG } from './watchTags';
 
 // Redeclare le global `self` avec le type specifique au service worker : le
 // lib "WebWorker" de tsconfig.sw.json le type par defaut en scope generique.
@@ -90,9 +93,83 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if ((event.data as { type?: string } | null)?.type === 'SKIP_WAITING') {
+  const type = (event.data as { type?: string } | null)?.type;
+  if (type === 'SKIP_WAITING') {
     void self.skipWaiting();
+  } else if (type === WATCH_RUN_MESSAGE) {
+    event.waitUntil(runWatch());
   }
+});
+
+/*
+ * Veille en arriere-plan (SERVICE_WORKER.md 9) : Periodic Background Sync,
+ * au rythme choisi par le navigateur. Rien sans permission de
+ * notification ni lieu veille.
+ */
+interface PeriodicSyncEvent extends ExtendableEvent {
+  readonly tag: string;
+}
+
+async function runWatch(): Promise<void> {
+  if (Notification.permission !== 'granted') {
+    return;
+  }
+  const state = await readWatchState();
+  if (state.entries.length === 0) {
+    return;
+  }
+  const now = new Date();
+  const notifications = await collectWatchNotifications(state, now);
+  for (const notification of notifications) {
+    await self.registration.showNotification(notification.title, {
+      body: notification.body,
+      tag: notification.key,
+      lang: 'fr',
+      icon: '/icons/icon-192.png',
+      data: { url: notification.url },
+    });
+  }
+  await markNotified(
+    notifications.map((notification) => notification.key),
+    now,
+    now.getTime(),
+  );
+  const windows = await self.clients.matchAll({ type: 'window' });
+  for (const client of windows) {
+    client.postMessage({ type: WATCH_DONE_MESSAGE });
+  }
+}
+
+self.addEventListener('periodicsync', (event) => {
+  const sync = event as PeriodicSyncEvent;
+  if (sync.tag === WATCH_TAG) {
+    sync.waitUntil(runWatch());
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data as { url?: unknown } | null)?.url;
+  // Chemin de la meme origine seulement.
+  const target =
+    typeof url === 'string' && url.startsWith('/') && !url.startsWith('//') ? url : '/';
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const open = windows[0];
+      if (open === undefined) {
+        await self.clients.openWindow(target);
+        return;
+      }
+      try {
+        await open.focus();
+        await open.navigate(target);
+      } catch {
+        // Fenetre non controlee par ce service worker : nouvelle fenetre.
+        await self.clients.openWindow(target);
+      }
+    })(),
+  );
 });
 
 async function cacheFirst(request: Request, cacheName: string): Promise<Response> {

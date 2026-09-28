@@ -15,8 +15,9 @@ import styles from './Alerts.module.css';
 
 /*
  * Alertes personnelles (BACKLOG.md Lot 7) : seuils choisis pour ce lieu,
- * evalues a chaque ouverture sur 72 h. Relevé n'a pas de serveur : il ne
- * peut pas prevenir quand l'application est fermee, et le dit.
+ * evalues a chaque ouverture sur 72 h. Relevé n'a pas de serveur : hors de
+ * la veille en arriere-plan (Reglages), il ne peut pas prevenir quand
+ * l'application est fermee, et le dit.
  */
 
 type WindUnit = Preferences['units']['wind'];
@@ -95,8 +96,8 @@ export function AlertRulesEditor({
     <div className={styles.editor}>
       <p className={styles.note}>
         Évaluées à chaque ouverture du relevé, sur les {ALERT_HORIZON_HOURS} prochaines heures, avec
-        le modèle retenu heure par heure. Sans serveur, Relevé ne peut pas vous prévenir quand
-        l’application est fermée.
+        le modèle retenu heure par heure. Sans serveur, Relevé ne peut vous prévenir application
+        fermée que par la veille en arrière-plan, là où le navigateur la permet (Réglages).
       </p>
 
       {rules.length === 0 ? (

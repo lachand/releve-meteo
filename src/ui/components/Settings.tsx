@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { Preferences } from '../../domain/types';
+import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
 import styles from './Settings.module.css';
+import { WatchSettings } from './WatchSettings';
 
 interface SettingsProps {
   readonly preferences: Preferences;
@@ -8,6 +10,8 @@ interface SettingsProps {
   readonly onSetTheme: (theme: Preferences['theme']) => void;
   readonly onPurge: () => Promise<void>;
   readonly onClose: () => void;
+  /** Veille en arriere-plan ; absente, la section n'est pas montree. */
+  readonly watch?: BackgroundWatch;
 }
 
 export function Settings({
@@ -16,6 +20,7 @@ export function Settings({
   onSetTheme,
   onPurge,
   onClose,
+  watch,
 }: SettingsProps) {
   const [confirmingPurge, setConfirmingPurge] = useState(false);
   const [purged, setPurged] = useState(false);
@@ -67,6 +72,8 @@ export function Settings({
           </select>
         </label>
       </section>
+
+      {watch !== undefined && <WatchSettings watch={watch} />}
 
       <section className={styles.section}>
         <p className="eyebrow">Données locales</p>
