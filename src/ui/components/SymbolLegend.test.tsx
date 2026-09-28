@@ -20,6 +20,12 @@ describe('SymbolLegend', () => {
 
   it('rappelle que le symbole ne porte jamais seul l information', () => {
     render(<SymbolLegend />);
-    expect(screen.getByText(/Le cercle de station se remplit par huitièmes/)).toBeInTheDocument();
+    expect(screen.getByText(/Plus il y a de gouttes ou de flocons/)).toBeInTheDocument();
+  });
+
+  it('montre la lune a la place du soleil, la nuit', () => {
+    const { container } = render(<SymbolLegend />);
+    expect(screen.getByText('Ciel dégagé, la nuit')).toBeInTheDocument();
+    expect(container.querySelectorAll('svg[data-night]')).toHaveLength(3);
   });
 });

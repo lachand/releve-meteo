@@ -54,7 +54,8 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
   donnée empruntée à un autre modèle est nommée ; les changements de modèle
   sont marqués, jamais lissés ; l'incertitude est une bande hachurée.
 - **Ressemble à un carnet de météorologue** : papier de registre, encre de
-  plume, symboles synoptiques de l'OMM, barbules de vent, thème sombre.
+  plume, pictogrammes du temps au trait (lune la nuit), barbules de vent,
+  thème sombre.
 - **Fonctionne hors ligne** (PWA installable), sans backend ni clé d'API.
 
 Plan de la refonte : [ROADMAP.md](ROADMAP.md). Avancement par lot et écarts

@@ -85,7 +85,7 @@ describe('NowPanel', () => {
     expect(readingValue('Humidité')).toBe('70%');
     expect(readingValue('Rosée')).toBe('9,5°C');
     expect(readingValue('Pression')).toBe('962hPa');
-    expect(readingValue('Nébulosité')).toBe('4/8');
+    expect(readingValue('Nébulosité')).toBe('50%');
     expect(readingValue('Visibilité')).toBe('8km');
     expect(readingValue('Pluie')).toBe('0,6mm/h');
     const wind = readingValue('Vent');

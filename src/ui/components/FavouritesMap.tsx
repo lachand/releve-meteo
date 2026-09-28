@@ -14,7 +14,7 @@ import styles from './FavouritesMap.module.css';
 
 /*
  * Carte « Mes lieux » : chaque favori pose comme sur une carte
- * d'observation, symbole synoptique a l'emplacement, temperature a cote,
+ * d'observation, pictogramme du temps a l'emplacement, temperature a cote,
  * et le nom du modele qui la donne (jamais une valeur sans sa source).
  * Une liste reprend les memes lieux, pour le clavier et les lecteurs
  * d'ecran, et quand la carte est trop petite.
@@ -77,6 +77,7 @@ function Plot({
           <WeatherSymbol
             code={point.weatherCode}
             cloudCover={point.cloudCover.value}
+            isDay={point.isDay}
             size={26}
             decorative
           />
@@ -134,7 +135,7 @@ export function FavouritesMap({ snapshots, activePlaceId, onOpen }: FavouritesMa
           className: styles.plotIcon ?? '',
           html: '',
           iconSize: [150, 48],
-          // Le symbole (le cercle de station) est pose sur le lieu.
+          // Le pictogramme est pose sur le lieu.
           iconAnchor: [16, 16],
         }),
         interactive: false,

@@ -33,17 +33,47 @@ describe('WeatherSymbol', () => {
     expect(svg).not.toHaveAttribute('role');
   });
 
-  it('deduit le cercle de station de la nebulosite en octas quand elle est fournie', () => {
-    // Ciel degage (code 0) avec nebulosite complete (100 %) : le cercle plein
-    // ajoute un second <circle> (le remplissage) en plus du contour.
-    const { container: full } = render(<WeatherSymbol code={0} cloudCover={100} decorative />);
-    expect(full.querySelectorAll('circle')).toHaveLength(2);
+  it('dessine le soleil le jour et la lune la nuit, jamais le soleil en pleine nuit', () => {
+    const { container: day } = render(<WeatherSymbol code={0} isDay decorative />);
+    expect(day.querySelector('svg')).not.toHaveAttribute('data-night');
+    expect(day.querySelector('circle')).toHaveAttribute('fill', 'var(--picto-soleil)');
+    const { container: night } = render(<WeatherSymbol code={0} isDay={false} decorative />);
+    expect(night.querySelector('svg')).toHaveAttribute('data-night');
+    expect(night.querySelector('path')).toHaveAttribute('fill', 'var(--picto-lune)');
+    // Jour ou nuit inconnu : le jour, par defaut.
+    const { container: unknown } = render(<WeatherSymbol code={0} decorative />);
+    expect(unknown.querySelector('svg')).not.toHaveAttribute('data-night');
   });
 
-  it('retombe sur une table fixe par code quand la nebulosite n est pas fournie', () => {
-    // Meme code 0, sans nebulosite : la table fixe donne 0 octa, donc
-    // seulement le contour (un unique <circle>), aucun remplissage.
-    const { container: bare } = render(<WeatherSymbol code={0} cloudCover={null} decorative />);
-    expect(bare.querySelectorAll('circle')).toHaveLength(1);
+  it('affine le ciel des codes 0 a 3 par la nebulosite de l heure', () => {
+    // Code « peu nuageux » mais ciel couvert a 95 % : deux nuages, pas de soleil.
+    const { container: covered } = render(<WeatherSymbol code={1} cloudCover={95} decorative />);
+    expect(covered.querySelectorAll('[fill="var(--picto-soleil)"]')).toHaveLength(0);
+    expect(covered.querySelectorAll('[fill="var(--picto-nuage-sombre)"]')).toHaveLength(1);
+    // Code « couvert » mais ciel a 10 % : le soleil seul.
+    const { container: clear } = render(<WeatherSymbol code={3} cloudCover={10} decorative />);
+    expect(clear.querySelectorAll('[fill="var(--picto-nuage)"]')).toHaveLength(0);
+    expect(clear.querySelectorAll('[fill="var(--picto-soleil)"]')).toHaveLength(1);
+  });
+
+  it.each([
+    [51, 2],
+    [53, 3],
+    [55, 4],
+  ])('dit l intensite de la bruine %i par le nombre de gouttelettes (%i)', (code, count) => {
+    const { container } = render(<WeatherSymbol code={code} decorative />);
+    expect(container.querySelectorAll('g[fill="var(--picto-pluie)"] circle')).toHaveLength(count);
+  });
+
+  it('dessine chaque code de la table, et un eclair pour l orage', () => {
+    for (const code of [
+      45, 48, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 96, 99,
+    ]) {
+      const { container, unmount } = render(<WeatherSymbol code={code} decorative />);
+      expect(container.querySelector('svg')?.childElementCount).toBeGreaterThan(0);
+      unmount();
+    }
+    const { container } = render(<WeatherSymbol code={95} decorative />);
+    expect(container.querySelector('[fill="var(--picto-eclair)"]')).not.toBeNull();
   });
 });

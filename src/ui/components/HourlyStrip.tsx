@@ -127,6 +127,7 @@ export function HourlyStrip({
                 <WeatherSymbol
                   code={c.point.weatherCode}
                   cloudCover={c.point.cloudCover.value}
+                  isDay={c.point.isDay}
                   size={30}
                 />
                 {weatherCodeLabel(c.point.weatherCode) === null && (

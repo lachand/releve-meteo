@@ -62,7 +62,6 @@ export function NowPanel({
   const speed = convertWindSpeed(point.windSpeed.value, windUnit);
   const gust = convertWindSpeed(point.windGust.value, windUnit);
   const visibilityKm = point.visibility.value === null ? null : point.visibility.value / 1000;
-  const octas = point.cloudCover.value === null ? null : Math.round(point.cloudCover.value / 12.5);
   const filled = describeFilledFrom(point.filledFrom);
 
   return (
@@ -72,6 +71,7 @@ export function NowPanel({
           <WeatherSymbol
             code={point.weatherCode}
             cloudCover={point.cloudCover.value}
+            isDay={point.isDay}
             size={72}
             className={styles.symbol}
             decorative
@@ -114,7 +114,7 @@ export function NowPanel({
           <Reading label="Humidité" value={formatInteger(point.humidity.value)} unit="%" />
           <Reading label="Rosée" value={formatOneDecimal(point.dewPoint.value)} unit="°C" />
           <Reading label="Pression" value={formatInteger(point.pressure.value)} unit="hPa" />
-          <Reading label="Nébulosité" value={octas === null ? MISSING : `${octas}/8`} />
+          <Reading label="Nébulosité" value={formatInteger(point.cloudCover.value)} unit="%" />
           <Reading label="Visibilité" value={formatCompact(visibilityKm)} unit="km" />
           <Reading label="Pluie" value={formatCompact(point.precipitation.value)} unit="mm/h" />
         </dl>
