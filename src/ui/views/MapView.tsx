@@ -1,8 +1,10 @@
 import { getForecastGrid } from '../../data/repository';
 import type { ModelId } from '../../domain/types';
+import { FavouritesMap } from '../components/FavouritesMap';
 import { ForecastMap } from '../components/ForecastMap';
 import { RadarMap } from '../components/RadarMap';
 import { useDataset } from '../hooks/useDataset';
+import { useFavouriteSnapshots } from '../hooks/useFavouriteSnapshots';
 import { MODEL_LABELS } from '../modelPresentation';
 import { Section } from './Section';
 import styles from './Views.module.css';
@@ -15,6 +17,8 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
     // `model` est non nul des que la cle l'est.
     getForecastGrid(vm.place, model as ModelId),
   );
+
+  const favourites = useFavouriteSnapshots(vm.favourites);
 
   return (
     <div className={styles.stack}>
@@ -37,6 +41,11 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
             ce que change le relief.
           </p>
           <ForecastMap key={vm.place.id} place={vm.place} model={model} state={grid} now={vm.now} />
+        </Section>
+      )}
+      {favourites.length > 0 && (
+        <Section eyebrow="Favoris" title="Mes lieux, en ce moment">
+          <FavouritesMap snapshots={favourites} activePlaceId={vm.place.id} onOpen={vm.openPlace} />
         </Section>
       )}
     </div>

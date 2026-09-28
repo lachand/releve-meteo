@@ -1,0 +1,161 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.map {
+  isolation: isolate;
+  height: min(56vh, 460px);
+  min-height: 300px;
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+}
+
+.map:global(.leaflet-container) {
+  background: var(--papier-creux);
+}
+
+/* Conteneur Leaflet de l'etiquette : sans le fond blanc par defaut. */
+.plotIcon {
+  background: none;
+  border: none;
+}
+
+/* Etiquette de station : symbole sur le lieu, temperature, puis nom et modele. */
+.plot {
+  pointer-events: auto;
+  display: inline-grid;
+  grid-template-columns: 28px auto;
+  align-items: center;
+  column-gap: 2px;
+  padding: 1px 7px 3px 2px;
+  border: 1px solid var(--encre);
+  border-radius: var(--rayon);
+  background: color-mix(in srgb, var(--papier-haut) 90%, transparent);
+  color: var(--encre);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+  font-family: var(--font-corps);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/*
+ * Etiquette a gauche du lieu : colonnes inversees, puis decalage pour que
+ * le symbole reste pose sur le lieu (a 16 px du bord de l'icone).
+ */
+.plotIcon[data-side='left'] .plot {
+  grid-template-columns: auto 28px;
+  padding: 1px 2px 3px 7px;
+  transform: translateX(calc(-100% + 32px));
+  text-align: right;
+}
+
+.plotIcon[data-side='left'] .plotSymbol {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.plotIcon[data-side='left'] .plotTemp {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.plotIcon[data-side='left'] .plotName {
+  padding: 0 4px 0 0;
+}
+
+/* Carte etroite : symbole et temperature seuls ; nom et modele dans la liste. */
+.map[data-compact='true'] .plotName {
+  display: none;
+}
+
+.plot[data-active] {
+  outline: 2px solid var(--marge);
+  outline-offset: 1px;
+}
+
+.plot:focus-visible {
+  outline: 3px solid var(--encre);
+  outline-offset: 2px;
+}
+
+.plotSymbol {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Cercle de station vide, en attendant la prevision. */
+.stationCircle {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1.7px solid currentColor;
+  border-radius: 50%;
+}
+
+.plotTemp {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.plotName {
+  grid-column: 1 / -1;
+  padding-left: 4px;
+  font-family: var(--font-display);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--esp-2) var(--esp-3);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  text-align: left;
+  cursor: pointer;
+}
+
+.item[data-active] {
+  border-color: var(--encre);
+}
+
+.itemName {
+  font-family: var(--font-titre);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.itemValue {
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
+.caption {
+  margin: 0;
+  color: var(--encre-faible);
+  font-size: var(--pas-xs);
+  max-width: 48rem;
+}

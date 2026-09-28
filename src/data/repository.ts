@@ -239,6 +239,22 @@ export async function getVerifications(
   });
 }
 
+/**
+ * Verification deja en cache pour ce lieu, meme perimee, sans jamais
+ * interroger le reseau : pour les apercus (carte des favoris), ou une
+ * erreur mesuree la semaine passee vaut mieux que pas d'erreur du tout.
+ */
+export async function peekVerifications(
+  place: Place,
+  models: readonly ModelId[],
+): Promise<VerificationReport | null> {
+  const cached = await getDataset<VerificationReport>(
+    'verification',
+    `${place.id}|${[...models].sort().join(',')}`,
+  );
+  return cached?.value ?? null;
+}
+
 export function getAirQuality(place: Place): Promise<HttpResult<DatasetResult<AirQualitySeries>>> {
   return throughCache({
     kind: 'airQuality',

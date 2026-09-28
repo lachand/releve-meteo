@@ -241,6 +241,8 @@ export function App() {
       preferred,
       setPreferred,
       navigate,
+      favourites: preferences.preferences.favourites,
+      openPlace: setPlace,
     };
   }, [
     terrain,
@@ -258,6 +260,7 @@ export function App() {
     preferred,
     setPreferred,
     navigate,
+    preferences.preferences.favourites,
   ]);
 
   const isFavourite =

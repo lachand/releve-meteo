@@ -196,6 +196,20 @@ describe('App', { timeout: 30000 }, () => {
     expect(window.location.search).toContain('vue=carte');
   });
 
+  it('place les favoris sur la carte avec la valeur du modele retenu', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('button', { name: 'Ajouter aux favoris' }));
+
+    await user.click(screen.getByRole('tab', { name: 'Cartes' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Mes lieux, en ce moment' }),
+    ).toBeInTheDocument();
+    const favourites = within(screen.getByRole('list', { name: 'Mes lieux, valeurs du moment' }));
+    expect(await favourites.findByText(/selon AROME$/)).toBeInTheDocument();
+  });
+
   it('laisse choisir un modele manuellement, puis revenir a la selection automatique', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();

@@ -58,4 +58,8 @@ export interface ForecastViewModel {
   readonly preferred: ModelId | null;
   readonly setPreferred: (model: ModelId | null) => void;
   readonly navigate: (view: ViewKey) => void;
+  /** Lieux favoris, dans l'ordre choisi. */
+  readonly favourites: readonly Place[];
+  /** Ouvre le releve d'un autre lieu, dans la vue courante. */
+  readonly openPlace: (place: Place) => void;
 }

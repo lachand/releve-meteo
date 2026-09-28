@@ -1,23 +1,31 @@
 .bar {
   position: sticky;
   bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
   margin-top: var(--esp-6);
-  padding-top: var(--esp-4);
+  padding: var(--esp-2) 0;
   border-top: var(--filet);
   background: var(--papier);
 }
 
+/* Une seule ligne qui defile : la barre garde toujours la meme hauteur. */
 .list {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: var(--esp-2);
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .item {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--esp-1);
   border: var(--filet);
@@ -25,7 +33,29 @@
   background: var(--papier-haut);
 }
 
+.organize {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--esp-3);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: transparent;
+  color: var(--encre-faible);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.organize[aria-pressed='true'] {
+  border-color: var(--encre);
+  color: var(--encre);
+}
+
 .placeButton {
+  white-space: nowrap;
   min-height: 44px;
   padding: 0 var(--esp-3);
   border: none;

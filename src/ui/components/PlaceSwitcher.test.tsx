@@ -86,7 +86,10 @@ describe('PlaceSwitcher', () => {
         onRename={vi.fn()}
       />,
     );
-    await user.click(screen.getByRole('button', { name: `Deplacer ${virieu.name} vers le bas` }));
+    await user.click(screen.getByRole('button', { name: 'Organiser' }));
+    await user.click(
+      screen.getByRole('button', { name: `Déplacer ${virieu.name} vers la droite` }),
+    );
     expect(onReorder).toHaveBeenCalledWith([golfeDuMorbihan.id, virieu.id]);
   });
 
@@ -103,6 +106,7 @@ describe('PlaceSwitcher', () => {
         onRename={vi.fn()}
       />,
     );
+    await user.click(screen.getByRole('button', { name: 'Organiser' }));
     await user.click(screen.getByRole('button', { name: `Retirer ${virieu.name} des favoris` }));
     expect(onRemove).toHaveBeenCalledWith(virieu.id);
   });
@@ -120,6 +124,7 @@ describe('PlaceSwitcher', () => {
         onRename={onRename}
       />,
     );
+    await user.click(screen.getByRole('button', { name: 'Organiser' }));
     await user.click(screen.getByRole('button', { name: `Renommer ${virieu.name}` }));
     const input = screen.getByLabelText(`Renommer ${virieu.name}`);
     await user.clear(input);

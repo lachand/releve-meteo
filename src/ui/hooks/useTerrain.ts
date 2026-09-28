@@ -6,17 +6,16 @@ import type { Place, TerrainProfile } from '../../domain/types';
 
 const coastline = coastlineFixture as readonly CoastlinePoint[];
 
+/** Terrain d'un lieu (cote, montagne, plateau, plaine), hors React. */
+export function terrainOf(place: Place): TerrainProfile {
+  return classifyTerrain({
+    latitude: place.latitude,
+    longitude: place.longitude,
+    elevation: place.elevation,
+    distanceToCoastKm: distanceToCoastKm(place.latitude, place.longitude, coastline),
+  });
+}
+
 export function useTerrain(place: Place | null): TerrainProfile | null {
-  return useMemo(() => {
-    if (place === null) {
-      return null;
-    }
-    const distance = distanceToCoastKm(place.latitude, place.longitude, coastline);
-    return classifyTerrain({
-      latitude: place.latitude,
-      longitude: place.longitude,
-      elevation: place.elevation,
-      distanceToCoastKm: distance,
-    });
-  }, [place]);
+  return useMemo(() => (place === null ? null : terrainOf(place)), [place]);
 }
