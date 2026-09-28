@@ -1,0 +1,87 @@
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 calc(var(--esp-4) * -1);
+  padding: 0 var(--esp-4);
+  background: color-mix(in srgb, var(--papier) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: var(--filet-encre);
+}
+
+.list {
+  display: flex;
+  gap: var(--esp-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Intercalaire : onglet de papier plus clair, coins hauts à peine arrondis,
+ * posé sur le filet d'encre. L'onglet actif « sort » du classeur.
+ */
+.tab {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: var(--esp-2) var(--esp-4) var(--esp-2);
+  margin-top: var(--esp-2);
+  border: var(--filet);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: var(--papier-creux);
+  color: var(--encre-faible);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color var(--duree-courte) ease-out,
+    color var(--duree-courte) ease-out,
+    transform var(--duree-courte) ease-out;
+}
+
+.tab:hover {
+  color: var(--encre);
+}
+
+.tab[aria-selected='true'] {
+  background: var(--papier-haut);
+  color: var(--encre);
+  border-color: var(--encre);
+  transform: translateY(1px);
+  box-shadow: inset 0 3px 0 var(--marge);
+}
+
+.tab:focus-visible {
+  outline-offset: -4px;
+}
+
+.short {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .full {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+
+  .tab {
+    padding-inline: var(--esp-3);
+  }
+}
+
+@media print {
+  .bar {
+    display: none;
+  }
+}

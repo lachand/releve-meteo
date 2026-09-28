@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import type { ForecastBundle, ModelId } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './PressureChart.module.css';
 
 Chart.register(CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip);
@@ -36,9 +37,9 @@ function windowPoints(
     if (time === undefined) {
       continue;
     }
-    const segment = cascade.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
-    const hourly = segment ? bundle.series[segment.model]?.hourly[i] : undefined;
-    points.push({ time, value: hourly?.pressure.value ?? null, model: segment?.model ?? null });
+    // Point de cascade : modele retenu, champs absents completes et nommes.
+    const hourly = cascade.points[i] ?? undefined;
+    points.push({ time, value: hourly?.pressure.value ?? null, model: hourly?.model ?? null });
   }
   return points;
 }
@@ -72,17 +73,12 @@ export function PressureChart({ bundle, cascade }: PressureChartProps) {
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { color: cssVar('--grille-faible') },
-        },
-        y: {
-          title: { display: true, text: 'hPa' },
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY('hPa') },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           callbacks: {
             label: (item) => {
               const point = points[item.dataIndex];
@@ -135,25 +131,27 @@ export function PressureChart({ bundle, cascade }: PressureChartProps) {
         role="img"
         aria-label="Pression atmospherique sur 72 heures, couleur par modele actif"
       />
-      <table className={styles.dataTable}>
-        <caption>Pression atmospherique horaire sur 72 heures, avec le modele actif</caption>
-        <thead>
-          <tr>
-            <th scope="col">Heure</th>
-            <th scope="col">Pression</th>
-            <th scope="col">Modele</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.time}>
-              <td>{point.time}</td>
-              <td>{point.value === null ? '—' : `${point.value} hPa`}</td>
-              <td>{point.model === null ? '—' : MODEL_LABELS[point.model]}</td>
+      <div className={styles.dataTable}>
+        <table>
+          <caption>Pression atmospherique horaire sur 72 heures, avec le modele actif</caption>
+          <thead>
+            <tr>
+              <th scope="col">Heure</th>
+              <th scope="col">Pression</th>
+              <th scope="col">Modele</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.time}>
+                <td>{point.time}</td>
+                <td>{point.value === null ? '–' : `${point.value} hPa`}</td>
+                <td>{point.model === null ? '–' : MODEL_LABELS[point.model]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,39 +1,39 @@
+import { MODEL_SPECS } from '../domain/models';
 import type { ConfidenceLevel, ModelId, TerrainKind } from '../domain/types';
 
-// DESIGN.md section 7 : "AROME", "ARPEGE", "ICON-EU", "GFS" sont conserves
-// tels quels, jamais traduits ni vulgarises.
+// DESIGN.md section 7 : les noms de modele sont conserves tels quels,
+// jamais traduits ni vulgarises. Source unique : le catalogue du domaine.
 export const MODEL_LABELS: Readonly<Record<ModelId, string>> = {
-  arome: 'AROME',
-  arpege: 'ARPEGE',
-  icon_eu: 'ICON-EU',
-  gfs: 'GFS',
+  arome: MODEL_SPECS.arome.label,
+  arome_france: MODEL_SPECS.arome_france.label,
+  icon_d2: MODEL_SPECS.icon_d2.label,
+  arpege: MODEL_SPECS.arpege.label,
+  icon_eu: MODEL_SPECS.icon_eu.label,
+  ecmwf: MODEL_SPECS.ecmwf.label,
+  gfs: MODEL_SPECS.gfs.label,
 };
 
 export const MODEL_COLOR_VARS: Readonly<Record<ModelId, string>> = {
   arome: '--arome',
+  arome_france: '--arome-france',
+  icon_d2: '--icon-d2',
   arpege: '--arpege',
   icon_eu: '--icon-eu',
+  ecmwf: '--ecmwf',
   gfs: '--gfs',
 };
 
-export const MODEL_PRODUCERS: Readonly<Record<ModelId, string>> = {
-  arome: 'Météo-France',
-  arpege: 'Météo-France',
-  icon_eu: 'DWD',
-  gfs: 'NOAA',
-};
+/** Maille native, texte affiche : « 1,3 km ». */
+export function modelResolution(model: ModelId): string {
+  return `${new Intl.NumberFormat('fr-FR').format(MODEL_SPECS[model].resolutionKm)} km`;
+}
 
-/** Resolution native approximative, pour le contexte affiche a l'utilisateur. */
-export const MODEL_RESOLUTIONS: Readonly<Record<ModelId, string>> = {
-  arome: '1,3 km',
-  arpege: '10 km',
-  icon_eu: '13 km',
-  gfs: '25 km',
-};
+export function modelProducer(model: ModelId): string {
+  return MODEL_SPECS[model].producer;
+}
 
 // AGENTS.md : messages utilisateur en francais. ConfidenceLevel est un
-// identifiant de domaine ('high'|'medium'|'low'|'unavailable'), jamais
-// affiche tel quel.
+// identifiant de domaine, jamais affiche tel quel.
 export const CONFIDENCE_LEVEL_LABELS: Readonly<Record<ConfidenceLevel, string>> = {
   high: 'Élevée',
   medium: 'Moyenne',
@@ -59,4 +59,9 @@ export function cssVar(name: string): string {
 
 export function modelColor(model: ModelId): string {
   return cssVar(MODEL_COLOR_VARS[model]);
+}
+
+/** Couleur CSS utilisable dans un attribut style, resolue par le navigateur. */
+export function modelColorVar(model: ModelId): string {
+  return `var(${MODEL_COLOR_VARS[model]})`;
 }

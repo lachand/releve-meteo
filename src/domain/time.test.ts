@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { hasDstTransition, hoursBetween, indexOfNow, leadHoursFrom } from './time';
+import {
+  hasDstTransition,
+  hoursBetween,
+  indexOfNow,
+  leadHoursFrom,
+  localIsoFromUtc,
+  utcMsFromLocalIso,
+} from './time';
+
+describe('localIsoFromUtc', () => {
+  it('convertit en heure d ete (UTC+2) et d hiver (UTC+1)', () => {
+    expect(localIsoFromUtc(Date.UTC(2026, 7, 17, 12))).toBe('2026-08-17T14:00');
+    expect(localIsoFromUtc(Date.UTC(2026, 0, 5, 23))).toBe('2026-01-06T00:00');
+  });
+
+  it('fait l aller-retour avec utcMsFromLocalIso', () => {
+    const utc = Date.UTC(2026, 9, 25, 3);
+    expect(utcMsFromLocalIso(localIsoFromUtc(utc))).toBe(utc);
+  });
+});
 
 describe('hoursBetween', () => {
   it('compte 24h sur une journee ordinaire', () => {

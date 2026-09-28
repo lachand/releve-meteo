@@ -1,6 +1,14 @@
-import { CASCADE_BOUNDS_HOURS } from './constants';
-import { leadHoursFrom } from './time';
-import type { ForecastBundle, HourlyPoint, LocalIsoHour, ModelId } from './types';
+import { MODEL_ORDER } from './models';
+import type { ForecastBundle, HourlyPoint, Measure, ModelId } from './types';
+
+/*
+ * Cascade : decoupage de la timeline en segments contigus, un modele par
+ * segment. Le choix du modele a chaque echeance est fait par
+ * `modelSelection.ts` (score explicable, performance locale mesuree) ; ce
+ * module ne fait plus que manipuler les segments. La cascade fixe par
+ * echeance (AROME <= 36 h, ARPEGE <= 96 h...) des lots 1 a 6 est remplacee,
+ * cf. ROADMAP.md phase A.
+ */
 
 export interface CascadeSegment {
   readonly model: ModelId;
@@ -8,91 +16,106 @@ export interface CascadeSegment {
   readonly endIndex: number; // inclusif
 }
 
-const CASCADE_ORDER: readonly ModelId[] = ['arome', 'arpege', 'icon_eu', 'gfs'];
+/**
+ * Champs qu'un modele peut ne pas fournir alors qu'il couvre l'echeance
+ * (AROME 1,3 km : ni nebulosite, ni pression, ni code de temps chez
+ * Open-Meteo). La temperature n'en fait pas partie : c'est elle qui definit
+ * la couverture d'un modele, un modele sans temperature n'est pas retenu.
+ */
+export const FILLABLE_FIELDS = [
+  'precipitation',
+  'windSpeed',
+  'windGust',
+  'windDirection',
+  'pressure',
+  'dewPoint',
+  'cloudCover',
+  'radiation',
+  'humidity',
+  'apparentTemperature',
+  'precipitationProbability',
+  'snowfall',
+  'cape',
+  'visibility',
+  'freezingLevel',
+  'weatherCode',
+] as const;
 
-function boundHoursFor(model: ModelId): number {
-  switch (model) {
-    case 'arome':
-      return CASCADE_BOUNDS_HOURS.aromeMax;
-    case 'arpege':
-      return CASCADE_BOUNDS_HOURS.arpegeMax;
-    case 'icon_eu':
-    case 'gfs':
-      return CASCADE_BOUNDS_HOURS.mediumRangeMax;
-  }
-}
+export type FillableField = (typeof FILLABLE_FIELDS)[number];
 
 /**
- * Retourne le modele a utiliser pour une echeance donnee, ou null si
- * aucun modele disponible ne couvre cette echeance.
- * Bornes: leadHours <= 36 -> arome, <= 96 -> arpege, <= 168 -> icon_eu puis gfs.
- *
- * Repli a l'interieur d'une tranche : si le modele nominal est absent,
- * prend le suivant dans l'ordre arome/arpege/icon_eu/gfs qui couvre encore
- * l'echeance. Ne remonte jamais vers un modele plus fin que l'echeance ne
- * le permet.
+ * Point de la cascade : les valeurs du modele retenu, et pour chaque champ
+ * que ce modele ne fournit pas a cet instant, la valeur du modele le plus
+ * fin qui la fournit, avec son nom dans `filledFrom`. Rien n'est lisse ni
+ * moyenne : chaque valeur vient d'un modele nomme (AGENTS.md, regle 7).
  */
-export function selectModelForLeadTime(
-  leadHours: number,
-  available: readonly ModelId[],
-): ModelId | null {
-  if (leadHours < 0 || leadHours > CASCADE_BOUNDS_HOURS.mediumRangeMax) {
-    return null;
-  }
-  const nominalIndex = CASCADE_ORDER.findIndex((model) => leadHours <= boundHoursFor(model));
-  // gfs couvre jusqu'a mediumRangeMax et leadHours y est deja borne ci-dessus :
-  // findIndex trouve toujours un modele nominal, ce -1 est structurel plutot
-  // qu'atteignable.
-  /* v8 ignore next 3 */
-  if (nominalIndex === -1) {
-    return null;
-  }
-  for (let i = nominalIndex; i < CASCADE_ORDER.length; i += 1) {
-    const model = CASCADE_ORDER[i];
-    if (model !== undefined && available.includes(model)) {
-      return model;
-    }
-  }
-  return null;
-}
-
-/**
- * Decoupe la timeline en segments contigus par modele.
- * Les segments sont ordonnes, sans chevauchement, et couvrent la timeline
- * sauf les echeances sans modele disponible qui sont simplement omises.
- */
-export function buildCascade(
-  timeline: readonly LocalIsoHour[],
-  now: Date,
-  available: readonly ModelId[],
-): readonly CascadeSegment[] {
-  const segments: CascadeSegment[] = [];
-  for (const [index, point] of timeline.entries()) {
-    const model = selectModelForLeadTime(leadHoursFrom(now, point), available);
-    if (model === null) {
-      continue;
-    }
-    const last = segments.at(-1);
-    if (last !== undefined && last.model === model && last.endIndex === index - 1) {
-      segments[segments.length - 1] = { ...last, endIndex: index };
-    } else {
-      segments.push({ model, startIndex: index, endIndex: index });
-    }
-  }
-  return segments;
-}
+export type BlendedPoint = HourlyPoint & {
+  readonly model: ModelId;
+  readonly filledFrom: Readonly<Partial<Record<FillableField, ModelId>>>;
+};
 
 /** Index de timeline ou le modele change. Utilise pour dessiner les marqueurs. */
 export function transitionIndices(segments: readonly CascadeSegment[]): readonly number[] {
   return segments.slice(1).map((segment) => segment.startIndex);
 }
 
+/** Modele du segment qui contient l'index, ou null hors cascade. */
+export function modelAt(segments: readonly CascadeSegment[], index: number): ModelId | null {
+  const segment = segments.find((s) => index >= s.startIndex && index <= s.endIndex);
+  return segment?.model ?? null;
+}
+
+function isMissing(point: HourlyPoint, field: FillableField): boolean {
+  return field === 'weatherCode' ? point.weatherCode === null : point[field].value === null;
+}
+
+/** Complete les champs absents du point retenu par le modele le plus fin qui les fournit. */
+function completePoint(
+  bundle: ForecastBundle,
+  index: number,
+  point: HourlyPoint,
+  model: ModelId,
+): BlendedPoint {
+  const filledFrom: Partial<Record<FillableField, ModelId>> = {};
+  const completed: Record<string, unknown> = { ...point };
+  for (const field of FILLABLE_FIELDS) {
+    if (!isMissing(point, field)) {
+      continue;
+    }
+    for (const donor of MODEL_ORDER) {
+      const candidate = donor === model ? undefined : bundle.series[donor]?.hourly[index];
+      if (candidate === undefined || isMissing(candidate, field)) {
+        continue;
+      }
+      completed[field] =
+        field === 'weatherCode' ? candidate.weatherCode : (candidate[field] satisfies Measure);
+      filledFrom[field] = donor;
+      break;
+    }
+  }
+  return { ...(completed as unknown as HourlyPoint), model, filledFrom };
+}
+
+/** Point de la cascade a un index de timeline ; null hors cascade ou serie absente. */
+export function blendedPointAt(
+  bundle: ForecastBundle,
+  segments: readonly CascadeSegment[],
+  index: number,
+): BlendedPoint | null {
+  const model = modelAt(segments, index);
+  if (model === null) {
+    return null;
+  }
+  const point = bundle.series[model]?.hourly[index];
+  return point === undefined ? null : completePoint(bundle, index, point, model);
+}
+
 /** Serie fusionnee selon la cascade, pour l'affichage par defaut. */
 export function blendByCascade(
   bundle: ForecastBundle,
   segments: readonly CascadeSegment[],
-): readonly (HourlyPoint & { readonly model: ModelId })[] {
-  const blended: (HourlyPoint & { readonly model: ModelId })[] = [];
+): readonly BlendedPoint[] {
+  const blended: BlendedPoint[] = [];
   for (const segment of segments) {
     const series = bundle.series[segment.model];
     if (series === undefined) {
@@ -101,7 +124,7 @@ export function blendByCascade(
     for (let i = segment.startIndex; i <= segment.endIndex; i += 1) {
       const point = series.hourly[i];
       if (point !== undefined) {
-        blended.push({ ...point, model: segment.model });
+        blended.push(completePoint(bundle, i, point, segment.model));
       }
     }
   }

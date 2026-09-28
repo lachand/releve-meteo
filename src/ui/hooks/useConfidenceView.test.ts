@@ -16,7 +16,7 @@ const place: Place = {
 const plain: TerrainProfile = { kind: 'plain', elevation: 200, distanceToCoastKm: 100 };
 
 function point(temperature: number): HourlyPoint {
-  const measure = (value: number) => ({ value, provenance: 'forecast' as const });
+  const measure = (value: number | null) => ({ value, provenance: 'forecast' as const });
   return {
     time: '2026-08-17T14:00',
     temperature: measure(temperature),
@@ -28,7 +28,15 @@ function point(temperature: number): HourlyPoint {
     dewPoint: measure(8),
     cloudCover: measure(50),
     radiation: measure(200),
+    humidity: measure(65),
+    apparentTemperature: measure(13),
+    precipitationProbability: measure(null),
+    snowfall: measure(0),
+    cape: measure(0),
+    visibility: measure(20000),
+    freezingLevel: measure(3000),
     weatherCode: 1,
+    isDay: true,
   };
 }
 

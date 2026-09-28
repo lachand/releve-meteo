@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { clearAllLocalData } from '../../data/cache/db';
+import { clearModelChoices } from '../../data/cache/modelChoice';
 import {
   addFavourite as addFavouriteToPrefs,
   defaultPreferences,
@@ -87,6 +88,7 @@ export function usePreferences(): PreferencesApi {
 
   const purgeLocalData = useCallback(async () => {
     await clearAllLocalData();
+    clearModelChoices();
     const defaults = defaultPreferences();
     writePreferences(defaults);
     setPreferences(defaults);

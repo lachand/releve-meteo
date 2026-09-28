@@ -1,10 +1,25 @@
 import { CACHE_TTL_MS } from '../domain/constants';
+import type { EnsembleHourly } from '../domain/ensemble';
+import type { StationRecord } from '../domain/stationCheck';
+import { nearestStation } from '../domain/stations';
+import type { Station, StationMatch } from '../domain/stations';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
+import { fetchAirQuality } from './clients/airQuality';
+import type { AirQualitySeries } from './clients/airQuality';
+import { fetchEnsemble } from './clients/ensemble';
 import { fetchPlaces } from './clients/geocoding';
+import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
-import { fetchForecast } from './clients/openMeteo';
+import { fetchStationYear, parseStationRecords } from './clients/meteostat';
+import { fetchForecast, fetchNowcast } from './clients/openMeteo';
+import { fetchVerifications } from './clients/verification';
+import type { VerificationReport } from './clients/verification';
+import { getDataset, setDataset } from './cache/datasetStore';
+import type { DatasetKind } from './cache/datasetStore';
 import { getCachedPlaces, normalizeQuery, setCachedPlaces } from './cache/geocodingStore';
 import { getCachedForecast, setCachedForecast } from './cache/forecastStore';
+import { mapNowcast } from './mappers/nowcastMapper';
+import type { Nowcast } from './mappers/nowcastMapper';
 import { mapOpenMeteoResponse } from './mappers/openMeteoMapper';
 import { enqueue } from './queue';
 
@@ -21,10 +36,14 @@ export interface ForecastResult {
   readonly missingModels: readonly ModelId[];
 }
 
-// Lot 1 ne couvre que la prevision courante : ni le repli sur l'observe
-// (Lot 4) ni l'archivage de fiabilite (Lot 7) n'exigent encore past_days.
-const PAST_DAYS = 0;
-const FORECAST_DAYS = 7;
+/**
+ * Un jour passe : les 24 dernieres heures s'affichent en 'estimated',
+ * pour situer la prevision par rapport a ce qui vient de se passer.
+ * Dix jours de deterministe : ECMWF et GFS portent la fin de la cascade,
+ * l'ensemble ECMWF (15 jours) prend le relais dans la vue longue.
+ */
+export const PAST_DAYS = 1;
+export const FORECAST_DAYS = 10;
 
 function missingModelsOf(request: ForecastRequest, bundle: ForecastBundle): readonly ModelId[] {
   return request.models.filter((model) => bundle.series[model] === undefined);
@@ -114,5 +133,179 @@ export async function searchPlaces(query: string): Promise<HttpResult<readonly P
       await setCachedPlaces(query, result.value, now, now + CACHE_TTL_MS.geocoding);
     }
     return result;
+  });
+}
+
+/** Resultat d'un jeu de donnees secondaire, avec son horodatage. */
+export interface DatasetResult<T> {
+  readonly value: T;
+  readonly fetchedAt: number;
+  readonly stale: boolean;
+}
+
+/**
+ * Lecture a travers le cache generique : frais -> cache ; sinon reseau ;
+ * reseau en echec -> copie perimee si elle existe (stale), sinon l'echec.
+ */
+async function throughCache<T>(input: {
+  readonly kind: DatasetKind;
+  readonly placeId: string;
+  readonly ttlMs: number;
+  readonly fetcher: () => Promise<HttpResult<T>>;
+}): Promise<HttpResult<DatasetResult<T>>> {
+  const now = Date.now();
+  const cached = await getDataset<T>(input.kind, input.placeId);
+  if (cached !== null && cached.expiresAt > now) {
+    return { ok: true, value: { value: cached.value, fetchedAt: cached.storedAt, stale: false } };
+  }
+  return enqueue(`${input.kind}:${input.placeId}`, async () => {
+    const result = await input.fetcher();
+    if (!result.ok) {
+      if (cached !== null) {
+        return {
+          ok: true,
+          value: { value: cached.value, fetchedAt: cached.storedAt, stale: true },
+        } satisfies HttpResult<DatasetResult<T>>;
+      }
+      return result;
+    }
+    await setDataset(input.kind, input.placeId, result.value, now, now + input.ttlMs);
+    return {
+      ok: true,
+      value: { value: result.value, fetchedAt: now, stale: false },
+    } satisfies HttpResult<DatasetResult<T>>;
+  });
+}
+
+export function getEnsemble(place: Place): Promise<HttpResult<DatasetResult<EnsembleHourly>>> {
+  return throughCache({
+    kind: 'ensemble',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.ensemble,
+    fetcher: () => fetchEnsemble(place.latitude, place.longitude),
+  });
+}
+
+let stationsPromise: Promise<readonly Station[]> | null = null;
+
+/**
+ * Stations d'observation de France metropolitaine, liste statique generee
+ * par `scripts/generate-stations.py` et servie avec l'application (donc
+ * disponible hors ligne). Liste vide si le fichier manque : la
+ * verification se replie alors sur la reanalyse.
+ */
+export function loadStations(): Promise<readonly Station[]> {
+  stationsPromise ??= request<readonly Station[]>('/data/stations-fr.json', { retries: 0 }).then(
+    (result) => (result.ok && Array.isArray(result.value) ? result.value : []),
+  );
+  return stationsPromise;
+}
+
+/** Reinitialise la liste memorisee. Utilise par les tests. */
+export function resetStationsForTests(): void {
+  stationsPromise = null;
+}
+
+/** Station representative du lieu (distance et denivele bornes), ou null. */
+async function stationFor(place: Place): Promise<StationMatch | null> {
+  return nearestStation({
+    latitude: place.latitude,
+    longitude: place.longitude,
+    elevation: place.elevation,
+    stations: await loadStations(),
+  });
+}
+
+export async function getVerifications(
+  place: Place,
+  models: readonly ModelId[],
+): Promise<HttpResult<DatasetResult<VerificationReport>>> {
+  const station = await stationFor(place);
+  return throughCache({
+    kind: 'verification',
+    placeId: `${place.id}|${[...models].sort().join(',')}`,
+    ttlMs: CACHE_TTL_MS.verification,
+    fetcher: () =>
+      fetchVerifications({
+        latitude: place.latitude,
+        longitude: place.longitude,
+        models,
+        station,
+        now: new Date(),
+      }),
+  });
+}
+
+export function getAirQuality(place: Place): Promise<HttpResult<DatasetResult<AirQualitySeries>>> {
+  return throughCache({
+    kind: 'airQuality',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.airQuality,
+    fetcher: () => fetchAirQuality(place.latitude, place.longitude),
+  });
+}
+
+export function getNowcast(place: Place): Promise<HttpResult<DatasetResult<Nowcast>>> {
+  return throughCache({
+    kind: 'nowcast',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.nowcast,
+    fetcher: async () => {
+      const result = await fetchNowcast(place.latitude, place.longitude);
+      return result.ok ? mapNowcast(result.value) : result;
+    },
+  });
+}
+
+/** Releves recents de la station representative du lieu. */
+export interface StationReport {
+  /** null : aucune station ne represente ce lieu. */
+  readonly match: StationMatch | null;
+  readonly records: readonly StationRecord[];
+}
+
+/**
+ * Profondeur du releve, heures : de quoi calculer l'ecart recent meme
+ * quand la station publie avec retard ou se tait la nuit.
+ */
+export const STATION_REPORT_HOURS = 36;
+
+const HOUR_MS = 60 * 60 * 1000;
+
+export async function getStationReport(
+  place: Place,
+): Promise<HttpResult<DatasetResult<StationReport>>> {
+  const match = await stationFor(place);
+  if (match === null) {
+    const report: StationReport = { match: null, records: [] };
+    return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
+  }
+  return throughCache({
+    kind: 'station',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.station,
+    fetcher: async (): Promise<HttpResult<StationReport>> => {
+      const now = Date.now();
+      const since = now - STATION_REPORT_HOURS * HOUR_MS;
+      // Deux fichiers annuels les premieres heures de janvier. Le fichier
+      // de l'annee qui commence peut manquer : on garde ce qui repond.
+      const years = [
+        ...new Set([new Date(since).getUTCFullYear(), new Date(now).getUTCFullYear()]),
+      ];
+      const records: StationRecord[] = [];
+      let failure: HttpResult<StationReport> | null = null;
+      for (const year of years) {
+        const text = await fetchStationYear(match.station.id, year);
+        if (text.ok) {
+          records.push(...parseStationRecords(text.value, since));
+        } else {
+          failure = text;
+        }
+      }
+      if (failure !== null && records.length === 0) {
+        return failure;
+      }
+      return { ok: true, value: { match, records } };
+    },
   });
 }

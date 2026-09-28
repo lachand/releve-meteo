@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { hourlyPoint } from '../../../tests/factories';
 import type { ForecastBundle, HourlyPoint, Place } from '../../domain/types';
 import { ComparisonView } from './ComparisonView';
 
@@ -15,20 +16,7 @@ const place: Place = {
 };
 
 function point(temperature: number): HourlyPoint {
-  const measure = (value: number) => ({ value, provenance: 'forecast' as const });
-  return {
-    time: '2026-08-17T14:00',
-    temperature: measure(temperature),
-    precipitation: measure(0),
-    windSpeed: measure(10),
-    windGust: measure(20),
-    windDirection: measure(180),
-    pressure: measure(1013),
-    dewPoint: measure(8),
-    cloudCover: measure(50),
-    radiation: measure(200),
-    weatherCode: 1,
-  };
+  return hourlyPoint('2026-08-17T14:00', { temperature });
 }
 
 function buildBundle(): ForecastBundle {
@@ -48,8 +36,8 @@ describe('ComparisonView', () => {
   it('affiche la legende avec un modele par ligne et sa portee', () => {
     const bundle = buildBundle();
     render(<ComparisonView bundle={bundle} nowIndex={0} onClose={vi.fn()} />);
-    expect(screen.getByText(/AROME jusqu'à 36 h/)).toBeInTheDocument();
-    expect(screen.getByText(/ARPEGE jusqu'à 96 h/)).toBeInTheDocument();
+    expect(screen.getByText(/AROME jusqu'à 48 h/)).toBeInTheDocument();
+    expect(screen.getByText(/ARPEGE jusqu'à 102 h/)).toBeInTheDocument();
   });
 
   it("calcule l'ecart maximal entre modeles dans le texte de synthese", () => {

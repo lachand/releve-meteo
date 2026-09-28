@@ -1,0 +1,162 @@
+.panel {
+  display: grid;
+  gap: var(--esp-8);
+}
+
+.method {
+  display: grid;
+  gap: var(--esp-3);
+  max-width: 48rem;
+}
+
+.references {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-s);
+}
+
+/* Provenance (DESIGN.md 5) : pastille pleine = mesurée, creuse = estimée. */
+.pastille {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: var(--esp-2);
+  border-radius: 50%;
+  border: 1.5px solid var(--observe);
+  background: var(--observe);
+  vertical-align: 0.05em;
+}
+
+li[data-provenance='estimated'] .pastille {
+  background: transparent;
+  border-color: var(--estime);
+}
+
+.caveat {
+  font-family: var(--font-titre);
+  font-style: italic;
+  color: var(--encre-faible);
+}
+
+.section {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.unit {
+  font-family: var(--font-corps);
+  font-size: var(--pas-s);
+  font-weight: 400;
+  color: var(--encre-faible);
+}
+
+.scroller {
+  position: relative;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pas-s);
+}
+
+.table thead th {
+  padding: var(--esp-2) var(--esp-2) var(--esp-2) 0;
+  border-bottom: var(--filet-encre);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table tbody td,
+.table tbody th {
+  padding: var(--esp-2) var(--esp-2) var(--esp-2) 0;
+  border-bottom: 1px dotted var(--grille);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.model {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--esp-2);
+  border-radius: 50%;
+  background: var(--model);
+}
+
+.value {
+  min-width: 4.5rem;
+}
+
+.value[data-best] [data-donnee] {
+  font-weight: 600;
+  color: var(--encre);
+  text-decoration: underline;
+  text-decoration-color: var(--marge);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+.bar {
+  display: block;
+  height: 3px;
+  margin-top: 3px;
+  background: var(--model);
+  max-width: 100%;
+}
+
+.bias {
+  white-space: nowrap;
+  color: var(--encre-faible);
+}
+
+.chart {
+  position: relative;
+  height: 220px;
+  max-width: 40rem;
+}
+
+.muted {
+  color: var(--encre-faible);
+}
+
+.error {
+  color: var(--alerte);
+}
+
+.privacy {
+  font-family: var(--font-titre);
+  font-style: italic;
+  color: var(--encre-faible);
+  border-top: var(--filet);
+  padding-top: var(--esp-3);
+}
+
+.loading {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.skeleton {
+  height: 12rem;
+  border-radius: var(--rayon);
+  background: var(--papier-creux);
+}

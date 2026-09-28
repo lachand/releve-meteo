@@ -16,7 +16,15 @@ const nowPoint: HourlyPoint = {
   dewPoint: measure(13.5),
   cloudCover: measure(50),
   radiation: measure(0),
+  humidity: measure(65),
+  apparentTemperature: measure(13),
+  precipitationProbability: measure(null),
+  snowfall: measure(0),
+  cape: measure(0),
+  visibility: measure(20000),
+  freezingLevel: measure(3000),
   weatherCode: 1,
+  isDay: true,
 };
 
 const today: DailyPoint = {
@@ -25,6 +33,11 @@ const today: DailyPoint = {
   tempMin: measure(-1),
   precipitationSum: measure(0),
   uvIndexMax: measure(5.4),
+  windGustMax: measure(30),
+  windSpeedMax: measure(15),
+  windDirectionDominant: measure(220),
+  precipitationHours: measure(0),
+  snowfallSum: measure(0),
   sunrise: '2026-08-17T06:30',
   sunset: '2026-08-17T21:05',
   weatherCode: 1,
@@ -48,13 +61,13 @@ describe('ConditionsPanel', () => {
   it("affiche un tiret plutot qu'un zero quand une donnee manque", () => {
     const partial: DailyPoint = { ...today, uvIndexMax: measure(null), sunrise: null };
     render(<ConditionsPanel nowPoint={null} today={partial} />);
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('–').length).toBeGreaterThan(0);
   });
 
   it("n'affiche pas de risque de brouillard sans mesure complete", () => {
     const withoutWind: HourlyPoint = { ...nowPoint, windSpeed: measure(null) };
     render(<ConditionsPanel nowPoint={withoutWind} today={today} />);
     const row = screen.getByText('risque de brouillard').closest('tr');
-    expect(row?.textContent).toContain('—');
+    expect(row?.textContent).toContain('–');
   });
 });

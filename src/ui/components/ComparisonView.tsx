@@ -11,13 +11,13 @@ import type { ChartOptions } from 'chart.js';
 import { useEffect, useRef, useState } from 'react';
 import { spreadBand } from '../../domain/confidence';
 import type { ForecastBundle, ModelId, WeatherVariable } from '../../domain/types';
-import { cascadeBoundHours } from '../modelExplanation';
-import { MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
+import { MODEL_ORDER, MODEL_SPECS } from '../../domain/models';
+import { MISSING } from '../format';
+import { MODEL_LABELS, modelColor } from '../modelPresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './ComparisonView.module.css';
 
 Chart.register(CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip);
-
-const CASCADE_ORDER: readonly ModelId[] = ['arome', 'arpege', 'icon_eu', 'gfs'];
 
 const VARIABLE_LABELS: Readonly<Record<WeatherVariable, string>> = {
   temperature: 'Température',
@@ -36,12 +36,15 @@ const VARIABLE_UNITS: Readonly<Record<WeatherVariable, string>> = {
 // convention de trait change donc explicitement (DESIGN.md 6.3).
 const MODEL_DASH: Readonly<Record<ModelId, number[]>> = {
   arome: [],
+  arome_france: [10, 3],
+  icon_d2: [4, 2, 1, 2],
   arpege: [6, 3],
   icon_eu: [2, 2],
+  ecmwf: [12, 4, 2, 4],
   gfs: [8, 3, 2, 3],
 };
 
-const WINDOW_OPTIONS = [48, 72, 168] as const;
+const WINDOW_OPTIONS = [48, 72, 168, 240] as const;
 
 function fieldValue(
   bundle: ForecastBundle,
@@ -79,7 +82,7 @@ function formatDayHour(iso: string): string {
 interface ComparisonViewProps {
   readonly bundle: ForecastBundle;
   readonly nowIndex: number;
-  readonly onClose: () => void;
+  readonly onClose?: () => void;
 }
 
 export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProps) {
@@ -91,7 +94,7 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
   const start = nowIndex === -1 ? 0 : nowIndex;
   const end = Math.min(start + windowHours, bundle.timeline.length);
   const visibleTimeline = bundle.timeline.slice(start, end);
-  const availableModels = CASCADE_ORDER.filter((model) => bundle.series[model] !== undefined);
+  const availableModels = MODEL_ORDER.filter((model) => bundle.series[model] !== undefined);
 
   const band = spreadBand(bundle, variable).slice(start, end);
   let maxSpreadIndex = -1;
@@ -123,17 +126,12 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { color: cssVar('--grille-faible') },
-        },
-        y: {
-          title: { display: true, text: VARIABLE_UNITS[variable] },
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY(VARIABLE_UNITS[variable]) },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           callbacks: {
             label: (item) =>
               `${MODEL_LABELS[availableModels[item.datasetIndex] as ModelId]} : ${item.formattedValue} ${VARIABLE_UNITS[variable]}`,
@@ -166,13 +164,22 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
   }, [bundle, nowIndex, windowHours, variable]);
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.header}>
-        <h2>Comparer les modèles</h2>
-        <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Fermer">
-          ✕
-        </button>
-      </div>
+    // Sans onClose, la comparaison est integree a un feuillet (onglet
+    // Modeles) : ni cadre ni titre propres, le feuillet les porte deja.
+    <div className={onClose === undefined ? styles.embedded : styles.overlay}>
+      {onClose !== undefined && (
+        <div className={styles.header}>
+          <h2>Comparer les modèles</h2>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className={styles.controls}>
         <label>
@@ -219,43 +226,45 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
                 borderTopStyle: MODEL_DASH[model].length === 0 ? 'solid' : 'dashed',
               }}
             />
-            {MODEL_LABELS[model]} jusqu'à {cascadeBoundHours(model)} h
+            {MODEL_LABELS[model]} jusqu'à {MODEL_SPECS[model].maxLeadHours} h
           </li>
         ))}
       </ul>
 
       <p className={styles.summary}>{summary}</p>
 
-      <table className={styles.dataTable}>
-        <caption>
-          {VARIABLE_LABELS[variable]} par modèle sur {windowHours} heures
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Heure</th>
-            {availableModels.map((model) => (
-              <th scope="col" key={model}>
-                {MODEL_LABELS[model]}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {visibleTimeline.map((time, i) => (
-            <tr key={time}>
-              <td>{time}</td>
-              {availableModels.map((model) => {
-                const value = fieldValue(bundle, model, start + i, variable);
-                return (
-                  <td key={model}>
-                    {value === null ? '—' : `${value} ${VARIABLE_UNITS[variable]}`}
-                  </td>
-                );
-              })}
+      <div className={styles.dataTable}>
+        <table>
+          <caption>
+            {VARIABLE_LABELS[variable]} par modèle sur {windowHours} heures
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Heure</th>
+              {availableModels.map((model) => (
+                <th scope="col" key={model}>
+                  {MODEL_LABELS[model]}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visibleTimeline.map((time, i) => (
+              <tr key={time}>
+                <td>{time}</td>
+                {availableModels.map((model) => {
+                  const value = fieldValue(bundle, model, start + i, variable);
+                  return (
+                    <td key={model}>
+                      {value === null ? MISSING : `${value} ${VARIABLE_UNITS[variable]}`}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

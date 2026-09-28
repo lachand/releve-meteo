@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { ForecastBundle, Provenance } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { cssVar } from '../modelPresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './PrecipitationChart.module.css';
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
@@ -39,8 +40,8 @@ export function PrecipitationChart({ bundle, cascade }: PrecipitationChartProps)
     if (time === undefined) {
       continue;
     }
-    const segment = cascade.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
-    const hourly = segment ? bundle.series[segment.model]?.hourly[i] : undefined;
+    // Point de cascade : modele retenu, champs absents completes et nommes.
+    const hourly = cascade.points[i] ?? undefined;
     points.push({
       time,
       value: hourly?.precipitation.value ?? null,
@@ -62,18 +63,12 @@ export function PrecipitationChart({ bundle, cascade }: PrecipitationChartProps)
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { display: false },
-        },
-        y: {
-          title: { display: true, text: 'mm' },
-          beginAtZero: true,
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY('mm'), beginAtZero: true },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           callbacks: {
             label: (item) => {
               const point = points[item.dataIndex];
@@ -121,27 +116,29 @@ export function PrecipitationChart({ bundle, cascade }: PrecipitationChartProps)
           <span className={styles.swatch} style={{ background: 'var(--grille)' }} /> prévu
         </li>
       </ul>
-      <table className={styles.dataTable}>
-        <caption>
-          Precipitations horaires sur 48 heures, avec la provenance de chaque mesure
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Heure</th>
-            <th scope="col">Precipitation</th>
-            <th scope="col">Provenance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.time}>
-              <td>{point.time}</td>
-              <td>{point.value === null ? '—' : `${point.value} mm`}</td>
-              <td>{point.provenance ?? '—'}</td>
+      <div className={styles.dataTable}>
+        <table>
+          <caption>
+            Precipitations horaires sur 48 heures, avec la provenance de chaque mesure
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Heure</th>
+              <th scope="col">Precipitation</th>
+              <th scope="col">Provenance</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.time}>
+                <td>{point.time}</td>
+                <td>{point.value === null ? '–' : `${point.value} mm`}</td>
+                <td>{point.provenance ?? '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

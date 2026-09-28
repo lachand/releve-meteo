@@ -1,194 +1,85 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildCascade,
-  blendByCascade,
-  selectModelForLeadTime,
-  transitionIndices,
-} from './modelCascade';
-import type { ForecastBundle, ModelId, Place } from './types';
+import { blendByCascade, blendedPointAt, modelAt, transitionIndices } from './modelCascade';
+import type { ForecastBundle, Place } from './types';
+import { buildHourlyTimeline, hourlyPoint } from '../../tests/factories';
 
-const ALL_MODELS: readonly ModelId[] = ['arome', 'arpege', 'icon_eu', 'gfs'];
-
-describe('selectModelForLeadTime', () => {
-  it('choisit arome a echeance 0h avec tous les modeles', () => {
-    expect(selectModelForLeadTime(0, ALL_MODELS)).toBe('arome');
-  });
-
-  it('choisit arome a echeance 36h exactement, borne incluse', () => {
-    expect(selectModelForLeadTime(36, ALL_MODELS)).toBe('arome');
-  });
-
-  it('choisit arpege a echeance 36.01h', () => {
-    expect(selectModelForLeadTime(36.01, ALL_MODELS)).toBe('arpege');
-  });
-
-  it('choisit arpege a echeance 96h exactement', () => {
-    expect(selectModelForLeadTime(96, ALL_MODELS)).toBe('arpege');
-  });
-
-  it('choisit icon_eu a echeance 96.01h', () => {
-    expect(selectModelForLeadTime(96.01, ALL_MODELS)).toBe('icon_eu');
-  });
-
-  it('choisit icon_eu a echeance 168h exactement', () => {
-    expect(selectModelForLeadTime(168, ALL_MODELS)).toBe('icon_eu');
-  });
-
-  it('ne choisit aucun modele au dela de 168h', () => {
-    expect(selectModelForLeadTime(168.01, ALL_MODELS)).toBeNull();
-  });
-
-  it('replie sur arpege a 12h si AROME est absent, jamais un modele plus fin', () => {
-    expect(selectModelForLeadTime(12, ['arpege', 'icon_eu', 'gfs'])).toBe('arpege');
-  });
-
-  it('replie sur gfs a 12h si seul gfs est disponible', () => {
-    expect(selectModelForLeadTime(12, ['gfs'])).toBe('gfs');
-  });
-
-  it("retourne null si aucun modele n'est disponible", () => {
-    expect(selectModelForLeadTime(12, [])).toBeNull();
-  });
-
-  it('retourne null pour une echeance negative', () => {
-    expect(selectModelForLeadTime(-1, ALL_MODELS)).toBeNull();
-  });
-});
-
-function buildHourlyTimeline(startIso: string, count: number): string[] {
-  const timeline: string[] = [];
-  const [datePart, timePart] = startIso.split('T');
-  const [y, m, d] = (datePart ?? '').split('-').map(Number);
-  const [h] = (timePart ?? '').split(':').map(Number);
-  for (let i = 0; i < count; i += 1) {
-    const date = new Date(Date.UTC(y ?? 2026, (m ?? 1) - 1, d ?? 1, (h ?? 0) + i));
-    const iso = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}T${String(date.getUTCHours()).padStart(2, '0')}:00`;
-    timeline.push(iso);
-  }
-  return timeline;
-}
-
-describe('buildCascade', () => {
-  it('decoupe 168 points en segments contigus, ordonnes, sans chevauchement', () => {
-    const timeline = buildHourlyTimeline('2026-08-17T00:00', 168);
-    const now = new Date('2026-08-16T22:00:00Z');
-    const segments = buildCascade(timeline, now, ALL_MODELS);
-
-    expect(segments.length).toBeGreaterThan(0);
-    for (let i = 1; i < segments.length; i += 1) {
-      const previous = segments[i - 1];
-      const current = segments[i];
-      expect(previous).toBeDefined();
-      expect(current).toBeDefined();
-      if (previous !== undefined && current !== undefined) {
-        expect(current.startIndex).toBe(previous.endIndex + 1);
-      }
-    }
-    const last = segments.at(-1);
-    expect(last?.endIndex).toBe(timeline.length - 1);
-  });
-
-  it('omet les points passes, anterieurs a now', () => {
-    const timeline = buildHourlyTimeline('2026-08-17T00:00', 10);
-    // now cale 3h apres le debut de la timeline : les 3 premiers points sont passes.
-    const now = new Date('2026-08-17T01:00:00Z');
-    const segments = buildCascade(timeline, now, ALL_MODELS);
-
-    expect(segments).toHaveLength(1);
-    expect(segments[0]?.startIndex).toBe(3);
-  });
-
-  it('produit un seul segment ARPEGE quand AROME est absent, sans segment vide', () => {
-    const timeline = buildHourlyTimeline('2026-08-17T00:00', 96);
-    const now = new Date('2026-08-16T22:00:00Z');
-    const segments = buildCascade(timeline, now, ['arpege', 'icon_eu', 'gfs']);
-
-    expect(segments).toHaveLength(1);
-    expect(segments[0]?.model).toBe('arpege');
-    expect(segments.every((segment) => segment.startIndex <= segment.endIndex)).toBe(true);
-  });
-});
+const place: Place = {
+  id: '45.4936:5.4708',
+  name: 'Val de Virieu',
+  latitude: 45.4936,
+  longitude: 5.4708,
+  elevation: 468,
+  admin: 'Isere',
+  alias: null,
+};
 
 describe('transitionIndices', () => {
-  it('compte exactement 2 transitions sur une cascade complete', () => {
-    const timeline = buildHourlyTimeline('2026-08-17T00:00', 168);
-    const now = new Date('2026-08-16T22:00:00Z');
-    const segments = buildCascade(timeline, now, ALL_MODELS);
-    expect(transitionIndices(segments)).toHaveLength(2);
+  it('retourne le debut de chaque segment sauf le premier', () => {
+    const segments = [
+      { model: 'arome' as const, startIndex: 0, endIndex: 35 },
+      { model: 'arpege' as const, startIndex: 36, endIndex: 95 },
+      { model: 'ecmwf' as const, startIndex: 96, endIndex: 200 },
+    ];
+    expect(transitionIndices(segments)).toEqual([36, 96]);
+  });
+
+  it('ne retourne aucune transition pour un segment unique ou vide', () => {
+    expect(transitionIndices([{ model: 'arome', startIndex: 0, endIndex: 3 }])).toEqual([]);
+    expect(transitionIndices([])).toEqual([]);
+  });
+});
+
+describe('modelAt', () => {
+  const segments = [
+    { model: 'arome' as const, startIndex: 2, endIndex: 4 },
+    { model: 'arpege' as const, startIndex: 5, endIndex: 8 },
+  ];
+
+  it('retourne le modele du segment contenant l index, bornes incluses', () => {
+    expect(modelAt(segments, 2)).toBe('arome');
+    expect(modelAt(segments, 4)).toBe('arome');
+    expect(modelAt(segments, 5)).toBe('arpege');
+  });
+
+  it('retourne null hors cascade', () => {
+    expect(modelAt(segments, 0)).toBeNull();
+    expect(modelAt(segments, 9)).toBeNull();
   });
 });
 
 describe('blendByCascade', () => {
-  const place: Place = {
-    id: '45.4936:5.4708',
-    name: 'Val de Virieu',
-    latitude: 45.4936,
-    longitude: 5.4708,
-    elevation: 468,
-    admin: 'Isere',
-    alias: null,
-  };
-
   it('porte le modele du segment correspondant sur chaque point', () => {
     const timeline = buildHourlyTimeline('2026-08-17T00:00', 48);
-    const now = new Date('2026-08-16T22:00:00Z');
-    const measure = { value: 14, provenance: 'forecast' as const };
-    const hourlyPoint = (time: string) => ({
-      time,
-      temperature: measure,
-      precipitation: measure,
-      windSpeed: measure,
-      windGust: measure,
-      windDirection: measure,
-      pressure: measure,
-      dewPoint: measure,
-      cloudCover: measure,
-      radiation: measure,
-      weatherCode: null,
-    });
-    const bundle: ForecastBundle = {
-      place,
-      fetchedAt: now.getTime(),
-      timeline,
-      series: {
-        arome: { model: 'arome', hourly: timeline.map(hourlyPoint), daily: [] },
-        arpege: { model: 'arpege', hourly: timeline.map(hourlyPoint), daily: [] },
-      },
-    };
-    const segments = buildCascade(timeline, now, ['arome', 'arpege']);
-    const blended = blendByCascade(bundle, segments);
-
-    expect(blended).toHaveLength(timeline.length);
-    for (const segment of segments) {
-      for (let i = segment.startIndex; i <= segment.endIndex; i += 1) {
-        expect(blended[i]?.model).toBe(segment.model);
-      }
-    }
-  });
-
-  it("ignore un index au-dela de la longueur reelle de la serie, si l'invariant de timeline commune est viole", () => {
-    const timeline = buildHourlyTimeline('2026-08-17T00:00', 4);
-    const measure = { value: 14, provenance: 'forecast' as const };
-    const shortHourly = [
-      {
-        time: timeline[0] as string,
-        temperature: measure,
-        precipitation: measure,
-        windSpeed: measure,
-        windGust: measure,
-        windDirection: measure,
-        pressure: measure,
-        dewPoint: measure,
-        cloudCover: measure,
-        radiation: measure,
-        weatherCode: null,
-      },
-    ];
     const bundle: ForecastBundle = {
       place,
       fetchedAt: 0,
       timeline,
-      series: { arome: { model: 'arome', hourly: shortHourly, daily: [] } },
+      series: {
+        arome: { model: 'arome', hourly: timeline.map((t) => hourlyPoint(t)), daily: [] },
+        arpege: { model: 'arpege', hourly: timeline.map((t) => hourlyPoint(t)), daily: [] },
+      },
+    };
+    const segments = [
+      { model: 'arome' as const, startIndex: 0, endIndex: 23 },
+      { model: 'arpege' as const, startIndex: 24, endIndex: 47 },
+    ];
+    const blended = blendByCascade(bundle, segments);
+
+    expect(blended).toHaveLength(timeline.length);
+    expect(blended[0]?.model).toBe('arome');
+    expect(blended[23]?.model).toBe('arome');
+    expect(blended[24]?.model).toBe('arpege');
+  });
+
+  it("ignore un index au-dela de la longueur reelle de la serie, si l'invariant de timeline commune est viole", () => {
+    const timeline = buildHourlyTimeline('2026-08-17T00:00', 4);
+    const bundle: ForecastBundle = {
+      place,
+      fetchedAt: 0,
+      timeline,
+      series: {
+        arome: { model: 'arome', hourly: [hourlyPoint(timeline[0] ?? '')], daily: [] },
+      },
     };
     const segments = [{ model: 'arome' as const, startIndex: 0, endIndex: 3 }];
 
@@ -197,14 +88,102 @@ describe('blendByCascade', () => {
 
   it('ignore un segment dont le modele est absent du bundle', () => {
     const timeline = buildHourlyTimeline('2026-08-17T00:00', 4);
-    const bundle: ForecastBundle = {
-      place,
-      fetchedAt: 0,
-      timeline,
-      series: {},
-    };
+    const bundle: ForecastBundle = { place, fetchedAt: 0, timeline, series: {} };
     const segments = [{ model: 'arome' as const, startIndex: 0, endIndex: 3 }];
 
     expect(blendByCascade(bundle, segments)).toHaveLength(0);
+  });
+});
+
+describe('blendedPointAt', () => {
+  const timeline = buildHourlyTimeline('2026-08-17T00:00', 4);
+  const bundle: ForecastBundle = {
+    place,
+    fetchedAt: 0,
+    timeline,
+    series: {
+      arome: {
+        model: 'arome',
+        hourly: timeline.map((t, i) => hourlyPoint(t, { temperature: 10 + i })),
+        daily: [],
+      },
+    },
+  };
+  const segments = [{ model: 'arome' as const, startIndex: 1, endIndex: 3 }];
+
+  it('retourne le point du modele actif avec son modele', () => {
+    const point = blendedPointAt(bundle, segments, 2);
+    expect(point?.model).toBe('arome');
+    expect(point?.temperature.value).toBe(12);
+  });
+
+  it('retourne null hors cascade ou si la serie manque', () => {
+    expect(blendedPointAt(bundle, segments, 0)).toBeNull();
+    expect(blendedPointAt(bundle, [{ model: 'arpege', startIndex: 0, endIndex: 3 }], 1)).toBeNull();
+    expect(blendedPointAt(bundle, [{ model: 'arome', startIndex: 0, endIndex: 9 }], 8)).toBeNull();
+  });
+});
+
+describe('completion des champs absents', () => {
+  const timeline = buildHourlyTimeline('2026-08-17T00:00', 2);
+  // AROME sans nebulosite ni code de temps ni pression, comme chez Open-Meteo.
+  const bundle: ForecastBundle = {
+    place,
+    fetchedAt: 0,
+    timeline,
+    series: {
+      arome: {
+        model: 'arome',
+        hourly: timeline.map((t) =>
+          hourlyPoint(t, { cloudCover: null, weatherCode: null, pressure: null, visibility: null }),
+        ),
+        daily: [],
+      },
+      arome_france: {
+        model: 'arome_france',
+        hourly: timeline.map((t) =>
+          hourlyPoint(t, { cloudCover: 80, weatherCode: 61, pressure: 1008, visibility: null }),
+        ),
+        daily: [],
+      },
+      gfs: {
+        model: 'gfs',
+        hourly: timeline.map((t) => hourlyPoint(t, { visibility: 9000, pressure: 1010 })),
+        daily: [],
+      },
+    },
+  };
+  const segments = [{ model: 'arome' as const, startIndex: 0, endIndex: 1 }];
+
+  it('prend chaque champ absent au modele le plus fin qui le fournit, et le dit', () => {
+    const point = blendedPointAt(bundle, segments, 0);
+    expect(point?.model).toBe('arome');
+    expect(point?.cloudCover.value).toBe(80);
+    expect(point?.weatherCode).toBe(61);
+    expect(point?.pressure.value).toBe(1008);
+    expect(point?.visibility.value).toBe(9000);
+    expect(point?.filledFrom).toEqual({
+      cloudCover: 'arome_france',
+      weatherCode: 'arome_france',
+      pressure: 'arome_france',
+      visibility: 'gfs',
+    });
+    // La temperature vient toujours du modele retenu.
+    expect(point?.temperature.value).toBe(14);
+  });
+
+  it('laisse un champ absent partout a null, sans inventer de valeur', () => {
+    const lonely: ForecastBundle = {
+      ...bundle,
+      series: { arome: bundle.series.arome },
+    };
+    const point = blendedPointAt(lonely, segments, 1);
+    expect(point?.cloudCover.value).toBeNull();
+    expect(point?.weatherCode).toBeNull();
+    expect(point?.filledFrom).toEqual({});
+  });
+
+  it('applique la meme completion a la serie fusionnee', () => {
+    expect(blendByCascade(bundle, segments)[1]?.filledFrom.cloudCover).toBe('arome_france');
   });
 });

@@ -1,9 +1,9 @@
 import { CONFIDENCE_THRESHOLDS, TERRAIN_PENALTIES } from './constants';
+import { MODEL_ORDER } from './models';
 import type {
   ConfidenceLevel,
   ForecastBundle,
   HourlyPoint,
-  ModelId,
   TerrainProfile,
   WeatherVariable,
 } from './types';
@@ -21,7 +21,6 @@ export interface ConfidenceVerdict {
   readonly modelCount: number;
 }
 
-const ALL_MODELS: readonly ModelId[] = ['arome', 'arpege', 'icon_eu', 'gfs'];
 const VARIABLES: readonly WeatherVariable[] = ['temperature', 'wind', 'precipitation'];
 const LEVEL_ORDER: Readonly<Record<ConfidenceLevel, number>> = {
   high: 3,
@@ -43,7 +42,7 @@ function fieldValue(point: HourlyPoint, variable: WeatherVariable): number | nul
 
 function valuesAt(bundle: ForecastBundle, index: number, variable: WeatherVariable): number[] {
   const values: number[] = [];
-  for (const model of ALL_MODELS) {
+  for (const model of MODEL_ORDER) {
     const point = bundle.series[model]?.hourly[index];
     if (point === undefined) {
       continue;

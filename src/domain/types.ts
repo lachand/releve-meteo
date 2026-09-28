@@ -1,4 +1,8 @@
-export type ModelId = 'arome' | 'arpege' | 'icon_eu' | 'gfs';
+/**
+ * Modeles deterministes interroges chez Open-Meteo. Catalogue complet
+ * (portee, maille, forces, faiblesses) dans `models.ts`.
+ */
+export type ModelId = 'arome' | 'arome_france' | 'icon_d2' | 'arpege' | 'icon_eu' | 'ecmwf' | 'gfs';
 
 export type Provenance = 'observed' | 'estimated' | 'forecast';
 
@@ -44,7 +48,24 @@ export interface HourlyPoint {
   readonly dewPoint: Measure;
   readonly cloudCover: Measure;
   readonly radiation: Measure;
+  /** Humidite relative a 2 m, %. */
+  readonly humidity: Measure;
+  /** Temperature ressentie, °C. */
+  readonly apparentTemperature: Measure;
+  /** Probabilite de precipitation, %. Absente pour la plupart des modeles deterministes. */
+  readonly precipitationProbability: Measure;
+  /** Chute de neige, cm par heure. */
+  readonly snowfall: Measure;
+  /** Energie potentielle convective disponible, J/kg. Moteur des orages. */
+  readonly cape: Measure;
+  /** Visibilite, m. */
+  readonly visibility: Measure;
+  /** Altitude de l'isotherme 0 °C, m. */
+  readonly freezingLevel: Measure;
+  /** Code de temps WMO (table WW simplifiee Open-Meteo). */
   readonly weatherCode: number | null;
+  /** Jour (true) ou nuit (false) au sens astronomique, null si inconnu. */
+  readonly isDay: boolean | null;
 }
 
 export interface DailyPoint {
@@ -53,6 +74,16 @@ export interface DailyPoint {
   readonly tempMin: Measure;
   readonly precipitationSum: Measure;
   readonly uvIndexMax: Measure;
+  /** Rafale maximale du jour, km/h. */
+  readonly windGustMax: Measure;
+  /** Vent moyen maximal du jour, km/h. */
+  readonly windSpeedMax: Measure;
+  /** Direction dominante du vent, degres. */
+  readonly windDirectionDominant: Measure;
+  /** Nombre d'heures avec precipitation. */
+  readonly precipitationHours: Measure;
+  /** Cumul de neige, cm. */
+  readonly snowfallSum: Measure;
   readonly sunrise: string | null;
   readonly sunset: string | null;
   readonly weatherCode: number | null;

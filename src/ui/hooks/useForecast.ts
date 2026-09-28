@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { ModelId, Place } from '../../domain/types';
+import { MODEL_ORDER } from '../../domain/models';
+import type { Place } from '../../domain/types';
 import type { HttpFailure, HttpResult } from '../../data/clients/http';
 import type { ForecastResult } from '../../data/repository';
 import { getForecast } from '../../data/repository';
 import { ensureStorageHeadroom } from '../../pwa/storage';
-
-const ALL_MODELS: readonly ModelId[] = ['arome', 'arpege', 'icon_eu', 'gfs'];
 
 export type ForecastState =
   | { readonly status: 'loading' }
@@ -30,7 +29,7 @@ export function useForecast(place: Place | null): ForecastState | null {
       return;
     }
     let cancelled = false;
-    getForecast({ place, models: ALL_MODELS }).then((outcome) => {
+    getForecast({ place, models: MODEL_ORDER }).then((outcome) => {
       if (!cancelled) {
         setSettled({ place, outcome });
       }

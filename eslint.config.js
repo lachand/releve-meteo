@@ -60,6 +60,7 @@ export default [
       'test-results/**',
       'public/**',
       'scripts/**',
+      '.claude/**',
     ],
   },
   js.configs.recommended,
@@ -96,6 +97,9 @@ export default [
         { argsIgnorePattern: '^_', ignoreRestSiblings: true },
       ],
       '@typescript-eslint/consistent-type-imports': 'error',
+      // Les fiches de modele (ModelChooser) portent leur texte trois niveaux
+      // sous le <label> ; la profondeur par defaut (2) ne le voit pas.
+      'jsx-a11y/label-has-associated-control': ['error', { depth: 4 }],
       'no-restricted-globals': [
         'error',
         { name: 'name', message: 'Global window.name, presque toujours involontaire.' },

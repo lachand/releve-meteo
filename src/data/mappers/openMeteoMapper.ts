@@ -29,7 +29,9 @@ export interface MappedForecast {
 
 type RawBlock = Readonly<Record<string, readonly (number | null)[] | readonly string[]>>;
 
-const HOURLY_MEASURES: readonly [keyof Omit<HourlyPoint, 'time' | 'weatherCode'>, string][] = [
+type HourlyMeasureField = keyof Omit<HourlyPoint, 'time' | 'weatherCode' | 'isDay'>;
+
+const HOURLY_MEASURES: readonly [HourlyMeasureField, string][] = [
   ['temperature', 'temperature_2m'],
   ['precipitation', 'precipitation'],
   ['windSpeed', 'wind_speed_10m'],
@@ -39,16 +41,33 @@ const HOURLY_MEASURES: readonly [keyof Omit<HourlyPoint, 'time' | 'weatherCode'>
   ['dewPoint', 'dew_point_2m'],
   ['cloudCover', 'cloud_cover'],
   ['radiation', 'shortwave_radiation'],
+  ['humidity', 'relative_humidity_2m'],
+  ['apparentTemperature', 'apparent_temperature'],
+  ['precipitationProbability', 'precipitation_probability'],
+  ['snowfall', 'snowfall'],
+  ['cape', 'cape'],
+  ['visibility', 'visibility'],
+  ['freezingLevel', 'freezing_level_height'],
 ];
 
-const DAILY_MEASURES: readonly [
-  keyof Omit<DailyPoint, 'date' | 'sunrise' | 'sunset' | 'weatherCode'>,
-  string,
-][] = [
+// Variables dont la seule presence dans le payload prouve que le modele a
+// repondu. Les variables optionnelles (probabilite, cape...) sont souvent
+// renvoyees en null pour un modele qui ne les fournit pas : elles ne
+// comptent pas pour detecter un modele absent.
+const PRESENCE_VARIABLES: readonly string[] = ['temperature_2m', 'precipitation', 'wind_speed_10m'];
+
+type DailyMeasureField = keyof Omit<DailyPoint, 'date' | 'sunrise' | 'sunset' | 'weatherCode'>;
+
+const DAILY_MEASURES: readonly [DailyMeasureField, string][] = [
   ['tempMax', 'temperature_2m_max'],
   ['tempMin', 'temperature_2m_min'],
   ['precipitationSum', 'precipitation_sum'],
   ['uvIndexMax', 'uv_index_max'],
+  ['windGustMax', 'wind_gusts_10m_max'],
+  ['windSpeedMax', 'wind_speed_10m_max'],
+  ['windDirectionDominant', 'wind_direction_10m_dominant'],
+  ['precipitationHours', 'precipitation_hours'],
+  ['snowfallSum', 'snowfall_sum'],
 ];
 
 function variableKey(variable: string, model: ModelId, suffixed: boolean): string {
@@ -97,8 +116,19 @@ function provenanceAt(now: Date, time: LocalIsoHour): Provenance {
   return leadHoursFrom(now, time) < 0 ? 'estimated' : 'forecast';
 }
 
+/**
+ * Un modele est present si l'une des variables de base est dans le payload
+ * avec au moins une valeur non nulle. Open-Meteo renvoie parfois les cles
+ * d'un modele hors domaine (ICON-D2 sur la Bretagne) remplies de null :
+ * ce modele est alors traite comme absent plutot que comme une serie vide.
+ */
 function isModelPresent(hourly: RawBlock, model: ModelId, suffixed: boolean): boolean {
-  return HOURLY_MEASURES.some(([, variable]) => variableKey(variable, model, suffixed) in hourly);
+  return PRESENCE_VARIABLES.some((variable) => {
+    const raw = hourly[variableKey(variable, model, suffixed)];
+    return (
+      raw !== undefined && (raw as readonly (number | string | null)[]).some((v) => v !== null)
+    );
+  });
 }
 
 function mapHourlySeries(
@@ -125,7 +155,8 @@ function mapHourlySeries(
     variableKey('weather_code', model, suffixed),
     timeline.length,
   );
-  if (weatherCode === null) {
+  const isDay = readNumericSeries(hourly, variableKey('is_day', model, suffixed), timeline.length);
+  if (weatherCode === null || isDay === null) {
     return null;
   }
 
@@ -134,6 +165,7 @@ function mapHourlySeries(
       value: seriesByField.get(field)?.[index] ?? null,
       provenance: provenanceAt(now, time),
     });
+    const day = isDay[index] ?? null;
     return {
       time,
       temperature: measure('temperature'),
@@ -145,7 +177,15 @@ function mapHourlySeries(
       dewPoint: measure('dewPoint'),
       cloudCover: measure('cloudCover'),
       radiation: measure('radiation'),
+      humidity: measure('humidity'),
+      apparentTemperature: measure('apparentTemperature'),
+      precipitationProbability: measure('precipitationProbability'),
+      snowfall: measure('snowfall'),
+      cape: measure('cape'),
+      visibility: measure('visibility'),
+      freezingLevel: measure('freezingLevel'),
       weatherCode: weatherCode[index] ?? null,
+      isDay: day === null ? null : day === 1,
     };
   });
 }
@@ -194,6 +234,11 @@ function mapDailySeries(
       tempMin: measure('tempMin'),
       precipitationSum: measure('precipitationSum'),
       uvIndexMax: measure('uvIndexMax'),
+      windGustMax: measure('windGustMax'),
+      windSpeedMax: measure('windSpeedMax'),
+      windDirectionDominant: measure('windDirectionDominant'),
+      precipitationHours: measure('precipitationHours'),
+      snowfallSum: measure('snowfallSum'),
       sunrise: sunrise[index] ?? null,
       sunset: sunset[index] ?? null,
       weatherCode: weatherCode[index] ?? null,
@@ -249,10 +294,22 @@ export function mapOpenMeteoResponse(input: MapOpenMeteoInput): HttpResult<Mappe
     series[model] = { model, hourly: hourlySeries, daily: dailySeries };
   }
 
+  // Altitude inconnue (0 : position GPS sans altitude, lien partage ancien) :
+  // celle du modele numerique de terrain d'Open-Meteo la remplace. Elle sert
+  // au classement du terrain et au choix de la station de reference.
+  const elevation =
+    place.elevation === 0 && Number.isFinite(response.elevation)
+      ? response.elevation
+      : place.elevation;
   return {
     ok: true,
     value: {
-      bundle: { place, fetchedAt, timeline: timeline as readonly LocalIsoHour[], series },
+      bundle: {
+        place: elevation === place.elevation ? place : { ...place, elevation },
+        fetchedAt,
+        timeline: timeline as readonly LocalIsoHour[],
+        series,
+      },
       missingModels,
     },
   };

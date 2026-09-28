@@ -1,0 +1,66 @@
+/*
+ * Tampon d'encre : double filet, légère inclinaison, encre un peu passée.
+ * La couleur est celle du modèle (--stamp), seule information qui en porte.
+ */
+.stamp {
+  --stamp: var(--encre);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--esp-2) var(--esp-4) var(--esp-3);
+  border: 3px double var(--stamp);
+  border-radius: 4px;
+  color: var(--stamp);
+  transform: rotate(-2.5deg);
+  background:
+    radial-gradient(
+      circle at 30% 20%,
+      color-mix(in srgb, var(--stamp) 6%, transparent),
+      transparent 70%
+    ),
+    color-mix(in srgb, var(--papier-haut) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--stamp) 25%, transparent);
+  text-align: center;
+  min-width: 9.5rem;
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.model {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.meta {
+  font-family: var(--font-corps);
+  font-size: var(--pas-xs);
+  letter-spacing: 0.02em;
+  color: var(--encre-faible);
+}
+
+.compact {
+  min-width: 0;
+  padding: var(--esp-1) var(--esp-3) var(--esp-2);
+  transform: rotate(-2deg);
+}
+
+.compact .model {
+  font-size: 1.375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp {
+    transform: none;
+  }
+}

@@ -2,14 +2,13 @@ import { deleteDB, openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import type { ForecastBundle, Place } from '../../domain/types';
 
-// ARCHITECTURE.md section 4.5 documente le schema complet (forecasts,
-// geocoding, archive, reliability, meta). archive/reliability dependent de
-// types que domain/reliability.ts n'expose qu'au Lot 7 : cette version 1
-// ne cree que les deux magasins requis au Lot 1. Le Lot 7 migrera vers la
-// version 2 en ajoutant les magasins manquants, jamais en recreant la base.
+// ARCHITECTURE.md section 4.5. Version 1 : forecasts, geocoding.
+// Version 2 (ROADMAP.md R5) : datasets, cache generique a expiration
+// (ensemble, verification, qualite de l'air, nowcast). Migration
+// incrementale, jamais de suppression et recreation de la base.
 export interface DbSchema extends DBSchema {
   forecasts: {
-    key: string; // `${placeId}|${modelsHash}|${pastDays}|${forecastDays}`
+    key: string; // `v${schema}|${placeId}|${modelsHash}|${pastDays}|${forecastDays}`
     value: {
       key: string;
       bundle: ForecastBundle;
@@ -28,19 +27,32 @@ export interface DbSchema extends DBSchema {
     };
     indexes: { byExpiry: number };
   };
+  datasets: {
+    key: string; // `${kind}|${placeId}`
+    value: {
+      key: string;
+      value: unknown;
+      storedAt: number;
+      expiresAt: number;
+    };
+    indexes: { byExpiry: number };
+  };
 }
 
 const DB_NAME = 'meteo-fr';
-const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 function isIndexedDbAvailable(): boolean {
   return typeof indexedDB !== 'undefined';
 }
 
-function upgrade(db: IDBPDatabase<DbSchema>, oldVersion: number): void {
+export function upgrade(db: IDBPDatabase<DbSchema>, oldVersion: number): void {
   if (oldVersion < 1) {
     db.createObjectStore('forecasts', { keyPath: 'key' }).createIndex('byExpiry', 'expiresAt');
     db.createObjectStore('geocoding', { keyPath: 'key' }).createIndex('byExpiry', 'expiresAt');
+  }
+  if (oldVersion < 2) {
+    db.createObjectStore('datasets', { keyPath: 'key' }).createIndex('byExpiry', 'expiresAt');
   }
 }
 

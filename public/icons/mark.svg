@@ -1,7 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#16232B"/>
-  <polyline points="112,330 182,268 246,304 312,196 384,244"
-            fill="none" stroke="#E9EDEA" stroke-width="24"
-            stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="384" cy="244" r="20" fill="#E9EDEA"/>
+  <!-- Cercle de station synoptique a moitie hachure (4 octas) et barbule de
+       vent : le symbole de station d'une carte d'observation, a l'encre. -->
+  <defs>
+    <pattern id="hachure" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="26" stroke="#F2EDE2" stroke-width="10"/>
+    </pattern>
+    <clipPath id="station"><circle cx="292" cy="292" r="112"/></clipPath>
+  </defs>
+  <rect width="512" height="512" fill="#1C2733"/>
+  <line x1="84" y1="0" x2="84" y2="512" stroke="#E0715F" stroke-width="10"/>
+  <rect x="292" y="170" width="130" height="250" fill="url(#hachure)" clip-path="url(#station)"/>
+  <circle cx="292" cy="292" r="112" fill="none" stroke="#F2EDE2" stroke-width="22"/>
+  <g stroke="#F2EDE2" stroke-width="22" stroke-linecap="round" fill="none">
+    <line x1="213" y1="213" x2="130" y2="130"/>
+    <line x1="130" y1="130" x2="196" y2="80"/>
+    <line x1="162" y1="162" x2="228" y2="112"/>
+  </g>
 </svg>

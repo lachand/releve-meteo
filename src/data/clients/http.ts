@@ -48,10 +48,34 @@ function isRetryable(failure: HttpFailure): boolean {
   );
 }
 
+type BodyParser<T> = (response: Response) => Promise<T>;
+
+async function parseJson<T>(response: Response): Promise<T> {
+  return (await response.json()) as T;
+}
+
+async function parseText(response: Response): Promise<string> {
+  return response.text();
+}
+
+/**
+ * Decompresse un corps gzip servi tel quel (fichier `.csv.gz` avec
+ * `Content-Type: application/gzip`, que le navigateur ne decode pas de
+ * lui-meme, contrairement a `Content-Encoding: gzip`).
+ */
+async function parseGzipText(response: Response): Promise<string> {
+  if (response.body === null) {
+    return '';
+  }
+  const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+}
+
 async function attemptRequest<T>(
   url: string,
   timeoutMs: number,
   callerSignal: AbortSignal | undefined,
+  parse: BodyParser<T>,
 ): Promise<HttpResult<T>> {
   const timeoutController = new AbortController();
   const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
@@ -91,7 +115,7 @@ async function attemptRequest<T>(
     }
 
     try {
-      const value = (await response.json()) as T;
+      const value = await parse(response);
       return { ok: true, value };
     } catch {
       return { ok: false, failure: { kind: 'malformed', detail: 'JSON invalide' } };
@@ -102,16 +126,29 @@ async function attemptRequest<T>(
 }
 
 /** Aucune exception n'est levee pour un echec reseau. Les erreurs sont des valeurs. */
-export async function request<T>(
+export function request<T>(url: string, options: RequestOptions = {}): Promise<HttpResult<T>> {
+  return requestWith<T>(url, options, parseJson);
+}
+
+/** Variante texte ; `gzip: true` pour un fichier compresse servi brut. */
+export function requestText(
   url: string,
-  options: RequestOptions = {},
+  options: RequestOptions & { readonly gzip?: boolean } = {},
+): Promise<HttpResult<string>> {
+  return requestWith(url, options, options.gzip === true ? parseGzipText : parseText);
+}
+
+async function requestWith<T>(
+  url: string,
+  options: RequestOptions,
+  parse: BodyParser<T>,
 ): Promise<HttpResult<T>> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const retries = options.retries ?? DEFAULT_RETRIES;
 
   let attempt = 0;
   for (;;) {
-    const result = await attemptRequest<T>(url, timeoutMs, options.signal);
+    const result = await attemptRequest<T>(url, timeoutMs, options.signal, parse);
     if (result.ok || attempt >= retries || !isRetryable(result.failure)) {
       return result;
     }

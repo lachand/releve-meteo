@@ -28,8 +28,8 @@ export function windRoseBuckets(
   const counts = new Array<number>(DIRECTIONS.length).fill(0);
   const boundedEnd = Math.min(end, bundle.timeline.length);
   for (let i = start; i < boundedEnd; i += 1) {
-    const segment = cascade.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
-    const hourly = segment ? bundle.series[segment.model]?.hourly[i] : undefined;
+    // Point de cascade : modele retenu, champs absents completes et nommes.
+    const hourly = cascade.points[i] ?? undefined;
     const degrees = hourly?.windDirection.value ?? null;
     if (degrees === null) {
       continue;

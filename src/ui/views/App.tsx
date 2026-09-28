@@ -1,32 +1,100 @@
-import { useEffect, useState } from 'react';
-import type { Place } from '../../domain/types';
-import { blendDaily } from '../dailyBlend';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  getAirQuality,
+  getEnsemble,
+  getNowcast,
+  getStationReport,
+  getVerifications,
+} from '../../data/repository';
+import { blendDaily } from '../../domain/dailyBlend';
+import { dailyEnsemble } from '../../domain/ensemble';
+import { MODEL_ORDER } from '../../domain/models';
+import { detectPhenomena } from '../../domain/phenomena';
+import { stationCheck } from '../../domain/stationCheck';
+import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
+import type { ForecastBundle, Place } from '../../domain/types';
+import { InstallPrompt } from '../components/InstallPrompt';
+import { PlaceSearch } from '../components/PlaceSearch';
+import { PlaceSwitcher } from '../components/PlaceSwitcher';
+import { Settings } from '../components/Settings';
+import { Tabs } from '../components/Tabs';
+import type { TabItem } from '../components/Tabs';
+import { UpdateBanner } from '../components/UpdateBanner';
+import { formatCompact, formatLongDate } from '../format';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
+import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
+import { useGeolocation } from '../hooks/useGeolocation';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { useModelChoice } from '../hooks/useModelChoice';
 import { usePreferences } from '../hooks/usePreferences';
 import { useServiceWorkerUpdate } from '../hooks/useServiceWorkerUpdate';
 import { useTerrain } from '../hooks/useTerrain';
 import { TERRAIN_KIND_LABELS } from '../modelPresentation';
-import { parseSharedPlace, sharedPlaceSearch } from '../sharedPlace';
-import { ComparisonView } from '../components/ComparisonView';
-import { ConditionsPanel } from '../components/ConditionsPanel';
-import { InstallPrompt } from '../components/InstallPrompt';
-import { ModelInfoPanel } from '../components/ModelInfoPanel';
-import { NowBlock } from '../components/NowBlock';
-import { PlaceSearch } from '../components/PlaceSearch';
-import { PlaceSwitcher } from '../components/PlaceSwitcher';
-import { PrecipitationChart } from '../components/PrecipitationChart';
-import { PressureChart } from '../components/PressureChart';
-import { RadarMap } from '../components/RadarMap';
-import { Settings } from '../components/Settings';
-import { SevenDayView } from '../components/SevenDayView';
-import { Timeline48h } from '../components/Timeline48h';
-import { UpdateBanner } from '../components/UpdateBanner';
-import { WindRose } from '../components/WindRose';
+import { explainSelection } from '../selectionExplanation';
+import { parseSharedPlace, sharedPlaceSearch, sharedView } from '../sharedPlace';
 import styles from './App.module.css';
+import { PHENOMENA_HORIZON_HOURS, TodayView } from './TodayView';
+import { VIEW_KEYS } from './viewModel';
+import type { ForecastViewModel, ViewKey } from './viewModel';
+
+// Seule la vue « Aujourd'hui » est dans le paquet initial : elle n'utilise
+// ni Chart.js ni Leaflet. Les autres vues sont chargees a la demande (et
+// precachees par le service worker pour le hors ligne).
+const HoursView = lazy(() => import('./HoursView').then((m) => ({ default: m.HoursView })));
+const DaysView = lazy(() => import('./DaysView').then((m) => ({ default: m.DaysView })));
+const MapView = lazy(() => import('./MapView').then((m) => ({ default: m.MapView })));
+const ModelsView = lazy(() => import('./ModelsView').then((m) => ({ default: m.ModelsView })));
+const ReliabilityView = lazy(() =>
+  import('./ReliabilityView').then((m) => ({ default: m.ReliabilityView })),
+);
+
+const TABS: readonly TabItem<ViewKey>[] = [
+  { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
+  { key: 'heures', label: 'Heure par heure', short: 'Heures' },
+  { key: 'jours', label: '15 jours', short: '15 j' },
+  { key: 'carte', label: 'Radar', short: 'Radar' },
+  { key: 'modeles', label: 'Modèles', short: 'Modèles' },
+  { key: 'fiabilite', label: 'Fiabilité', short: 'Fiabilité' },
+];
+
+function examplePlace(
+  name: string,
+  latitude: number,
+  longitude: number,
+  elevation: number,
+  admin: string,
+): Place {
+  return {
+    id: `${latitude.toFixed(4)}:${longitude.toFixed(4)}`,
+    name,
+    latitude,
+    longitude,
+    elevation,
+    admin,
+    alias: null,
+  };
+}
+
+/** Lieux d'exemple de l'ecran vide : un par type de terrain, pour voir la selection varier. */
+const EXAMPLE_PLACES: readonly { readonly place: Place; readonly terrain: string }[] = [
+  { place: examplePlace('Paris', 48.8566, 2.3522, 35, 'Paris'), terrain: 'grande ville' },
+  {
+    place: examplePlace('Chamonix-Mont-Blanc', 45.9237, 6.8694, 1035, 'Haute-Savoie'),
+    terrain: 'montagne',
+  },
+  { place: examplePlace('Brest', 48.3904, -4.4861, 52, 'Finistère'), terrain: 'côte atlantique' },
+  {
+    place: examplePlace('Marseille', 43.2965, 5.3698, 12, 'Bouches-du-Rhône'),
+    terrain: 'Méditerranée',
+  },
+  {
+    place: examplePlace('Strasbourg', 48.5734, 7.7521, 142, 'Bas-Rhin'),
+    terrain: 'plaine d’Alsace',
+  },
+];
 
 const dateTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Europe/Paris',
@@ -40,41 +108,168 @@ function formatFetchedAt(epochMs: number): string {
   return dateTimeFormatter.format(new Date(epochMs)).replace(' ', ' à ').replace(':', 'h');
 }
 
+function initialView(): ViewKey {
+  const requested = sharedView(window.location.search);
+  return VIEW_KEYS.find((key) => key === requested) ?? 'jour';
+}
+
+function coordinates(place: Place): string {
+  const lat = `${formatCompact(Math.abs(Math.round(place.latitude * 100) / 100))}° ${place.latitude >= 0 ? 'N' : 'S'}`;
+  const lon = `${formatCompact(Math.abs(Math.round(place.longitude * 100) / 100))}° ${place.longitude >= 0 ? 'E' : 'O'}`;
+  return `${lat}, ${lon}`;
+}
+
 export function App() {
   const [place, setPlace] = useState<Place | null>(() => parseSharedPlace(window.location.search));
-  const [comparing, setComparing] = useState(false);
+  const [view, setView] = useState<ViewKey>(initialView);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
   const { available: installAvailable, promptInstall } = useInstallPrompt();
   const preferences = usePreferences();
+  const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
-  const cascade = useCascadeView(bundle);
-  const terrain = useTerrain(place);
+  // Le lieu de la prevision peut porter une altitude plus juste (terrain
+  // d'Open-Meteo quand la position n'en donnait pas) : c'est lui qui sert
+  // au terrain et au choix de la station de reference.
+  const resolvedPlace = bundle?.place ?? place;
+  const terrain = useTerrain(resolvedPlace);
+  const geolocation = useGeolocation(setPlace);
+
+  // La verification attend la prevision : elle a besoin de l'altitude
+  // resolue pour retenir une station representative.
+  const verification = useDataset(bundle === null ? null : `verification|${bundle.place.id}`, () =>
+    // `bundle` est non nul des que la cle l'est.
+    getVerifications((bundle as ForecastBundle).place, MODEL_ORDER),
+  );
+  const ensemble = useDataset(place === null ? null : `ensemble|${place.id}`, () =>
+    getEnsemble(place as Place),
+  );
+  const airQuality = useDataset(place === null ? null : `air|${place.id}`, () =>
+    getAirQuality(place as Place),
+  );
+  const nowcast = useDataset(place === null ? null : `nowcast|${place.id}`, () =>
+    getNowcast(place as Place),
+  );
+  // Meme dependance que la verification : la station depend de l'altitude resolue.
+  const station = useDataset(bundle === null ? null : `station|${bundle.place.id}`, () =>
+    getStationReport((bundle as ForecastBundle).place),
+  );
+
+  const verifications = useMemo(
+    () => (verification.status === 'ready' ? verification.value.verifications : []),
+    [verification],
+  );
+  const cascade = useCascadeView(bundle, { terrain, verification: verifications, preferred });
   const confidence = useConfidenceView(bundle, terrain);
 
   useAppliedTheme(preferences.preferences.theme);
+
+  // Raccourci « Ma position » du manifeste : `?geo=1` localise au demarrage.
+  const { locate } = geolocation;
+  const [geoRequested] = useState(
+    () => new URLSearchParams(window.location.search).get('geo') === '1',
+  );
+  useEffect(() => {
+    if (geoRequested && place === null) {
+      locate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule tentative au demarrage.
+  }, [geoRequested]);
 
   useEffect(() => {
     if (place === null) {
       return;
     }
-    const search = sharedPlaceSearch(place);
+    const search = sharedPlaceSearch(place, view === 'jour' ? undefined : view);
     if (window.location.search !== search) {
       window.history.replaceState(null, '', search);
     }
-  }, [place]);
+  }, [place, view]);
+
+  const navigate = useCallback((next: ViewKey) => {
+    setView(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const ensembleValue = ensemble.status === 'ready' ? ensemble.value : null;
+  const ensembleDays = useMemo(
+    () => (ensembleValue === null ? null : dailyEnsemble(ensembleValue)),
+    [ensembleValue],
+  );
+
+  const vm = useMemo((): ForecastViewModel | null => {
+    if (bundle === null || cascade === null) {
+      return null;
+    }
+    const place = bundle.place;
+    const now = new Date();
+    const nowIso = localIsoFromUtc(now.getTime());
+    const today = nowIso.slice(0, 10);
+    const horizon = cascade.points.filter((point, index) => {
+      const time = bundle.timeline[index];
+      if (point === null || time === undefined) {
+        return false;
+      }
+      const lead = leadHoursFrom(now, time);
+      return lead >= -1 && lead <= PHENOMENA_HORIZON_HOURS;
+    });
+    return {
+      place,
+      terrain,
+      bundle,
+      cascade,
+      confidence,
+      days: blendDaily({ bundle, context: cascade.context, now, preferred }),
+      ensembleDays: ensembleDays?.filter((day) => day.date >= today) ?? null,
+      ensembleMembers: ensembleValue?.temperature.length ?? 0,
+      ensembleState: ensemble.status,
+      verification,
+      airQuality,
+      nowcast,
+      station,
+      stationCheck:
+        station.status === 'ready'
+          ? stationCheck({ records: station.value.records, bundle, now })
+          : null,
+      episodes: detectPhenomena(horizon.filter((p) => p !== null)),
+      explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),
+      windUnit: preferences.preferences.units.wind,
+      now,
+      today,
+      currentHour: `${nowIso.slice(0, 13)}:00`,
+      preferred,
+      setPreferred,
+      navigate,
+    };
+  }, [
+    terrain,
+    bundle,
+    cascade,
+    confidence,
+    ensembleDays,
+    ensembleValue,
+    ensemble.status,
+    verification,
+    airQuality,
+    nowcast,
+    station,
+    preferences.preferences.units.wind,
+    preferred,
+    setPreferred,
+    navigate,
+  ]);
 
   const isFavourite =
     place !== null && preferences.preferences.favourites.some((f) => f.id === place.id);
-
-  const nowPoint =
-    bundle !== null && cascade !== null && cascade.activeModel !== null && cascade.nowIndex !== -1
-      ? (bundle.series[cascade.activeModel]?.hourly[cascade.nowIndex] ?? null)
-      : null;
+  const displayName = place === null ? null : (place.alias ?? place.name);
+  const metaPlace = resolvedPlace ?? place;
 
   return (
     <div className={styles.page}>
+      <a className={styles.skip} href="#contenu">
+        Aller au relevé
+      </a>
       {updateAvailable && <UpdateBanner onRefresh={applyUpdate} />}
       {!updateAvailable && installAvailable && (
         <InstallPrompt
@@ -83,52 +278,67 @@ export function App() {
           }}
         />
       )}
-      <header className={styles.header}>
-        <div>
-          <p className="eyebrow">Relevé</p>
-          <h1>{place === null ? 'Aucun lieu selectionne' : place.name}</h1>
-          {place !== null && (
+
+      <header className={styles.masthead}>
+        <div className={styles.brand}>
+          <img src="/icons/mark.svg" alt="" width={28} height={28} className={styles.mark} />
+          <p className={styles.brandName}>
+            Relevé <span className={styles.brandSub}>carnet météorologique</span>
+          </p>
+        </div>
+        <div className={styles.actions}>
+          <div className={styles.searchColumn}>
+            <PlaceSearch onSelect={setPlace} />
+          </div>
+          <div className={styles.buttons}>
+            {place !== null && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-pressed={isFavourite}
+                onClick={() =>
+                  isFavourite
+                    ? preferences.removeFavourite(place.id)
+                    : preferences.addFavourite(place)
+                }
+                aria-label={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                title={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              >
+                {isFavourite ? '★' : '☆'}
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => setSettingsOpen((open) => !open)}
+              aria-label="Réglages"
+              aria-expanded={settingsOpen}
+              title="Réglages"
+            >
+              ⚙
+            </button>
+          </div>
+        </div>
+        {place !== null && (
+          <div className={styles.placeBlock}>
+            <h1 className={styles.placeName}>{displayName}</h1>
             <p className={styles.placeMeta}>
               {[
                 place.admin,
-                `${Math.round(place.elevation)} m`,
+                metaPlace === null ? null : `${Math.round(metaPlace.elevation)} m`,
                 terrain !== null ? TERRAIN_KIND_LABELS[terrain.kind] : null,
+                coordinates(place),
               ]
                 .filter((value): value is string => value !== null)
                 .join(' · ')}
             </p>
-          )}
-        </div>
-        <div className={styles.headerActions}>
-          <div className={styles.searchColumn}>
-            <PlaceSearch onSelect={setPlace} />
+            {bundle !== null && (
+              <p className={styles.dateline}>
+                Relevé du {formatLongDate(localIsoFromUtc(bundle.fetchedAt))}
+              </p>
+            )}
           </div>
-          {place !== null && (
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-pressed={isFavourite}
-              onClick={() =>
-                isFavourite
-                  ? preferences.removeFavourite(place.id)
-                  : preferences.addFavourite(place)
-              }
-              aria-label={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              title={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            >
-              {isFavourite ? '★' : '☆'}
-            </button>
-          )}
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Réglages"
-            title="Réglages"
-          >
-            ⚙
-          </button>
-        </div>
+        )}
       </header>
 
       {settingsOpen && (
@@ -141,122 +351,116 @@ export function App() {
         />
       )}
 
+      {!settingsOpen && place !== null && (
+        <Tabs
+          items={TABS}
+          active={view}
+          onChange={setView}
+          label="Sections du relevé"
+          idPrefix="releve"
+        />
+      )}
+
       {!settingsOpen && (
-        <main>
+        <main id="contenu" className={styles.main}>
           {place === null && (
             <div className={styles.emptyState}>
-              <p>Aucun lieu enregistre.</p>
-              <p>Cherchez une commune ou utilisez votre position pour voir sa prevision.</p>
+              <p className={styles.emptyTitle}>Aucun lieu au carnet.</p>
+              <p>
+                Cherchez une commune de France métropolitaine, ou utilisez votre position, pour
+                ouvrir son relevé : le meilleur modèle y est choisi automatiquement, et justifié.
+              </p>
+              {geolocation.isSupported && (
+                <button
+                  type="button"
+                  className={styles.primaryAction}
+                  onClick={geolocation.locate}
+                  disabled={geolocation.state.status === 'loading'}
+                >
+                  Utiliser ma position
+                </button>
+              )}
+              {geolocation.state.status === 'error' && (
+                <p role="alert">{geolocation.state.message}</p>
+              )}
+              <div className={styles.examples}>
+                <p className="note">
+                  Ou ouvrir un lieu d’exemple, chacun sur un terrain différent :
+                </p>
+                <ul>
+                  {EXAMPLE_PLACES.map((example) => (
+                    <li key={example.place.id}>
+                      <button
+                        type="button"
+                        aria-label={`${example.place.name}, ${example.terrain}`}
+                        onClick={() => setPlace(example.place)}
+                      >
+                        {example.place.name}
+                        <span>{example.terrain}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
 
           {place !== null && forecastState?.status === 'loading' && (
             <div
-              className={styles.section}
+              className={styles.loading}
               aria-busy="true"
-              aria-label="Chargement de la prevision"
+              aria-label="Chargement de la prévision"
             >
               <div className={styles.skeleton} />
+              <div className={styles.skeletonShort} />
+              <p className="note">Interrogation de sept modèles de prévision…</p>
             </div>
           )}
 
           {place !== null && forecastState?.status === 'error' && (
             <div className={styles.errorState} role="alert">
-              <p>Prevision indisponible.</p>
-              <p>Le service de prevision ne repond pas.</p>
+              <p className={styles.emptyTitle}>Prévision indisponible.</p>
+              <p>
+                Le service de prévision Open-Meteo ne répond pas
+                {forecastState.failure.kind === 'rate_limited' ? ' (quota atteint)' : ''}. Vérifiez
+                la connexion puis réessayez.
+              </p>
               <button type="button" onClick={() => setPlace({ ...place })}>
-                Reessayer
+                Réessayer
               </button>
             </div>
           )}
 
-          {place !== null &&
-            forecastState?.status === 'ready' &&
-            bundle !== null &&
-            cascade !== null && (
-              <>
-                {forecastState.result.stale && (
-                  <p className={styles.staleBanner}>
-                    Hors ligne · Releve du {formatFetchedAt(bundle.fetchedAt)}
-                  </p>
-                )}
-
-                <section className={styles.section}>
-                  <p className="eyebrow">Maintenant</p>
-                  <NowBlock
-                    point={nowPoint}
-                    model={cascade.activeModel}
-                    windUnit={preferences.preferences.units.wind}
-                  />
-                </section>
-
-                {comparing ? (
-                  <section className={styles.section}>
-                    <ComparisonView
-                      bundle={bundle}
-                      nowIndex={cascade.nowIndex}
-                      onClose={() => setComparing(false)}
-                    />
-                  </section>
-                ) : (
-                  <div className={styles.detailLayout}>
-                    <div>
-                      <section className={styles.section}>
-                        <p className="eyebrow">48 heures</p>
-                        <Timeline48h bundle={bundle} cascade={cascade} confidence={confidence} />
-                      </section>
-
-                      <section className={styles.section}>
-                        <p className="eyebrow">Précipitations</p>
-                        <PrecipitationChart bundle={bundle} cascade={cascade} />
-                      </section>
-
-                      <section className={styles.section}>
-                        <p className="eyebrow">7 jours</p>
-                        <SevenDayView days={blendDaily(bundle)} />
-                      </section>
-
-                      <section className={styles.section}>
-                        <p className="eyebrow">Pression</p>
-                        <PressureChart bundle={bundle} cascade={cascade} />
-                      </section>
-
-                      <section className={styles.section}>
-                        <p className="eyebrow">Vent</p>
-                        <WindRose bundle={bundle} cascade={cascade} />
-                      </section>
-
-                      <section className={styles.section}>
-                        <p className="eyebrow">Radar</p>
-                        <RadarMap key={place.id} place={place} />
-                      </section>
+          {vm !== null && forecastState?.status === 'ready' && (
+            <>
+              {forecastState.result.stale && (
+                <p className={styles.staleBanner}>
+                  Hors ligne · Relevé du {formatFetchedAt(vm.bundle.fetchedAt)}
+                </p>
+              )}
+              <div
+                role="tabpanel"
+                id={`releve-panel-${view}`}
+                aria-labelledby={`releve-tab-${view}`}
+                className={styles.panel}
+              >
+                <Suspense
+                  fallback={
+                    <div className={styles.loading} aria-busy="true" aria-label="Chargement">
+                      <div className={styles.skeleton} />
                     </div>
-
-                    {cascade.activeModel !== null &&
-                      terrain !== null &&
-                      cascade.nowIndex !== -1 && (
-                        <aside className={styles.sidePanel}>
-                          <ModelInfoPanel
-                            bundle={bundle}
-                            nowIndex={cascade.nowIndex}
-                            activeModel={cascade.activeModel}
-                            available={cascade.available}
-                            terrain={terrain}
-                            onCompareClick={() => setComparing(true)}
-                          />
-                          <section className={styles.section}>
-                            <p className="eyebrow">Repères du jour</p>
-                            <ConditionsPanel
-                              nowPoint={nowPoint}
-                              today={blendDaily(bundle)[0] ?? null}
-                            />
-                          </section>
-                        </aside>
-                      )}
-                  </div>
-                )}
-              </>
-            )}
+                  }
+                >
+                  {view === 'jour' && <TodayView vm={vm} />}
+                  {view === 'heures' && <HoursView vm={vm} />}
+                  {view === 'jours' && <DaysView vm={vm} />}
+                  {view === 'carte' && <MapView vm={vm} />}
+                  {view === 'modeles' && <ModelsView vm={vm} />}
+                  {view === 'fiabilite' && <ReliabilityView vm={vm} />}
+                </Suspense>
+              </div>
+            </>
+          )}
         </main>
       )}
 
@@ -270,6 +474,16 @@ export function App() {
           onRename={preferences.setAlias}
         />
       )}
+
+      <footer className={styles.footer}>
+        <p>
+          Prévisions Open-Meteo (Météo-France, DWD, ECMWF, NOAA), observations Meteostat, réanalyse
+          ERA5 et qualité de l’air Copernicus, radar RainViewer, fonds OpenStreetMap.
+        </p>
+        <p>
+          <a href="/sources.html">Sources, licences et méthode</a>
+        </p>
+      </footer>
     </div>
   );
 }

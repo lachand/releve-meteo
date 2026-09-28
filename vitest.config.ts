@@ -4,12 +4,14 @@ import viteConfig from './vite.config.ts';
 export default mergeConfig(
   viteConfig,
   defineConfig({
+    // Fixtures binaires (fichiers de station Meteostat) importees en ?inline.
+    assetsInclude: ['**/*.gz'],
     test: {
       environment: 'jsdom',
       setupFiles: ['./tests/setup.ts'],
       globals: false,
       css: true,
-      exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**'],
+      exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**', '.claude/**'],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'html'],

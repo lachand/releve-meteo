@@ -1,11 +1,5 @@
 import type { TerrainKind, WeatherVariable } from './types';
 
-export const CASCADE_BOUNDS_HOURS = {
-  aromeMax: 36,
-  arpegeMax: 96,
-  mediumRangeMax: 168,
-} as const;
-
 export const TERRAIN_THRESHOLDS = {
   mountainElevationM: 900,
   plateauElevationM: 300,
@@ -37,4 +31,13 @@ export const CACHE_TTL_MS = {
   geocoding: 30 * 24 * 60 * 60 * 1000,
   vigilance: 15 * 60 * 1000,
   radar: 15 * 60 * 1000,
+  /** L'ensemble ECMWF est reexecute toutes les 6 h. */
+  ensemble: 3 * 60 * 60 * 1000,
+  /** La fenetre de verification glisse d'un jour par jour. */
+  verification: 12 * 60 * 60 * 1000,
+  airQuality: 3 * 60 * 60 * 1000,
+  /** Pas de 15 min : le nowcast vieillit vite. */
+  nowcast: 10 * 60 * 1000,
+  /** Meteostat publie les releves horaires avec quelques heures de retard. */
+  station: 30 * 60 * 1000,
 } as const;

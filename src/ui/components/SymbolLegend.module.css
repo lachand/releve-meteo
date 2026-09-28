@@ -1,0 +1,27 @@
+.legend {
+  display: grid;
+  gap: var(--esp-4);
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--esp-2) var(--esp-4);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  font-size: var(--pas-s);
+  color: var(--encre);
+}
+
+.note {
+  font-family: var(--font-titre);
+  font-style: italic;
+  color: var(--encre-faible);
+}

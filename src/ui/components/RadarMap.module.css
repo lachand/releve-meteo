@@ -1,12 +1,13 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--esp-2);
+  gap: var(--esp-3);
 }
 
 .map {
-  height: 320px;
-  border: var(--filet);
+  height: min(62vh, 520px);
+  min-height: 320px;
+  border: var(--filet-encre);
   border-radius: var(--rayon);
 }
 
@@ -14,4 +15,56 @@
   margin: 0;
   color: var(--encre-faible);
   font-size: var(--pas-xs);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.play {
+  min-height: 44px;
+  min-width: 6rem;
+  padding: 0 var(--esp-4);
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.slider {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--encre);
+}
+
+.frameLabel {
+  margin: 0;
+  white-space: nowrap;
+  font-size: var(--pas-s);
+}
+
+/* Provenance (DESIGN.md 5) : pastille pleine = observé ; prévu = encre, sans pastille. */
+.observed::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  border: 1.5px solid var(--observe);
+  background: var(--observe);
+  vertical-align: 0.05em;
+}
+
+.forecast {
+  font-style: italic;
 }

@@ -1,0 +1,151 @@
+.fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: var(--esp-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  grid-column: 1 / -1;
+  margin-bottom: var(--esp-2);
+  font-family: var(--font-titre);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Fiche de modèle : feuillet cartonné, bord gauche à la couleur du modèle. */
+.card {
+  --model: var(--encre);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--esp-3);
+  padding: var(--esp-3) var(--esp-4);
+  border: var(--filet);
+  border-left: 4px solid var(--model);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  box-shadow: var(--ombre-feuillet);
+  cursor: pointer;
+  transition: border-color var(--duree-courte) ease-out;
+}
+
+.card[data-checked] {
+  border-color: var(--encre);
+  border-left-color: var(--model);
+  outline: 2px solid var(--encre);
+  outline-offset: -1px;
+}
+
+.card[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.card:has(.radio:focus-visible) {
+  outline: 2px solid var(--encre);
+  outline-offset: 2px;
+}
+
+.radio {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.3rem;
+  accent-color: var(--encre);
+}
+
+.cardBody {
+  display: grid;
+  gap: var(--esp-2);
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  font-family: var(--font-display);
+  font-size: var(--pas-m);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--model);
+}
+
+.meta {
+  font-family: var(--font-corps);
+  font-size: var(--pas-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--encre-faible);
+}
+
+.recommended {
+  font-size: var(--pas-xs);
+  letter-spacing: 0.14em;
+  padding: 0 var(--esp-1);
+  border: 1px solid var(--marge);
+  color: var(--marge);
+  border-radius: var(--rayon);
+}
+
+.summary {
+  font-size: var(--pas-s);
+  color: var(--encre);
+}
+
+.lists {
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-s);
+}
+
+.pros,
+.cons {
+  display: grid;
+  gap: 2px;
+}
+
+.pro::before,
+.con::before {
+  display: inline-block;
+  width: 1.1em;
+  font-family: var(--font-donnee);
+  font-weight: 400;
+}
+
+.pro::before {
+  content: '+';
+  color: var(--encre);
+}
+
+.con::before {
+  content: '\2212';
+  color: var(--marge);
+}
+
+.con {
+  color: var(--encre-faible);
+}
+
+.measured {
+  font-family: var(--font-titre);
+  font-style: italic;
+  font-size: 0.98rem;
+  color: var(--encre);
+}
+
+.unavailable {
+  font-size: var(--pas-s);
+  font-style: italic;
+  color: var(--marge);
+}
