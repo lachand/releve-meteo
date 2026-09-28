@@ -98,6 +98,46 @@ describe('buildPreviousRunsUrl', () => {
   });
 });
 
+describe('altitude de verification', () => {
+  it("transmet l'altitude de la station aux previsions passees et a la reanalyse", () => {
+    const window = { startDate: '2026-08-29', endDate: '2026-09-27' };
+    const previous = new URL(
+      buildPreviousRunsUrl({
+        latitude: 45.7,
+        longitude: 4.9,
+        elevation: 200,
+        models: ['arome'],
+        window,
+      }),
+    );
+    const reanalysis = new URL(
+      buildReanalysisUrl({ latitude: 45.7, longitude: 4.9, elevation: 200, window }),
+    );
+    expect(previous.searchParams.get('elevation')).toBe('200');
+    expect(reanalysis.searchParams.get('elevation')).toBe('200');
+  });
+
+  it("n'invente pas d'altitude quand elle est inconnue", () => {
+    const window = { startDate: '2026-08-29', endDate: '2026-09-27' };
+    expect(
+      new URL(
+        buildPreviousRunsUrl({
+          latitude: 45.7,
+          longitude: 4.9,
+          elevation: null,
+          models: ['arome'],
+          window,
+        }),
+      ).searchParams.has('elevation'),
+    ).toBe(false);
+    expect(
+      new URL(buildReanalysisUrl({ latitude: 45.7, longitude: 4.9, window })).searchParams.has(
+        'elevation',
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('buildReanalysisUrl', () => {
   it('construit une URL archive-api avec les trois variables de base', () => {
     const url = new URL(
@@ -460,6 +500,7 @@ describe('fetchVerifications', () => {
     for (const url of requestedUrls) {
       expect(new URL(url).searchParams.get('latitude')).toBe(String(PLACE.latitude));
       expect(new URL(url).searchParams.get('longitude')).toBe(String(PLACE.longitude));
+      expect(new URL(url).searchParams.has('elevation')).toBe(false);
     }
   });
 
@@ -491,6 +532,8 @@ describe('fetchVerifications', () => {
     for (const url of requestedUrls) {
       expect(new URL(url).searchParams.get('latitude')).toBe(String(STATION.latitude));
       expect(new URL(url).searchParams.get('longitude')).toBe(String(STATION.longitude));
+      // Station a station : a l'altitude de la station aussi.
+      expect(new URL(url).searchParams.get('elevation')).toBe(String(STATION.elevation));
     }
   });
 

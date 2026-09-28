@@ -153,7 +153,7 @@ export function App() {
   );
   // Meme dependance que la verification : la station depend de l'altitude resolue.
   const station = useDataset(bundle === null ? null : `station|${bundle.place.id}`, () =>
-    getStationReport((bundle as ForecastBundle).place),
+    getStationReport((bundle as ForecastBundle).place, MODEL_ORDER),
   );
 
   const verifications = useMemo(
@@ -230,7 +230,7 @@ export function App() {
       station,
       stationCheck:
         station.status === 'ready'
-          ? stationCheck({ records: station.value.records, bundle, now })
+          ? stationCheck({ records: station.value.records, models: station.value.models, now })
           : null,
       episodes: detectPhenomena(horizon.filter((p) => p !== null)),
       explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),

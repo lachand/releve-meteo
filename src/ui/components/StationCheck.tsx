@@ -106,7 +106,7 @@ export function StationLine({ state, check, activeModel, onDetail }: StationLine
           <>
             {MODEL_LABELS[active.model]} donnait{' '}
             <span data-donnee>{formatOneDecimal(active.temperature)}</span>
-            {'\u00a0°C'} ici à la même heure (écart{' '}
+            {'\u00a0°C'} au même endroit à la même heure (écart{' '}
             <span data-donnee>{formatSignedOneDecimal(active.gap)}</span>
             {'\u00a0°C'}).
           </>
@@ -115,6 +115,11 @@ export function StationLine({ state, check, activeModel, onDetail }: StationLine
       {check.stale && (
         <p className={styles.caveat}>
           Relevé ancien : la station publie avec retard, l’écart ne dit rien de la dernière heure.
+        </p>
+      )}
+      {state.value.models === null && (
+        <p className={styles.caveat}>
+          Valeurs des modèles au point de la station indisponibles : aucun écart calculé.
         </p>
       )}
       <button type="button" className={styles.link} onClick={onDetail}>
@@ -222,28 +227,37 @@ export function StationCheckPanel({ state, check, activeModel, windUnit }: Stati
         <Reading label="Pluie" value={formatCompact(latest.precipitation.value)} unit="mm/h" />
       </dl>
 
-      {/* Legende hors de la zone defilante : elle ne s'elargit jamais avec le tableau. */}
-      <p id={captionId} className={styles.caption}>
-        Température de chaque modèle au lieu, en °C, face à la mesure, du plus proche au plus
-        éloigné. L’écart est la valeur du modèle moins la mesure.
-      </p>
-      <div className={styles.scroller}>
-        <table className={styles.table} aria-labelledby={captionId}>
-          <thead>
-            <tr>
-              <th scope="col">Modèle</th>
-              <th scope="col">À {hour}</th>
-              <th scope="col">Écart</th>
-              <th scope="col">Sur {STATION_CHECK.recentHours} h</th>
-            </tr>
-          </thead>
-          <tbody>
-            {check.gaps.map((gap) => (
-              <GapRow key={gap.model} gap={gap} active={gap.model === activeModel} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {check.gaps.length === 0 ? (
+        <p className={styles.muted}>
+          Valeurs des modèles au point de la station indisponibles pour l’instant : aucun écart
+          calculé.
+        </p>
+      ) : (
+        <>
+          {/* Legende hors de la zone defilante : elle ne s'elargit jamais avec le tableau. */}
+          <p id={captionId} className={styles.caption}>
+            Température de chaque modèle au point et à l’altitude de la station, en °C, face à la
+            mesure, du plus proche au plus éloigné. L’écart est la valeur du modèle moins la mesure.
+          </p>
+          <div className={styles.scroller}>
+            <table className={styles.table} aria-labelledby={captionId}>
+              <thead>
+                <tr>
+                  <th scope="col">Modèle</th>
+                  <th scope="col">À {hour}</th>
+                  <th scope="col">Écart</th>
+                  <th scope="col">Sur {STATION_CHECK.recentHours} h</th>
+                </tr>
+              </thead>
+              <tbody>
+                {check.gaps.map((gap) => (
+                  <GapRow key={gap.model} gap={gap} active={gap.model === activeModel} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <ul className={styles.notes}>
         <li>
@@ -253,7 +267,9 @@ export function StationCheckPanel({ state, check, activeModel, windUnit }: Stati
         </li>
         {match !== null && (
           <li>
-            La station est à {stationPhrase(match)} : une part de l’écart peut tenir à la distance.
+            Comparaison station à station : les modèles sont lus au point exact de la station et à
+            son altitude, pas au lieu ({stationPhrase(match)}). L’écart ne mêle donc pas la distance
+            entre les deux.
           </li>
         )}
         <li>

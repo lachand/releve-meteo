@@ -2,7 +2,7 @@ import { CACHE_TTL_MS } from '../domain/constants';
 import type { EnsembleHourly } from '../domain/ensemble';
 import { FORECAST_GRID, gridPoints } from '../domain/grid';
 import type { ForecastGrid } from '../domain/grid';
-import type { StationRecord } from '../domain/stationCheck';
+import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
 import type { Station, StationMatch } from '../domain/stations';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
@@ -14,7 +14,7 @@ import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
 import { fetchStationYear, parseStationRecords } from './clients/meteostat';
-import { fetchForecast, fetchNowcast } from './clients/openMeteo';
+import { fetchForecast, fetchNowcast, fetchStationPoint } from './clients/openMeteo';
 import { fetchVerifications } from './clients/verification';
 import type { VerificationReport } from './clients/verification';
 import { getDataset, setDataset } from './cache/datasetStore';
@@ -265,6 +265,11 @@ export interface StationReport {
   /** null : aucune station ne represente ce lieu. */
   readonly match: StationMatch | null;
   readonly records: readonly StationRecord[];
+  /**
+   * Temperatures des modeles au point et a l'altitude de la station, pour
+   * une comparaison station a station ; null si indisponibles.
+   */
+  readonly models: StationModelSeries | null;
 }
 
 /**
@@ -277,19 +282,28 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export async function getStationReport(
   place: Place,
+  models: readonly ModelId[],
 ): Promise<HttpResult<DatasetResult<StationReport>>> {
   const match = await stationFor(place);
   if (match === null) {
-    const report: StationReport = { match: null, records: [] };
+    const report: StationReport = { match: null, records: [], models: null };
     return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
   }
   return throughCache({
     kind: 'station',
-    placeId: place.id,
+    placeId: `${place.id}|${[...models].sort().join(',')}`,
     ttlMs: CACHE_TTL_MS.station,
     fetcher: async (): Promise<HttpResult<StationReport>> => {
       const now = Date.now();
       const since = now - STATION_REPORT_HOURS * HOUR_MS;
+      // Modeles lus au point et a l'altitude de la station, en parallele des
+      // releves : la comparaison se fait station a station.
+      const modelsAtStation = fetchStationPoint({
+        latitude: match.station.latitude,
+        longitude: match.station.longitude,
+        elevation: match.station.elevation,
+        models,
+      });
       // Deux fichiers annuels les premieres heures de janvier. Le fichier
       // de l'annee qui commence peut manquer : on garde ce qui repond.
       const years = [
@@ -305,10 +319,15 @@ export async function getStationReport(
           failure = text;
         }
       }
+      // Sans valeurs de modele, le releve reste utile : rendu sans ecart.
+      const atStation = await modelsAtStation;
       if (failure !== null && records.length === 0) {
         return failure;
       }
-      return { ok: true, value: { match, records } };
+      return {
+        ok: true,
+        value: { match, records, models: atStation.ok ? atStation.value : null },
+      };
     },
   });
 }

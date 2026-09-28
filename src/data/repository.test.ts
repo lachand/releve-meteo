@@ -447,18 +447,25 @@ describe('getStationReport', () => {
         return new HttpResponse(null, { status: 404 });
       }),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.value).toEqual({ match: null, records: [] });
+    expect(result.value.value).toEqual({ match: null, records: [], models: null });
     expect(meteostatCalls).toBe(0);
   });
 
-  it('garde les releves des 36 dernieres heures de la station retenue', async () => {
+  it('garde les releves des 36 dernieres heures et lit les modeles au point de la station', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    const pointRequests: URL[] = [];
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', ({ request }) => {
+        pointRequests.push(new URL(request.url));
+        return HttpResponse.json({
+          hourly: { time: ['2026-09-28T11:00', '2026-09-28T12:00'], temperature_2m: [24.1, 25.2] },
+        });
+      }),
       http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
         const body = [
           HEADER,
@@ -469,7 +476,7 @@ describe('getStationReport', () => {
         return new HttpResponse(await gzip(body));
       }),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const report = result.value.value;
@@ -479,6 +486,34 @@ describe('getStationReport', () => {
       '2026-09-28T12:00',
     ]);
     expect(report.records[1]?.temperature).toEqual({ value: 26, provenance: 'observed' });
+    // Station a station : coordonnees et altitude de la station, pas du lieu.
+    expect(pointRequests).toHaveLength(1);
+    expect(pointRequests[0]?.searchParams.get('latitude')).toBe('45.5');
+    expect(pointRequests[0]?.searchParams.get('longitude')).toBe('5.5');
+    expect(pointRequests[0]?.searchParams.get('elevation')).toBe('450');
+    expect(report.models?.temperature.arome).toEqual([24.1, 25.2]);
+  });
+
+  it('rend les releves sans modeles quand le point de station ne repond pas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get(
+        'https://api.open-meteo.com/v1/forecast',
+        () => new HttpResponse(null, { status: 400 }),
+      ),
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        return new HttpResponse(
+          await gzip([HEADER, '2026,9,28,10,26.0,metar,37,metar'].join('\n')),
+        );
+      }),
+    );
+    const result = await getStationReport(place, ['arome']);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value.records).toHaveLength(1);
+    expect(result.value.value.models).toBeNull();
   });
 
   it("garde l'annee precedente quand le fichier de la nouvelle annee manque", async () => {
@@ -486,6 +521,9 @@ describe('getStationReport', () => {
     vi.setSystemTime(new Date('2027-01-01T05:00:00Z'));
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time: [], temperature_2m: [] } }),
+      ),
       http.get(
         'https://data.meteostat.net/hourly/2026/07480.csv.gz',
         async () =>
@@ -496,7 +534,7 @@ describe('getStationReport', () => {
         () => new HttpResponse(null, { status: 404 }),
       ),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.value.records.map((record) => record.time)).toEqual(['2026-12-31T23:00']);
@@ -505,12 +543,15 @@ describe('getStationReport', () => {
   it('propage l echec quand aucun fichier ne repond', async () => {
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time: [], temperature_2m: [] } }),
+      ),
       http.get(
         'https://data.meteostat.net/hourly/:year/:station',
         () => new HttpResponse(null, { status: 404 }),
       ),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(false);
   });
 });

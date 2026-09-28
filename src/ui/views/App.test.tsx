@@ -19,6 +19,7 @@ import gridRaw from '../../../tests/fixtures/live/grid-lyon-arome.json?raw';
 import meteostatDataUrl from '../../../tests/fixtures/live/meteostat-07480-2026.csv.gz?inline';
 import nowcastRaw from '../../../tests/fixtures/live/nowcast-lyon.json?raw';
 import previousRunsRaw from '../../../tests/fixtures/live/previous-runs-bron.json?raw';
+import { stationPointPayload } from '../../../tests/fixtures/stationPoint';
 import { App } from './App';
 
 /*
@@ -52,6 +53,10 @@ function liveHandlers(options: { failForecast?: boolean; failVerification?: bool
       }
       if (params.get('latitude')?.includes(',') === true) {
         return HttpResponse.json(JSON.parse(gridRaw) as unknown[]);
+      }
+      // Modeles au point de la station (controle au dernier releve).
+      if (params.has('past_hours')) {
+        return HttpResponse.json(stationPointPayload());
       }
       return options.failForecast === true
         ? HttpResponse.error()
@@ -241,7 +246,11 @@ describe('App', { timeout: 30000 }, () => {
 
     const line = await screen.findByText(/Mesuré à/, {}, { timeout: 12000 });
     expect(line).toHaveTextContent('Mesuré à Lyon / Bron à 12h : 26 °C (il y a 3 h 27).');
-    expect(line).toHaveTextContent(/donnait .* ici à la même heure \(écart [+−]?\d+,\d °C\)/);
+    // Station a station : la valeur d'AROME lue au point de la station
+    // (24,8 °C, tests/fixtures/stationPoint.ts), pas celle du lieu.
+    expect(line).toHaveTextContent(
+      'AROME donnait 24,8 °C au même endroit à la même heure (écart −1,2 °C).',
+    );
     expect(
       screen.getByRole('button', { name: 'Tous les modèles face à la mesure' }),
     ).toBeInTheDocument();

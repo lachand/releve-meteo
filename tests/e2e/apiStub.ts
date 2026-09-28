@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
+import { stationPointPayload } from '../fixtures/stationPoint';
 import { stubTileRequests } from './tileStub';
 
 /*
@@ -50,6 +51,10 @@ export async function stubApis(page: Page, options: StubOptions = {}): Promise<v
     // Carte de prevision : une grille de points en listes paralleles.
     if (url.searchParams.get('latitude')?.includes(',') === true) {
       return route.fulfill(json(fixture('grid-lyon-arome.json')));
+    }
+    // Modeles au point de la station : reponse synthetique (voir le fichier).
+    if (url.searchParams.has('past_hours')) {
+      return route.fulfill(json(Buffer.from(JSON.stringify(stationPointPayload()))));
     }
     if (options.failForecast === true) {
       return route.fulfill({ status: 503, headers: { 'access-control-allow-origin': '*' } });
