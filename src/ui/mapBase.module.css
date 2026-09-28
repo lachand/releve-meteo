@@ -1,0 +1,14 @@
+/* Fond de carte en gris sepia : les couches de donnees ressortent. */
+.fond {
+  filter: grayscale(1) sepia(0.28) contrast(0.92) brightness(1.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .fond {
+    filter: grayscale(1) invert(0.9) sepia(0.2) contrast(0.85) brightness(0.85);
+  }
+}
+
+:global(:root[data-theme='dark']) .fond {
+  filter: grayscale(1) invert(0.9) sepia(0.2) contrast(0.85) brightness(0.85);
+}

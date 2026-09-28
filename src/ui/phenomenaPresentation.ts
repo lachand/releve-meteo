@@ -25,7 +25,7 @@ export const RISK_LABELS: Readonly<Record<RiskLevel, string>> = {
   high: 'fort',
 };
 
-/** Code WMO representatif, pour le symbole synoptique ; null si glyphe dedie. */
+/** Code WMO representatif, pour le pictogramme ; null si pictogramme dedie. */
 export const PHENOMENON_SYMBOL: Readonly<Record<PhenomenonKind, number | null>> = {
   thunderstorm: 95,
   heavyRain: 65,

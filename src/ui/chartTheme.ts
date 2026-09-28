@@ -25,6 +25,9 @@ Chart.register(
   Filler,
 );
 
+// Graduations et infobulles a la francaise : « 1 026 », « 0,1 ».
+Chart.defaults.locale = 'fr-FR';
+
 /*
  * Habillage commun des graphiques (DESIGN.md, carnet) : grille sépia,
  * graduations en IBM Plex Mono, titres d'axe en petites capitales, encre

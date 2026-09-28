@@ -96,6 +96,12 @@
   margin-left: -6px;
 }
 
+/* D'ou vient le vent, en toutes lettres : la fleche dit ou il va. */
+.windFrom {
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
 .margin {
   display: flex;
   flex-direction: column;

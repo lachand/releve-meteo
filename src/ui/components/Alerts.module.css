@@ -1,0 +1,135 @@
+/* Bandeau d'alerte : filet et titre a l'encre d'alerte, jamais un aplat criard. */
+.banner {
+  padding: var(--esp-3) var(--esp-4);
+  border: var(--filet);
+  border-left: 4px solid var(--alerte);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  box-shadow: var(--ombre-feuillet);
+}
+
+.bannerTitle {
+  margin: 0 0 var(--esp-2);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--alerte);
+}
+
+.hits {
+  display: grid;
+  gap: var(--esp-1);
+  margin: 0;
+  padding-left: var(--esp-4);
+}
+
+.editor {
+  display: grid;
+  gap: var(--esp-4);
+}
+
+.note {
+  margin: 0;
+  max-width: 48rem;
+  color: var(--encre-faible);
+  font-size: var(--pas-s);
+}
+
+.muted {
+  margin: 0;
+  color: var(--encre-faible);
+}
+
+.rules {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2) var(--esp-4);
+  padding: var(--esp-2) 0;
+  border-bottom: 1px dotted var(--grille);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--encre);
+}
+
+.remove,
+.add {
+  min-height: 44px;
+  padding: 0 var(--esp-4);
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.add {
+  background: var(--encre);
+  color: var(--papier-haut);
+}
+
+.add:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--esp-3);
+}
+
+.field {
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
+}
+
+.field select,
+.field input {
+  min-height: 44px;
+  padding: 0 var(--esp-3);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier-creux);
+  color: var(--encre);
+  font: inherit;
+  font-size: var(--pas-m);
+}
+
+.field input {
+  width: 6rem;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--alerte);
+}

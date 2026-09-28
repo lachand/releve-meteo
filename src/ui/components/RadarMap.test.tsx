@@ -1,11 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import L from 'leaflet';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as rainviewer from '../../data/clients/rainviewer';
 import type { Place } from '../../domain/types';
 import { RadarMap } from './RadarMap';
 
-vi.mock('../../data/clients/rainviewer', () => ({
+vi.mock('../../data/clients/rainviewer', async (importOriginal) => ({
+  ...(await importOriginal<typeof rainviewer>()),
   fetchRadarFrames: vi.fn(),
 }));
 
@@ -77,5 +79,39 @@ describe('RadarMap', () => {
     });
     render(<RadarMap place={place} />);
     expect(await screen.findByText('Radar indisponible pour l’instant.')).toBeInTheDocument();
+  });
+
+  // Regression : RainViewer ne sert plus ses tuiles gratuites au-dela du
+  // zoom 7 (image « Zoom Level Not Supported ») ; la carte s'ouvre au zoom
+  // 8. Les tuiles radar doivent etre demandees au zoom 7 au plus, agrandies.
+  it('demande les tuiles radar au zoom 7 au plus, quel que soit le zoom de la carte', async () => {
+    const spy = vi.spyOn(L, 'tileLayer');
+    vi.mocked(rainviewer.fetchRadarFrames).mockResolvedValue({
+      ok: true,
+      value: [
+        {
+          time: 1700000000,
+          tileUrlTemplate: 'https://tilecache.rainviewer.com/a/{z}/{x}/{y}.png',
+          provenance: 'observed',
+        },
+        {
+          time: 1700000600,
+          tileUrlTemplate: 'https://tilecache.rainviewer.com/b/{z}/{x}/{y}.png',
+          provenance: 'observed',
+        },
+      ],
+    });
+    render(<RadarMap place={place} />);
+    await screen.findByRole('slider', { name: 'Trame radar' });
+    const radarLayers = spy.mock.results
+      .map((result) => result.value as L.TileLayer)
+      .filter((layer) => (layer as unknown as { _url: string })._url.includes('rainviewer'));
+    expect(radarLayers).toHaveLength(2);
+    for (const { options } of radarLayers) {
+      // Zoom demande au serveur = min(zoom, maxNativeZoom) + zoomOffset.
+      expect((options.maxNativeZoom ?? Infinity) + (options.zoomOffset ?? 0)).toBe(7);
+      expect(options.tileSize).toBe(512);
+    }
+    spy.mockRestore();
   });
 });

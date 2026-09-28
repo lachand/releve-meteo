@@ -1,6 +1,6 @@
-// Table WMO (WW) telle que documentee par Open-Meteo. Etiquette texte
-// uniquement : DESIGN.md section 1 exclut les grandes icones soleil-nuage
-// stylisees, l'esthetique du produit reste typographique.
+// Table WMO (WW) telle que documentee par Open-Meteo. L'etiquette
+// accompagne toujours le pictogramme (symbols/WeatherSymbol.tsx), visible
+// ou comme nom accessible.
 const WEATHER_CODE_LABELS: Readonly<Record<number, string>> = {
   0: 'Ciel dégagé',
   1: 'Peu nuageux',

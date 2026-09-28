@@ -10,15 +10,21 @@ import {
   getAirQuality,
   getEnsemble,
   getForecast,
+  getForecastGrid,
   getNowcast,
   getStationReport,
   getVerifications,
+  getVigilance,
+  loadDepartments,
   loadStations,
   PAST_DAYS,
+  resetDepartmentsForTests,
   resetStationsForTests,
   searchPlaces,
 } from './repository';
 import type { ForecastBundle, Place } from '../domain/types';
+import departments from '../../public/data/departements-fr.json';
+import vigilanceRhone from '../../tests/fixtures/live/vigilance-rhone.json';
 
 const place: Place = {
   id: '45.4900:5.4700',
@@ -59,6 +65,7 @@ beforeEach(async () => {
   resetMemoryGeocodingStore();
   resetMemoryDatasetStore();
   resetStationsForTests();
+  resetDepartmentsForTests();
 });
 
 describe('getForecast', () => {
@@ -446,18 +453,25 @@ describe('getStationReport', () => {
         return new HttpResponse(null, { status: 404 });
       }),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.value).toEqual({ match: null, records: [] });
+    expect(result.value.value).toEqual({ match: null, records: [], models: null });
     expect(meteostatCalls).toBe(0);
   });
 
-  it('garde les releves des 36 dernieres heures de la station retenue', async () => {
+  it('garde les releves des 36 dernieres heures et lit les modeles au point de la station', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    const pointRequests: URL[] = [];
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', ({ request }) => {
+        pointRequests.push(new URL(request.url));
+        return HttpResponse.json({
+          hourly: { time: ['2026-09-28T11:00', '2026-09-28T12:00'], temperature_2m: [24.1, 25.2] },
+        });
+      }),
       http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
         const body = [
           HEADER,
@@ -468,7 +482,7 @@ describe('getStationReport', () => {
         return new HttpResponse(await gzip(body));
       }),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const report = result.value.value;
@@ -478,6 +492,34 @@ describe('getStationReport', () => {
       '2026-09-28T12:00',
     ]);
     expect(report.records[1]?.temperature).toEqual({ value: 26, provenance: 'observed' });
+    // Station a station : coordonnees et altitude de la station, pas du lieu.
+    expect(pointRequests).toHaveLength(1);
+    expect(pointRequests[0]?.searchParams.get('latitude')).toBe('45.5');
+    expect(pointRequests[0]?.searchParams.get('longitude')).toBe('5.5');
+    expect(pointRequests[0]?.searchParams.get('elevation')).toBe('450');
+    expect(report.models?.temperature.arome).toEqual([24.1, 25.2]);
+  });
+
+  it('rend les releves sans modeles quand le point de station ne repond pas', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get(
+        'https://api.open-meteo.com/v1/forecast',
+        () => new HttpResponse(null, { status: 400 }),
+      ),
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        return new HttpResponse(
+          await gzip([HEADER, '2026,9,28,10,26.0,metar,37,metar'].join('\n')),
+        );
+      }),
+    );
+    const result = await getStationReport(place, ['arome']);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value.records).toHaveLength(1);
+    expect(result.value.value.models).toBeNull();
   });
 
   it("garde l'annee precedente quand le fichier de la nouvelle annee manque", async () => {
@@ -485,6 +527,9 @@ describe('getStationReport', () => {
     vi.setSystemTime(new Date('2027-01-01T05:00:00Z'));
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time: [], temperature_2m: [] } }),
+      ),
       http.get(
         'https://data.meteostat.net/hourly/2026/07480.csv.gz',
         async () =>
@@ -495,7 +540,7 @@ describe('getStationReport', () => {
         () => new HttpResponse(null, { status: 404 }),
       ),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.value.records.map((record) => record.time)).toEqual(['2026-12-31T23:00']);
@@ -504,12 +549,107 @@ describe('getStationReport', () => {
   it('propage l echec quand aucun fichier ne repond', async () => {
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time: [], temperature_2m: [] } }),
+      ),
       http.get(
         'https://data.meteostat.net/hourly/:year/:station',
         () => new HttpResponse(null, { status: 404 }),
       ),
     );
-    const result = await getStationReport(place);
+    const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('getForecastGrid', () => {
+  it('interroge toute la grille en une requete et la met en cache par modele', async () => {
+    const requests: URL[] = [];
+    server.use(
+      http.get('https://api.open-meteo.com/v1/forecast', ({ request }) => {
+        const url = new URL(request.url);
+        requests.push(url);
+        const count = url.searchParams.get('latitude')?.split(',').length ?? 0;
+        return HttpResponse.json(
+          Array.from({ length: count }, () => ({
+            hourly: { time: ['2026-09-28T16:00'], temperature_2m: [21], precipitation: [0] },
+          })),
+        );
+      }),
+    );
+    const first = await getForecastGrid(place, 'arome');
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.value.points).toHaveLength(81);
+    expect(first.value.value.temperature[0]).toHaveLength(81);
+
+    await getForecastGrid(place, 'arome');
+    expect(requests).toHaveLength(1);
+    await getForecastGrid(place, 'ecmwf');
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.searchParams.get('models')).toBe('ecmwf_ifs025');
+  });
+});
+
+describe('getVigilance', () => {
+  const DEPARTMENTS_URL = 'http://localhost:3000/data/departements-fr.json';
+  const VIGILANCE_URL =
+    'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/weatherref-france-vigilance-meteo-departement/records';
+  const lyon: Place = { ...place, id: '45.7485:4.8467', latitude: 45.7485, longitude: 4.8467 };
+
+  it('interroge le departement du lieu, puis sert le cache dans le TTL', async () => {
+    const wheres: (string | null)[] = [];
+    server.use(
+      http.get(DEPARTMENTS_URL, () => HttpResponse.json(departments)),
+      http.get(VIGILANCE_URL, ({ request }) => {
+        wheres.push(new URL(request.url).searchParams.get('where'));
+        return HttpResponse.json(vigilanceRhone);
+      }),
+    );
+    const first = await getVigilance(lyon);
+    const second = await getVigilance(lyon);
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.value.department).toEqual({ code: '69', name: 'Rhône' });
+    expect(first.value.value.bulletin?.department).toBe('69');
+    expect(wheres).toEqual(['domain_id in ("69","6910")']);
+  });
+
+  it('ne demande rien pour un lieu hors des departements', async () => {
+    let calls = 0;
+    server.use(
+      http.get(DEPARTMENTS_URL, () => HttpResponse.json(departments)),
+      http.get(VIGILANCE_URL, () => {
+        calls += 1;
+        return HttpResponse.json(vigilanceRhone);
+      }),
+    );
+    const result = await getVigilance({ ...place, id: 'geneve', latitude: 46.2, longitude: 6.15 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value).toEqual({ department: null, bulletin: null });
+    expect(calls).toBe(0);
+  });
+
+  it("remonte l'echec du service de vigilance", async () => {
+    server.use(
+      http.get(DEPARTMENTS_URL, () => HttpResponse.json(departments)),
+      http.get(VIGILANCE_URL, () => new HttpResponse(null, { status: 404 })),
+    );
+    const result = await getVigilance(lyon);
+    expect(result.ok).toBe(false);
+  });
+
+  it('se contente de contours vides quand le fichier manque, et ne le charge qu une fois', async () => {
+    let calls = 0;
+    server.use(
+      http.get(DEPARTMENTS_URL, () => {
+        calls += 1;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    expect(await loadDepartments()).toEqual([]);
+    expect(await loadDepartments()).toEqual([]);
+    expect(calls).toBe(1);
   });
 });

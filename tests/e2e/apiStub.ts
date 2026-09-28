@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
+import { stationPointPayload } from '../fixtures/stationPoint';
 import { stubTileRequests } from './tileStub';
 
 /*
@@ -10,7 +11,8 @@ import { stubTileRequests } from './tileStub';
  * a 13h27 UTC pour Lyon (tests/fixtures/live/). L'horloge du navigateur est
  * figee au meme instant : les echeances, la cascade et la verification
  * sont ainsi celles d'un vrai releve, mais deterministes. Aucune requete
- * ne part vers Open-Meteo, Meteostat ou les serveurs de tuiles.
+ * ne part vers Open-Meteo, Meteostat, Opendatasoft ou les serveurs de
+ * tuiles.
  */
 
 const LIVE = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'live');
@@ -47,6 +49,14 @@ export async function stubApis(page: Page, options: StubOptions = {}): Promise<v
     if (url.searchParams.has('minutely_15')) {
       return route.fulfill(json(fixture('nowcast-lyon.json')));
     }
+    // Carte de prevision : une grille de points en listes paralleles.
+    if (url.searchParams.get('latitude')?.includes(',') === true) {
+      return route.fulfill(json(fixture('grid-lyon-arome.json')));
+    }
+    // Modeles au point de la station : reponse synthetique (voir le fichier).
+    if (url.searchParams.has('past_hours')) {
+      return route.fulfill(json(Buffer.from(JSON.stringify(stationPointPayload()))));
+    }
     if (options.failForecast === true) {
       return route.fulfill({ status: 503, headers: { 'access-control-allow-origin': '*' } });
     }
@@ -76,6 +86,9 @@ export async function stubApis(page: Page, options: StubOptions = {}): Promise<v
       headers: { 'access-control-allow-origin': '*' },
       body: fixture('meteostat-07480-2026.csv.gz'),
     }),
+  );
+  await page.route('https://public.opendatasoft.com/**', (route) =>
+    route.fulfill(json(fixture('vigilance-rhone.json'))),
   );
 }
 

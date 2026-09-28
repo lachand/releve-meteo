@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dewPoint, fogRisk, frostRisk, rollingSum, solarYieldKwh } from './derived';
+import { dewPoint, fogRisk, frostRisk, rollingSum, solarYieldKwh, windowTotal } from './derived';
 
 describe('dewPoint', () => {
   it('calcule 9,3 °C a 20 °C et 50 % HR, tolerance 0,1', () => {
@@ -82,5 +82,20 @@ describe('solarYieldKwh', () => {
     const withDefault = solarYieldKwh([1000], 1);
     const withZeroLoss = solarYieldKwh([1000], 1, 0);
     expect(withDefault).toBeCloseTo(withZeroLoss * 0.8, 5);
+  });
+});
+
+describe('windowTotal', () => {
+  it('additionne les valeurs connues et compte les heures sans valeur', () => {
+    expect(windowTotal([0.4, null, 1.2, 0])).toEqual({ total: 1.6, missing: 1 });
+  });
+
+  it('rend un total nul, pas absent, quand toutes les heures sont seches', () => {
+    expect(windowTotal([0, 0, 0])).toEqual({ total: 0, missing: 0 });
+  });
+
+  it('rend null, jamais 0, sans aucune valeur connue', () => {
+    expect(windowTotal([null, null])).toEqual({ total: null, missing: 2 });
+    expect(windowTotal([])).toEqual({ total: null, missing: 0 });
   });
 });

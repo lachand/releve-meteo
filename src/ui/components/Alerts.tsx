@@ -1,0 +1,169 @@
+import { useId, useState } from 'react';
+import type { FormEvent } from 'react';
+import { ALERT_HORIZON_HOURS } from '../../domain/alerts';
+import type { AlertHit } from '../../domain/alerts';
+import type { AlertRule, Preferences, WeatherVariable } from '../../domain/types';
+import {
+  ALERT_COMPARATOR_LABELS,
+  ALERT_VARIABLE_LABELS,
+  alertUnit,
+  hitSentence,
+  ruleSentence,
+} from '../alertPresentation';
+import { toKmh } from '../windUnit';
+import styles from './Alerts.module.css';
+
+/*
+ * Alertes personnelles (BACKLOG.md Lot 7) : seuils choisis pour ce lieu,
+ * evalues a chaque ouverture sur 72 h. Relevé n'a pas de serveur : hors de
+ * la veille en arriere-plan (Reglages), il ne peut pas prevenir quand
+ * l'application est fermee, et le dit.
+ */
+
+type WindUnit = Preferences['units']['wind'];
+
+const VARIABLES: readonly WeatherVariable[] = ['temperature', 'precipitation', 'wind'];
+
+/** Bandeau des regles franchies, en tete du releve. Rien si aucune. */
+export function AlertBanner({
+  hits,
+  windUnit,
+}: {
+  readonly hits: readonly AlertHit[];
+  readonly windUnit: WindUnit;
+}) {
+  if (hits.length === 0) {
+    return null;
+  }
+  return (
+    <section className={styles.banner} aria-labelledby="alertes-franchies">
+      <h2 id="alertes-franchies" className={styles.bannerTitle}>
+        {hits.length === 1 ? 'Votre alerte est franchie' : 'Vos alertes sont franchies'}
+      </h2>
+      <ul className={styles.hits}>
+        {hits.map((hit) => (
+          <li key={hit.rule.id}>
+            <strong>{ruleSentence(hit.rule, windUnit)}</strong> : {hitSentence(hit, windUnit)}.
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+interface AlertRulesEditorProps {
+  readonly placeId: string;
+  readonly placeName: string;
+  readonly rules: readonly AlertRule[];
+  readonly windUnit: WindUnit;
+  readonly onAdd: (rule: Omit<AlertRule, 'id'>) => void;
+  readonly onToggle: (id: string) => void;
+  readonly onRemove: (id: string) => void;
+}
+
+/** Regles de ce lieu : liste, activation, suppression, ajout. */
+export function AlertRulesEditor({
+  placeId,
+  placeName,
+  rules,
+  windUnit,
+  onAdd,
+  onToggle,
+  onRemove,
+}: AlertRulesEditorProps) {
+  const id = useId().replace(/:/g, '');
+  const [variable, setVariable] = useState<WeatherVariable>('temperature');
+  const [comparator, setComparator] = useState<AlertRule['comparator']>('lt');
+  const [threshold, setThreshold] = useState('2');
+  const parsed = Number(threshold.replace(',', '.'));
+  const valid = threshold.trim() !== '' && Number.isFinite(parsed);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!valid) {
+      return;
+    }
+    onAdd({
+      placeId,
+      variable,
+      comparator,
+      threshold: variable === 'wind' ? toKmh(parsed, windUnit) : parsed,
+      enabled: true,
+    });
+  };
+
+  return (
+    <div className={styles.editor}>
+      <p className={styles.note}>
+        Évaluées à chaque ouverture du relevé, sur les {ALERT_HORIZON_HOURS} prochaines heures, avec
+        le modèle retenu heure par heure. Sans serveur, Relevé ne peut vous prévenir application
+        fermée que par la veille en arrière-plan, là où le navigateur la permet (Réglages).
+      </p>
+
+      {rules.length === 0 ? (
+        <p className={styles.muted}>Aucune alerte pour {placeName}.</p>
+      ) : (
+        <ul className={styles.rules} aria-label={`Alertes pour ${placeName}`}>
+          {rules.map((rule) => (
+            <li key={rule.id} className={styles.rule}>
+              <label className={styles.toggle}>
+                <input type="checkbox" checked={rule.enabled} onChange={() => onToggle(rule.id)} />
+                <span>{ruleSentence(rule, windUnit)}</span>
+              </label>
+              <button
+                type="button"
+                className={styles.remove}
+                onClick={() => onRemove(rule.id)}
+                aria-label={`Supprimer l’alerte ${ruleSentence(rule, windUnit)}`}
+              >
+                Supprimer
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form className={styles.form} onSubmit={submit} aria-label="Nouvelle alerte">
+        <label className={styles.field} htmlFor={`${id}-grandeur`}>
+          <span>Grandeur</span>
+          <select
+            id={`${id}-grandeur`}
+            value={variable}
+            onChange={(event) => setVariable(event.target.value as WeatherVariable)}
+          >
+            {VARIABLES.map((option) => (
+              <option key={option} value={option}>
+                {ALERT_VARIABLE_LABELS[option]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.field} htmlFor={`${id}-sens`}>
+          <span>Sens</span>
+          <select
+            id={`${id}-sens`}
+            value={comparator}
+            onChange={(event) => setComparator(event.target.value as AlertRule['comparator'])}
+          >
+            <option value="lt">{ALERT_COMPARATOR_LABELS.lt}</option>
+            <option value="gt">{ALERT_COMPARATOR_LABELS.gt}</option>
+          </select>
+        </label>
+        <label className={styles.field} htmlFor={`${id}-seuil`}>
+          <span>Seuil ({alertUnit(variable, windUnit)})</span>
+          <input
+            id={`${id}-seuil`}
+            type="text"
+            inputMode="decimal"
+            value={threshold}
+            aria-invalid={!valid}
+            onChange={(event) => setThreshold(event.target.value)}
+          />
+        </label>
+        <button type="submit" className={styles.add} disabled={!valid}>
+          Ajouter
+        </button>
+      </form>
+    </div>
+  );
+}

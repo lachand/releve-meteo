@@ -1,0 +1,93 @@
+/* Bandeau de vigilance : filet d'alerte pleine hauteur, comme les alertes personnelles. */
+.banner {
+  padding: var(--esp-3) var(--esp-4);
+  border: var(--filet);
+  border-left: 4px solid var(--alerte);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  box-shadow: var(--ombre-feuillet);
+}
+
+.bannerTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  margin: 0 0 var(--esp-2);
+  font-family: var(--font-display);
+  font-size: var(--pas-s);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--alerte);
+}
+
+.warnings {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0 0 var(--esp-2);
+  padding: 0;
+  list-style: none;
+}
+
+.warnings li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-2);
+}
+
+.meaning {
+  color: var(--encre-faible);
+  font-style: italic;
+}
+
+.swatch {
+  flex: none;
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  border: 1px solid var(--encre);
+  border-radius: 1px;
+  background: var(--vigilance-verte);
+  transform: translateY(0.05em);
+}
+
+.swatch[data-level='2'] {
+  background: var(--vigilance-jaune);
+}
+
+.swatch[data-level='3'] {
+  background: var(--vigilance-orange);
+}
+
+.swatch[data-level='4'] {
+  background: var(--vigilance-rouge);
+}
+
+.source,
+.stale {
+  margin: 0;
+  max-width: 48rem;
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
+}
+
+.stale {
+  margin-top: var(--esp-1);
+  color: var(--alerte);
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-2);
+  margin: var(--esp-3) 0 0;
+  padding-top: var(--esp-2);
+  border-top: 1px dotted var(--grille);
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
+.source a,
+.line a {
+  color: inherit;
+}

@@ -73,10 +73,12 @@ export function criterionSentence(model: ModelId, criterion: Criterion): string 
         return null;
       }
       const unit = `\u00a0${VARIABLE_UNITS[variable]}`;
-      const figures = `${formatOneDecimal(mae)}${unit} d’erreur moyenne à J+${leadDays} sur ${sampleCount}\u00a0h vérifiées, contre ${formatOneDecimal(peerMae)}${unit} pour les autres modèles`;
+      // peerMae est la moyenne des autres modeles : la phrase le dit, pour ne
+      // jamais laisser croire au meilleur score quand un autre fait mieux.
+      const figures = `${formatOneDecimal(mae)}${unit} d’erreur moyenne à J+${leadDays} sur ${sampleCount}\u00a0h vérifiées, contre ${formatOneDecimal(peerMae)}${unit} en moyenne pour les autres`;
       return mae <= peerMae
-        ? `Plus juste ici sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`
-        : `Moins juste ici sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`;
+        ? `Plus juste ici que la moyenne des modèles sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`
+        : `Moins juste ici que la moyenne des modèles sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`;
     }
   }
 }

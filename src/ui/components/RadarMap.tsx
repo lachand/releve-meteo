@@ -1,9 +1,14 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
-import { fetchRadarFrames } from '../../data/clients/rainviewer';
+import {
+  RAINVIEWER_MAX_NATIVE_ZOOM,
+  RAINVIEWER_TILE_SIZE,
+  fetchRadarFrames,
+} from '../../data/clients/rainviewer';
 import type { RadarAnimationFrame } from '../../data/clients/rainviewer';
 import type { Place } from '../../domain/types';
+import { addPaperBaseLayer, removeMap } from '../mapBase';
 import { cssVar } from '../modelPresentation';
 import styles from './RadarMap.module.css';
 
@@ -12,9 +17,6 @@ interface RadarMapProps {
 }
 
 const DEFAULT_ZOOM = 8;
-const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const RAINVIEWER_ATTRIBUTION = '<a href="https://www.rainviewer.com/">RainViewer</a>';
 const RADAR_OPACITY = 0.7;
 /** Duree d'affichage d'une trame en lecture, ms ; la derniere observee dure plus. */
@@ -37,7 +39,7 @@ function prefersReducedMotion(): boolean {
 
 /**
  * Fond OpenStreetMap et boucle radar RainViewer : deux heures observees
- * (pas de 10 min) puis le nowcast, marque « prévu ». Lecture automatique
+ * (pas de 10 min) puis, s'il est publie, le nowcast, marque « prévu ». Lecture automatique
  * sauf si l'utilisateur demande de reduire les animations ; curseur et
  * bouton de lecture pour parcourir les trames. App monte ce composant avec
  * `key={place.id}` : changer de lieu recree l'instance.
@@ -56,15 +58,12 @@ export function RadarMap({ place }: RadarMapProps) {
     if (container === null) {
       return;
     }
-    const map = L.map(container).setView([place.latitude, place.longitude], DEFAULT_ZOOM);
-    // crossOrigin : OSM et RainViewer envoient Access-Control-Allow-Origin: *.
-    // Sans cette option, les tuiles arrivent en reponses opaques que le
-    // service worker ne peut pas horodater (sw.ts, piege 1).
-    L.tileLayer(OSM_TILE_URL, {
-      attribution: OSM_ATTRIBUTION,
-      maxZoom: 19,
-      crossOrigin: true,
-    }).addTo(map);
+    // Sans fondu des tuiles : aucune animation decorative (DESIGN.md).
+    const map = L.map(container, { fadeAnimation: false }).setView(
+      [place.latitude, place.longitude],
+      DEFAULT_ZOOM,
+    );
+    addPaperBaseLayer(map);
     const ink = cssVar('--encre') || '#1c2733';
     L.circleMarker([place.latitude, place.longitude], {
       radius: 6,
@@ -78,7 +77,7 @@ export function RadarMap({ place }: RadarMapProps) {
     mapRef.current = map;
 
     return () => {
-      map.remove();
+      removeMap(map);
       mapRef.current = null;
       layersRef.current = [];
     };
@@ -102,6 +101,13 @@ export function RadarMap({ place }: RadarMapProps) {
           attribution: RAINVIEWER_ATTRIBUTION,
           opacity: 0,
           crossOrigin: true,
+          // Tuiles de 512 px : zoom d'URL = zoom de carte - 1. Jamais au-dela
+          // du zoom 7 (plafond de l'API gratuite), agrandies ensuite.
+          tileSize: RAINVIEWER_TILE_SIZE,
+          zoomOffset: -1,
+          minNativeZoom: 1,
+          maxNativeZoom: RAINVIEWER_MAX_NATIVE_ZOOM + 1,
+          maxZoom: 19,
         }).addTo(map),
       );
       // Demarre sur la derniere trame observee : l'etat present.

@@ -5,7 +5,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 // Test isole, hors du webServer partage de playwright.config.ts : il doit
 // pouvoir reconstruire l'application en cours de test pour simuler un

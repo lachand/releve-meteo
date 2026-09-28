@@ -9,8 +9,9 @@ export interface RadarFrame {
 
 /**
  * Trame d'animation : les trames passees sont des observations radar, les
- * trames de nowcast sont une extrapolation (prevision a 30 min) et le
- * disent (AGENTS.md regle 7).
+ * trames de nowcast une extrapolation, qui le disent (AGENTS.md regle 7).
+ * L'API gratuite ne publie plus de nowcast depuis 2026 (liste vide,
+ * constate le 2026-09-28) : le cas reste gere si elle en republie.
  */
 export interface RadarAnimationFrame extends RadarFrame {
   readonly provenance: 'observed' | 'forecast';
@@ -36,7 +37,18 @@ const WEATHER_MAPS_URL = 'https://api.rainviewer.com/public/weather-maps.json';
 // + HttpResult), pas de logique de fetch dans ui/, pour une seule requete
 // JSON legere sans mise en cache IndexedDB (les horodatages de trame n'ont
 // de sens que rafraichis).
-const TILE_SIZE = 256;
+/**
+ * Tuiles de 512 px : au zoom 7, plafond de l'API gratuite, elles ont la
+ * densite d'une tuile de 256 px au zoom 8, sans agrandissement.
+ */
+export const RAINVIEWER_TILE_SIZE = 512;
+const TILE_SIZE = RAINVIEWER_TILE_SIZE;
+/**
+ * Zoom maximal des tuiles de l'API gratuite RainViewer : au-dela, le
+ * serveur renvoie une image « Zoom Level Not Supported » (constate le
+ * 2026-09-28). Les cartes plus zoomees agrandissent les tuiles de ce zoom.
+ */
+export const RAINVIEWER_MAX_NATIVE_ZOOM = 7;
 // Palette 2 (Universal Blue) : lisible sur le fond clair et sombre de
 // DESIGN.md, sans devoir la reimplementer nous-memes.
 const COLOR_SCHEME = 2;
@@ -72,23 +84,4 @@ export async function fetchRadarFrames(
     })),
   ];
   return { ok: true, value: frames.sort((a, b) => a.time - b.time) };
-}
-
-/** Derniere trame radar disponible, ou `null` si RainViewer n'en publie aucune. */
-export async function fetchLatestRadarFrame(
-  signal?: AbortSignal,
-): Promise<HttpResult<RadarFrame | null>> {
-  const result = await request<RawWeatherMapsResponse>(WEATHER_MAPS_URL, { signal });
-  if (!result.ok) {
-    return result;
-  }
-  const frames = result.value.radar?.past ?? [];
-  const latest = frames.at(-1);
-  if (latest === undefined) {
-    return { ok: true, value: null };
-  }
-  return {
-    ok: true,
-    value: { time: latest.time, tileUrlTemplate: tileTemplate(result.value.host, latest) },
-  };
 }

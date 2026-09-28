@@ -4,8 +4,11 @@ import {
   getEnsemble,
   getNowcast,
   getStationReport,
+  getVigilance,
   getVerifications,
 } from '../../data/repository';
+import { evaluateAlerts } from '../../domain/alerts';
+import type { AlertHit } from '../../domain/alerts';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
@@ -13,6 +16,7 @@ import { detectPhenomena } from '../../domain/phenomena';
 import { stationCheck } from '../../domain/stationCheck';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
 import type { ForecastBundle, Place } from '../../domain/types';
+import { summarizeVigilance } from '../../domain/vigilance';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { PlaceSwitcher } from '../components/PlaceSwitcher';
@@ -24,6 +28,7 @@ import { formatCompact, formatLongDate } from '../format';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
+import { useBackgroundWatch } from '../hooks/useBackgroundWatch';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -51,11 +56,14 @@ const ReliabilityView = lazy(() =>
   import('./ReliabilityView').then((m) => ({ default: m.ReliabilityView })),
 );
 
+/** Aucune alerte franchie : reference stable pour la veille. */
+const NO_HITS: readonly AlertHit[] = [];
+
 const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
   { key: 'heures', label: 'Heure par heure', short: 'Heures' },
   { key: 'jours', label: '15 jours', short: '15 j' },
-  { key: 'carte', label: 'Radar', short: 'Radar' },
+  { key: 'carte', label: 'Cartes', short: 'Cartes' },
   { key: 'modeles', label: 'Modèles', short: 'Modèles' },
   { key: 'fiabilite', label: 'Fiabilité', short: 'Fiabilité' },
 ];
@@ -153,7 +161,10 @@ export function App() {
   );
   // Meme dependance que la verification : la station depend de l'altitude resolue.
   const station = useDataset(bundle === null ? null : `station|${bundle.place.id}`, () =>
-    getStationReport((bundle as ForecastBundle).place),
+    getStationReport((bundle as ForecastBundle).place, MODEL_ORDER),
+  );
+  const vigilance = useDataset(place === null ? null : `vigilance|${place.id}`, () =>
+    getVigilance(place as Place),
   );
 
   const verifications = useMemo(
@@ -230,7 +241,12 @@ export function App() {
       station,
       stationCheck:
         station.status === 'ready'
-          ? stationCheck({ records: station.value.records, bundle, now })
+          ? stationCheck({ records: station.value.records, models: station.value.models, now })
+          : null,
+      vigilance,
+      vigilanceSummary:
+        vigilance.status === 'ready' && vigilance.value.bulletin !== null
+          ? summarizeVigilance(vigilance.value.bulletin, now)
           : null,
       episodes: detectPhenomena(horizon.filter((p) => p !== null)),
       explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),
@@ -241,6 +257,18 @@ export function App() {
       preferred,
       setPreferred,
       navigate,
+      favourites: preferences.preferences.favourites,
+      openPlace: setPlace,
+      alertRules: preferences.preferences.alerts.filter((rule) => rule.placeId === place.id),
+      alertHits: evaluateAlerts({
+        rules: preferences.preferences.alerts,
+        placeId: place.id,
+        points: cascade.points.filter((point) => point !== null),
+        now,
+      }),
+      addAlert: preferences.addAlert,
+      toggleAlert: preferences.toggleAlert,
+      removeAlert: preferences.removeAlert,
     };
   }, [
     terrain,
@@ -254,11 +282,35 @@ export function App() {
     airQuality,
     nowcast,
     station,
+    vigilance,
     preferences.preferences.units.wind,
     preferred,
     setPreferred,
     navigate,
+    preferences.preferences.favourites,
+    preferences.preferences.alerts,
+    preferences.addAlert,
+    preferences.toggleAlert,
+    preferences.removeAlert,
   ]);
+
+  const watch = useBackgroundWatch({
+    place: bundle?.place ?? null,
+    terrain,
+    verification: verifications,
+    preferred,
+    favourites: preferences.preferences.favourites,
+    rules: preferences.preferences.alerts,
+    windUnit: preferences.preferences.units.wind,
+    alertHits: vm?.alertHits ?? NO_HITS,
+    vigilance:
+      vm !== null &&
+      vm.vigilanceSummary !== null &&
+      vm.vigilance.status === 'ready' &&
+      vm.vigilance.value.department !== null
+        ? { department: vm.vigilance.value.department.code, summary: vm.vigilanceSummary }
+        : null,
+  });
 
   const isFavourite =
     place !== null && preferences.preferences.favourites.some((f) => f.id === place.id);
@@ -348,6 +400,7 @@ export function App() {
           onSetTheme={preferences.setTheme}
           onPurge={preferences.purgeLocalData}
           onClose={() => setSettingsOpen(false)}
+          watch={watch}
         />
       )}
 

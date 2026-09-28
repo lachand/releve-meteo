@@ -15,3 +15,8 @@ export function convertWindSpeed(kmh: number | null, unit: WindUnit): number | n
 export function windUnitLabel(unit: WindUnit): string {
   return unit === 'kt' ? 'kt' : 'km/h';
 }
+
+/** Inverse de convertWindSpeed : valeur saisie dans l'unite d'affichage, vers km/h. */
+export function toKmh(value: number, unit: WindUnit): number {
+  return unit === 'kt' ? value * KMH_PER_KNOT : value;
+}

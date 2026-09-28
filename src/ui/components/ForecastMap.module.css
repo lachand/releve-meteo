@@ -1,0 +1,170 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-2) var(--esp-4);
+}
+
+/* Bascule pluie / temperature : deux onglets de registre. */
+.layers {
+  display: inline-flex;
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+  overflow: hidden;
+}
+
+.layers button {
+  min-height: 44px;
+  padding: 0 var(--esp-4);
+  border: none;
+  background: var(--papier-haut);
+  color: var(--encre-faible);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.layers button + button {
+  border-left: var(--filet-encre);
+}
+
+.layers button[aria-pressed='true'] {
+  background: var(--encre);
+  color: var(--papier-haut);
+}
+
+.frameLabel {
+  margin: 0;
+  font-size: var(--pas-s);
+}
+
+.relative {
+  color: var(--encre-faible);
+}
+
+.forecast {
+  font-style: italic;
+}
+
+.map {
+  /* Contexte d'empilement propre : les volets Leaflet (z-index 400 a 1000)
+     restent sous la barre d'onglets collante. */
+  isolation: isolate;
+  height: min(62vh, 520px);
+  min-height: 320px;
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+}
+
+/* Fond du conteneur a la couleur du papier : les coutures entre tuiles ne
+   laissent plus voir le gris par defaut de Leaflet. */
+.map:global(.leaflet-container) {
+  background: var(--papier-creux);
+}
+
+/* Valeur d'une case, ecrite a l'encre au centre. */
+.cellLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-donnee);
+  font-size: 11px;
+  font-weight: 600;
+  color: #1c2733;
+  text-shadow:
+    0 0 2px rgb(255 255 255 / 85%),
+    0 0 1px rgb(255 255 255 / 85%);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.play {
+  min-height: 44px;
+  min-width: 6rem;
+  padding: 0 var(--esp-4);
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+  background: var(--papier-haut);
+  color: var(--encre);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.slider {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--encre);
+}
+
+.summary {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-size: 1.1rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2) var(--esp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+}
+
+.swatch {
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  border: 1px solid var(--grille);
+}
+
+.gradientLegend {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--esp-2);
+  font-size: var(--pas-xs);
+}
+
+.gradient {
+  display: block;
+  height: 10px;
+  border: 1px solid var(--grille);
+  border-radius: 1px;
+}
+
+.caption {
+  margin: 0;
+  color: var(--encre-faible);
+  font-size: var(--pas-xs);
+  max-width: 48rem;
+}

@@ -1,13 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('la page se charge et affiche le nom du produit', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Relevé', { exact: true })).toBeVisible();
+  // Le bandeau porte "Relevé" suivi d un sous-titre dans le meme paragraphe
+  // (App.tsx) : on cible le bandeau plutot qu un texte exact.
+  await expect(page.getByRole('banner').getByText('Relevé')).toBeVisible();
 });
 
 test('la page Sources et licences est accessible', async ({ page }) => {
   await page.goto('/sources.html');
-  await expect(page.getByRole('heading', { name: 'Sources et licences' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sources, licences et méthode' })).toBeVisible();
 });
 
 test("le manifeste est valide et le service worker s'enregistre (TESTING.md 5.7)", async ({

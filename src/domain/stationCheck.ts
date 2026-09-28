@@ -1,11 +1,13 @@
 import { MODEL_ORDER } from './models';
 import { utcMsFromLocalIso } from './time';
-import type { ForecastBundle, LocalIsoHour, Measure, ModelId } from './types';
+import type { LocalIsoHour, Measure, ModelId } from './types';
 
 /*
  * Controle au dernier releve : la mesure la plus recente de la station de
  * reference (provenance 'observed'), face a ce que chaque modele donnait
- * au lieu a la meme heure.
+ * au meme endroit a la meme heure. Station a station : les modeles sont lus
+ * au point exact de la station et a son altitude, jamais au lieu, pour que
+ * l'ecart ne mele pas la distance entre les deux.
  *
  * Les valeurs passees d'un modele sont ses sorties les plus recentes pour
  * cette heure, pas une prevision emise la veille : l'ecart dit si le
@@ -29,6 +31,13 @@ export interface StationRecord {
   readonly pressure: Measure;
 }
 
+/** Temperature de chaque modele au point de la station, par heure locale. */
+export interface StationModelSeries {
+  readonly timeline: readonly LocalIsoHour[];
+  /** °C a 2 m ; absent pour un modele qui n'a rien rendu. */
+  readonly temperature: Partial<Record<ModelId, readonly (number | null)[]>>;
+}
+
 export const STATION_CHECK = {
   /** Au dela, le releve est signale comme ancien. */
   staleAfterHours: 6,
@@ -42,7 +51,7 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export interface ModelGap {
   readonly model: ModelId;
-  /** Temperature du modele au lieu, a l'heure du releve, °C. */
+  /** Temperature du modele au point de la station, a l'heure du releve, °C. */
   readonly temperature: number | null;
   /** Modele moins mesure a l'heure du releve, °C. */
   readonly gap: number | null;
@@ -90,11 +99,12 @@ function compareGaps(a: ModelGap, b: ModelGap): number {
 /**
  * Dernier releve de temperature et ecart de chaque modele, ou null si la
  * station n'a releve aucune temperature avant `now`. L'appariement se
- * fait sur l'heure locale, jamais par index.
+ * fait sur l'heure locale, jamais par index. Sans valeurs de modele au
+ * point de la station (`models` null), le releve est rendu sans ecart.
  */
 export function stationCheck(input: {
   readonly records: readonly StationRecord[];
-  readonly bundle: ForecastBundle;
+  readonly models: StationModelSeries | null;
   readonly now: Date;
 }): StationCheck | null {
   const nowMs = input.now.getTime();
@@ -109,16 +119,17 @@ export function stationCheck(input: {
   const recent = measured.filter(
     (r) => latestMs - utcMsFromLocalIso(r.time) < STATION_CHECK.recentHours * HOUR_MS,
   );
-  const indexOfTime = new Map(input.bundle.timeline.map((time, index) => [time, index]));
+  const models = input.models;
+  const indexOfTime = new Map(models?.timeline.map((time, index) => [time, index]) ?? []);
 
   const gaps = MODEL_ORDER.flatMap((model): ModelGap[] => {
-    const series = input.bundle.series[model];
+    const series = models?.temperature[model];
     if (series === undefined) {
       return [];
     }
     const modelValue = (time: LocalIsoHour): number | null => {
       const index = indexOfTime.get(time);
-      return index === undefined ? null : (series.hourly[index]?.temperature.value ?? null);
+      return index === undefined ? null : (series[index] ?? null);
     };
     const differences: number[] = [];
     for (const r of recent) {

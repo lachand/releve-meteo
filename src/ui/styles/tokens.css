@@ -90,6 +90,29 @@
   --risque-modere: #9a4b21;
   --risque-fort: #a32020;
 
+  /*
+   * Vigilance Météo-France : couleurs officielles des niveaux, en pastille
+   * cerclée d'encre, toujours accompagnées du mot (jaune, orange, rouge).
+   * C'est le code du produit officiel, pas un feu tricolore maison.
+   */
+  --vigilance-verte: #31aa35;
+  --vigilance-jaune: #f5d63d;
+  --vigilance-orange: #ec8a19;
+  --vigilance-rouge: #d21c1c;
+
+  /*
+   * Pictogrammes du temps : lavis discrets sous le trait d'encre, pour
+   * reconnaître d'un coup d'œil soleil, pluie, neige et éclair. Jamais
+   * employés pour un tracé de modèle.
+   */
+  --picto-soleil: #eeb534;
+  --picto-lune: #e6dcc0;
+  --picto-nuage: #fbf8f1;
+  --picto-nuage-sombre: #c9c0ae;
+  --picto-pluie: #2f7ec2;
+  --picto-neige: #4f8fc4;
+  --picto-eclair: #f2c230;
+
   --font-titre: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
   --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;
   --font-corps: 'IBM Plex Sans', system-ui, sans-serif;
@@ -152,6 +175,13 @@
     --risque-faible: #b4aa98;
     --risque-modere: #e59a5e;
     --risque-fort: #f06a5a;
+    --picto-soleil: #f2c04a;
+    --picto-lune: #e8dfc6;
+    --picto-nuage: #2a3440;
+    --picto-nuage-sombre: #4a5563;
+    --picto-pluie: #6db2ec;
+    --picto-neige: #b9d8f2;
+    --picto-eclair: #f5cf4a;
     --ombre-feuillet: 0 1px 0 rgb(0 0 0 / 30%), 0 8px 24px -16px rgb(0 0 0 / 70%);
   }
 }
@@ -180,6 +210,13 @@
   --risque-modere: #e59a5e;
   --risque-fort: #f06a5a;
   --ombre-feuillet: 0 1px 0 rgb(0 0 0 / 30%), 0 8px 24px -16px rgb(0 0 0 / 70%);
+  --picto-soleil: #f2c04a;
+  --picto-lune: #e8dfc6;
+  --picto-nuage: #2a3440;
+  --picto-nuage-sombre: #4a5563;
+  --picto-pluie: #6db2ec;
+  --picto-neige: #b9d8f2;
+  --picto-eclair: #f5cf4a;
 }
 
 .eyebrow {

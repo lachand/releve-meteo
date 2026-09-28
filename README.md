@@ -20,18 +20,42 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
   sept jours avant sont comparées, sur 30 jours, aux mesures de la station
   la plus proche (Meteostat), à défaut à la réanalyse ERA5, signalée comme
   estimation. Ces scores alimentent directement le choix du modèle.
+- **Confronte le modèle au dernier relevé.** Sous la valeur du moment, la
+  dernière mesure de la station représentative du lieu et l'écart du
+  modèle retenu ; dans l'onglet Fiabilité, chaque modèle face à cette
+  mesure, à l'heure du relevé et sur les six dernières heures. Toujours
+  station à station : les modèles sont lus au point exact de la station
+  et à son altitude, jamais au lieu, pour que l'écart ne mêle pas la
+  distance entre les deux.
 - **Montre la prévision la plus complète possible** : maintenant, pluie au
   quart d'heure sur 2 h, phénomènes à surveiller sur 72 h (orage, forte
   pluie, neige, verglas, gel, brouillard, vent fort, chaleur, avec leurs
   critères), ruban horaire sur 72 h puis toutes les 3 h jusqu'à 10 jours,
   10 jours avec le modèle retenu chaque jour, éventail de l'ensemble ECMWF
-  sur 15 jours, pression, rose des vents, radar, qualité de l'air et
-  pollens.
+  sur 15 jours, pression, rose des vents, qualité de l'air et pollens.
+- **Cartographie** : radar observé sur les deux dernières heures, carte
+  de prévision sur 48 h (pluie et température du modèle retenu, une case
+  tous les 12,5 km sur 100 km autour du lieu, valeurs écrites dans les
+  cases) et carte des favoris en étiquettes de station, sur un fond de
+  carte sépia.
+- **Vigilance Météo-France officielle** du département, sans clé : bandeau
+  en tête du relevé dès le jaune, avec période, heure du bulletin et lien
+  vers la carte officielle ; distincte des phénomènes calculés par Relevé.
+- **Alertes personnelles** : un seuil par lieu (gel, chaleur, pluie,
+  rafales), vérifié à chaque ouverture sur 72 h, avec le modèle qui le
+  franchit.
+- **Veille en arrière-plan**, sans serveur : là où le navigateur le permet
+  (Chrome ou Edge, application installée), le service worker recharge de
+  temps en temps la prévision des favoris et des lieux à alertes, avec la
+  même cascade de modèles, et notifie une alerte franchie ou une vigilance
+  orange ou rouge. Ailleurs, l'interface dit que les alertes sont vérifiées
+  à l'ouverture.
 - **Reste transparent** : chaque valeur dit quel modèle la produit ; une
   donnée empruntée à un autre modèle est nommée ; les changements de modèle
   sont marqués, jamais lissés ; l'incertitude est une bande hachurée.
 - **Ressemble à un carnet de météorologue** : papier de registre, encre de
-  plume, symboles synoptiques de l'OMM, barbules de vent, thème sombre.
+  plume, pictogrammes du temps au trait (lune la nuit), flèches de vent,
+  thème sombre.
 - **Fonctionne hors ligne** (PWA installable), sans backend ni clé d'API.
 
 Plan de la refonte : [ROADMAP.md](ROADMAP.md). Avancement par lot et écarts
@@ -86,12 +110,25 @@ ESLint + Prettier
 
 ## Sources de données
 
-[Open-Meteo](https://open-meteo.com/) (modèles AROME, ARPEGE, ICON-EU, GFS,
-géocodage), [Infoclimat](https://www.infoclimat.fr/) (relevés observés,
-optionnel), [Météo-France Vigilance](https://vigilance.meteofrance.fr/)
-(optionnel), [RainViewer](https://www.rainviewer.com/) (radar),
-[OpenStreetMap](https://www.openstreetmap.org/) (fond de carte). Attribution
-complète dans l'application, page « Sources et licences ».
+Toutes gratuites et sans clé :
+
+- [Open-Meteo](https://open-meteo.com/) (CC BY 4.0) : les sept modèles
+  déterministes, l'ensemble ECMWF, les prévisions passées (Previous Runs),
+  la réanalyse ERA5, la qualité de l'air et les pollens CAMS, le géocodage ;
+- [Meteostat](https://meteostat.net/) (CC BY-NC 4.0) : relevés horaires
+  des stations, seules les sources d'observation étant retenues ;
+- [RainViewer](https://www.rainviewer.com/) : radar ;
+- [Vigilance Météo-France](https://vigilance.meteofrance.fr/fr) (Licence
+  Ouverte) : vigilance départementale, lue sans clé sur le jeu public
+  d'[Opendatasoft](https://public.opendatasoft.com/explore/dataset/weatherref-france-vigilance-meteo-departement/)
+  qui la republie ;
+- IGN Admin Express (Licence Ouverte) : contours simplifiés des
+  départements, pour situer un lieu hors ligne ;
+- [OpenStreetMap](https://www.openstreetmap.org/) (ODbL) : fond de carte.
+
+Attribution complète dans l'application, page « Sources et licences ».
+Infoclimat demande une clé ou un compte : il n'est pas intégré (voir
+[BACKLOG.md](BACKLOG.md), Écarts constatés).
 
 ## Licence
 

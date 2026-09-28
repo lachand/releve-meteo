@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { spreadBand } from '../../domain/confidence';
 import type { ForecastBundle, ModelId, WeatherVariable } from '../../domain/types';
 import { MODEL_ORDER, MODEL_SPECS } from '../../domain/models';
-import { MISSING } from '../format';
+import { MISSING, formatOneDecimal } from '../format';
 import { MODEL_LABELS, modelColor } from '../modelPresentation';
 import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './ComparisonView.module.css';
@@ -111,7 +111,7 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
   const summary =
     maxSpreadIndex === -1
       ? "Pas assez de modèles disponibles pour comparer l'écart."
-      : `Écart maximal ${maxSpread.toFixed(1)} ${VARIABLE_UNITS[variable]} ${formatDayHour(
+      : `Écart maximal ${formatOneDecimal(maxSpread)}\u00a0${VARIABLE_UNITS[variable]} ${formatDayHour(
           visibleTimeline[maxSpreadIndex] ?? '',
         )}. Les modèles ne s'accordent pas sur cette échéance.`;
 

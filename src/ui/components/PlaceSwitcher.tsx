@@ -15,7 +15,12 @@ function displayName(place: Place): string {
   return place.alias ?? place.name;
 }
 
-/** Bascule entre lieux favoris, DESIGN.md section 6.1 bas d'ecran : pastille pleine sur le lieu actif. */
+/**
+ * Bascule entre lieux favoris, DESIGN.md section 6.1 bas d'ecran : pastille
+ * pleine sur le lieu actif. Une seule ligne, qui defile si besoin : la
+ * barre ne mange jamais l'ecran. Deplacer, renommer et retirer ne
+ * s'affichent qu'en mode « Organiser ».
+ */
 export function PlaceSwitcher({
   favourites,
   activePlaceId,
@@ -24,6 +29,7 @@ export function PlaceSwitcher({
   onRemove,
   onRename,
 }: PlaceSwitcherProps) {
+  const [organizing, setOrganizing] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draftAlias, setDraftAlias] = useState('');
   const aliasInputRef = useRef<HTMLInputElement | null>(null);
@@ -67,7 +73,7 @@ export function PlaceSwitcher({
 
   return (
     <nav className={styles.bar} aria-label="Lieux favoris">
-      <ul className={styles.list}>
+      <ul className={styles.list} data-organizing={organizing || undefined}>
         {favourites.map((place, index) => {
           const active = place.id === activePlaceId;
           return (
@@ -102,25 +108,25 @@ export function PlaceSwitcher({
                 </button>
               )}
 
-              {renamingId !== place.id && (
+              {organizing && renamingId !== place.id && (
                 <span className={styles.itemControls}>
                   <button
                     type="button"
                     className={styles.controlButton}
                     disabled={index === 0}
                     onClick={() => moveBy(index, -1)}
-                    aria-label={`Deplacer ${displayName(place)} vers le haut`}
+                    aria-label={`Déplacer ${displayName(place)} vers la gauche`}
                   >
-                    ▲
+                    ◀
                   </button>
                   <button
                     type="button"
                     className={styles.controlButton}
                     disabled={index === favourites.length - 1}
                     onClick={() => moveBy(index, 1)}
-                    aria-label={`Deplacer ${displayName(place)} vers le bas`}
+                    aria-label={`Déplacer ${displayName(place)} vers la droite`}
                   >
-                    ▼
+                    ▶
                   </button>
                   <button
                     type="button"
@@ -144,6 +150,17 @@ export function PlaceSwitcher({
           );
         })}
       </ul>
+      <button
+        type="button"
+        className={styles.organize}
+        aria-pressed={organizing}
+        onClick={() => {
+          setOrganizing((value) => !value);
+          setRenamingId(null);
+        }}
+      >
+        {organizing ? 'Terminé' : 'Organiser'}
+      </button>
     </nav>
   );
 }

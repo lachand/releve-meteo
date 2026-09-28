@@ -2,17 +2,20 @@ import { useCallback, useState } from 'react';
 import { clearAllLocalData } from '../../data/cache/db';
 import { clearModelChoices } from '../../data/cache/modelChoice';
 import {
+  addAlert as addAlertToPrefs,
   addFavourite as addFavouriteToPrefs,
   defaultPreferences,
   readPreferences,
+  removeAlert as removeAlertFromPrefs,
   removeFavourite as removeFavouriteFromPrefs,
   reorderFavourites as reorderFavouritesInPrefs,
   setAlias as setAliasInPrefs,
   setTheme as setThemeInPrefs,
   setWindUnit as setWindUnitInPrefs,
+  toggleAlert as toggleAlertInPrefs,
   writePreferences,
 } from '../../data/cache/preferences';
-import type { Place, Preferences } from '../../domain/types';
+import type { AlertRule, Place, Preferences } from '../../domain/types';
 import { requestPersistentStorageOnce } from '../../pwa/storage';
 
 export interface PreferencesApi {
@@ -23,7 +26,15 @@ export interface PreferencesApi {
   readonly setAlias: (placeId: string, alias: string | null) => void;
   readonly setWindUnit: (wind: 'kmh' | 'kt') => void;
   readonly setTheme: (theme: Preferences['theme']) => void;
+  readonly addAlert: (rule: Omit<AlertRule, 'id'>) => void;
+  readonly toggleAlert: (id: string) => void;
+  readonly removeAlert: (id: string) => void;
   readonly purgeLocalData: () => Promise<void>;
+}
+
+/** Identifiant de regle : unique sur l'appareil, sans dependance. */
+function newAlertId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /**
@@ -86,6 +97,28 @@ export function usePreferences(): PreferencesApi {
     });
   }, []);
 
+  const update = useCallback((change: (current: Preferences) => Preferences) => {
+    setPreferences((current) => {
+      const next = change(current);
+      writePreferences(next);
+      return next;
+    });
+  }, []);
+
+  const addAlert = useCallback(
+    (rule: Omit<AlertRule, 'id'>) =>
+      update((current) => addAlertToPrefs(current, { ...rule, id: newAlertId() })),
+    [update],
+  );
+  const toggleAlert = useCallback(
+    (id: string) => update((current) => toggleAlertInPrefs(current, id)),
+    [update],
+  );
+  const removeAlert = useCallback(
+    (id: string) => update((current) => removeAlertFromPrefs(current, id)),
+    [update],
+  );
+
   const purgeLocalData = useCallback(async () => {
     await clearAllLocalData();
     clearModelChoices();
@@ -102,6 +135,9 @@ export function usePreferences(): PreferencesApi {
     setAlias,
     setWindUnit,
     setTheme,
+    addAlert,
+    toggleAlert,
+    removeAlert,
     purgeLocalData,
   };
 }

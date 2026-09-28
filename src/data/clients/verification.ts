@@ -91,15 +91,25 @@ export function verificationWindow(now: Date, delayDays: number): VerificationWi
   };
 }
 
+/** Altitude transmise a Open-Meteo pour corriger la temperature du relief. */
+function setElevation(url: URL, elevation: number | null | undefined): void {
+  if (elevation !== undefined && elevation !== null) {
+    url.searchParams.set('elevation', String(elevation));
+  }
+}
+
 export function buildPreviousRunsUrl(input: {
   readonly latitude: number;
   readonly longitude: number;
+  /** Altitude de la station, si connue : verification a son altitude. */
+  readonly elevation?: number | null;
   readonly models: readonly ModelId[];
   readonly window: VerificationWindow;
 }): string {
   const url = new URL('https://previous-runs-api.open-meteo.com/v1/forecast');
   url.searchParams.set('latitude', String(input.latitude));
   url.searchParams.set('longitude', String(input.longitude));
+  setElevation(url, input.elevation);
   url.searchParams.set('models', input.models.map((m) => OPEN_METEO_MODEL_IDS[m]).join(','));
   const hourly: string[] = [];
   for (const variable of VARIABLES) {
@@ -117,11 +127,13 @@ export function buildPreviousRunsUrl(input: {
 export function buildReanalysisUrl(input: {
   readonly latitude: number;
   readonly longitude: number;
+  readonly elevation?: number | null;
   readonly window: VerificationWindow;
 }): string {
   const url = new URL('https://archive-api.open-meteo.com/v1/archive');
   url.searchParams.set('latitude', String(input.latitude));
   url.searchParams.set('longitude', String(input.longitude));
+  setElevation(url, input.elevation);
   url.searchParams.set('hourly', VARIABLES.map((v) => VARIABLE_KEYS[v]).join(','));
   url.searchParams.set('timezone', 'Europe/Paris');
   url.searchParams.set('start_date', input.window.startDate);
@@ -286,10 +298,16 @@ export async function fetchVerifications(input: {
   // quand il y en a une. Comparer la prevision du centre-ville a la mesure
   // de l'aeroport voisin penaliserait a tort les modeles fins, qui
   // representent justement l'ilot de chaleur urbain ou l'effet de vallee.
+  // A son altitude aussi : Open-Meteo corrige alors la temperature du relief
+  // entre sa maille et la station.
   const point =
     input.station === null
-      ? { latitude: input.latitude, longitude: input.longitude }
-      : { latitude: input.station.station.latitude, longitude: input.station.station.longitude };
+      ? { latitude: input.latitude, longitude: input.longitude, elevation: null }
+      : {
+          latitude: input.station.station.latitude,
+          longitude: input.station.station.longitude,
+          elevation: input.station.station.elevation,
+        };
 
   const [previousRuns, reanalysis, observations] = await Promise.all([
     request<RawHourlyResponse>(

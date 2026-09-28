@@ -7,7 +7,15 @@ import { getDb } from './db';
  * exception propagee.
  */
 
-export type DatasetKind = 'ensemble' | 'verification' | 'airQuality' | 'nowcast' | 'station';
+export type DatasetKind =
+  | 'ensemble'
+  | 'verification'
+  | 'airQuality'
+  | 'nowcast'
+  | 'station'
+  | 'grid'
+  | 'vigilance'
+  | 'watch';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -18,10 +26,15 @@ export interface CachedDataset<T> {
 /** Version de forme par type de jeu : a incrementer si la structure change. */
 const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   ensemble: 1,
-  verification: 1,
+  // v2 : verification a l'altitude de la station.
+  verification: 2,
   airQuality: 1,
   nowcast: 1,
-  station: 1,
+  // v2 : temperatures des modeles au point de la station.
+  station: 2,
+  grid: 1,
+  vigilance: 1,
+  watch: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

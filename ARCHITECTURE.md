@@ -34,6 +34,8 @@ src/
 │   ├── phenomena.ts       # orage, pluie forte, neige, verglas, gel, brouillard, vent, chaleur
 │   ├── ensemble.ts        # quantiles d'ensemble, probabilites
 │   ├── nowcast.ts         # resume de la pluie au quart d'heure
+│   ├── stationCheck.ts    # dernier releve de station face a chaque modele
+│   ├── grid.ts            # grille de la carte de prevision
 │   ├── derived.ts
 │   └── time.ts
 ├── data/
@@ -44,14 +46,12 @@ src/
 │   │   ├── meteostat.ts       # observations de station
 │   │   ├── airQuality.ts      # CAMS : indice europeen, particules, pollens
 │   │   ├── geocoding.ts
+│   │   ├── forecastGrid.ts    # carte de prevision : une requete multi-points
 │   │   ├── rainviewer.ts
-│   │   ├── vigilance.ts
-│   │   ├── infoclimat.ts
 │   │   └── http.ts
 │   ├── mappers/
 │   │   ├── openMeteoMapper.ts
-│   │   ├── nowcastMapper.ts
-│   │   └── infoclimatMapper.ts
+│   │   └── nowcastMapper.ts
 │   ├── cache/
 │   │   ├── db.ts
 │   │   ├── forecastStore.ts
@@ -63,7 +63,7 @@ src/
 │   └── repository.ts
 ├── ui/
 │   ├── components/
-│   ├── symbols/           # symboles synoptiques OMM, barbules
+│   ├── symbols/           # pictogrammes du temps, flèches de vent
 │   ├── views/             # App + une vue par onglet
 │   ├── hooks/
 │   └── styles/

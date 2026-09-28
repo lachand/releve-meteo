@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { StationReport } from '../../data/repository';
-import type { StationCheck, StationRecord } from '../../domain/stationCheck';
+import type { StationCheck, StationModelSeries, StationRecord } from '../../domain/stationCheck';
 import type { StationMatch } from '../../domain/stations';
 import { measure } from '../../../tests/factories';
 import { formatSignedOneDecimal } from '../format';
@@ -30,8 +30,11 @@ function latest(values: Partial<Record<Exclude<keyof StationRecord, 'time'>, num
   } satisfies StationRecord;
 }
 
-function ready(match: StationMatch | null = MATCH): DatasetState<StationReport> {
-  return { status: 'ready', value: { match, records: [] }, fetchedAt: 0, stale: false };
+function ready(
+  match: StationMatch | null = MATCH,
+  models: StationModelSeries | null = { timeline: [], temperature: {} },
+): DatasetState<StationReport> {
+  return { status: 'ready', value: { match, records: [], models }, fetchedAt: 0, stale: false };
 }
 
 const CHECK: StationCheck = {
@@ -79,7 +82,7 @@ describe('StationLine', () => {
     render(<StationLine state={ready()} check={CHECK} activeModel="arome" onDetail={onDetail} />);
     const text = screen.getByText(/Mesuré à/);
     expect(text).toHaveTextContent(
-      'Mesuré à Lyon / Bron à 12h : 26 °C (il y a 3 h 27). AROME donnait 25,6 °C ici à la même heure (écart −0,4 °C).',
+      'Mesuré à Lyon / Bron à 12h : 26 °C (il y a 3 h 27). AROME donnait 25,6 °C au même endroit à la même heure (écart −0,4 °C).',
     );
     await userEvent.click(
       screen.getByRole('button', { name: 'Tous les modèles face à la mesure' }),
@@ -90,6 +93,23 @@ describe('StationLine', () => {
   it("n'invente pas d'ecart quand le modele retenu n'a pas de valeur a cette heure", () => {
     render(<StationLine state={ready()} check={CHECK} activeModel="gfs" onDetail={vi.fn()} />);
     expect(screen.getByText(/Mesuré à/)).not.toHaveTextContent('donnait');
+  });
+
+  it('dit quand les valeurs des modeles au point de la station manquent', () => {
+    render(
+      <StationLine
+        state={ready(MATCH, null)}
+        check={{ ...CHECK, gaps: [] }}
+        activeModel="arome"
+        onDetail={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Mesuré à/)).not.toHaveTextContent('donnait');
+    expect(
+      screen.getByText(
+        'Valeurs des modèles au point de la station indisponibles : aucun écart calculé.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('previent quand le releve est ancien', () => {
@@ -126,7 +146,7 @@ describe('StationCheckPanel', () => {
 
     const measures = within(screen.getByLabelText('Mesures de 12h'));
     expect(measures.getByText('Température').nextSibling).toHaveTextContent('26°C');
-    expect(measures.getByText('Vent').nextSibling).toHaveTextContent('S 15km/h');
+    expect(measures.getByText('Vent').nextSibling).toHaveTextContent('15km/h du S');
     // Rafale et pluie non mesurees : tiret de valeur absente, jamais zero.
     expect(measures.getByText('Rafales').nextSibling).toHaveTextContent('–');
     expect(measures.getByText('Pluie').nextSibling).toHaveTextContent('–');
@@ -139,10 +159,29 @@ describe('StationCheckPanel', () => {
       'ECMWF IFS',
       'GFS',
     ]);
-    expect(rows[1]).toHaveTextContent('25,6 °C−0,4 °C−0,9 °C trop froid');
+    expect(rows[1]).toHaveTextContent('AROMEretenu25,6−0,4−0,9trop froid');
     expect(rows[0]).toHaveTextContent('au plus près de la mesure');
     expect(rows[2]).toHaveTextContent('trop peu d’heures');
     expect(rows[3]).toHaveTextContent('GFS––trop peu d’heures');
+  });
+
+  it('compare station a station et le dit, sans tableau vide quand les modeles manquent', () => {
+    const { rerender } = render(
+      <StationCheckPanel state={ready()} check={CHECK} activeModel="arome" windUnit="kmh" />,
+    );
+    expect(screen.getByText(/Comparaison station à station/)).toHaveTextContent(
+      'pas au lieu (7,3 km du lieu, 38 m plus bas)',
+    );
+    rerender(
+      <StationCheckPanel
+        state={ready(MATCH, null)}
+        check={{ ...CHECK, gaps: [] }}
+        activeModel="arome"
+        windUnit="kmh"
+      />,
+    );
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText(/aucun écart calculé/)).toBeInTheDocument();
   });
 
   it('convertit le vent dans l unite choisie et signale un vent non mesure', () => {
@@ -150,7 +189,7 @@ describe('StationCheckPanel', () => {
       <StationCheckPanel state={ready()} check={CHECK} activeModel="arome" windUnit="kt" />,
     );
     const measures = () => within(screen.getByLabelText('Mesures de 12h'));
-    expect(measures().getByText('Vent').nextSibling).toHaveTextContent('S 8kt');
+    expect(measures().getByText('Vent').nextSibling).toHaveTextContent('8kt du S');
     rerender(
       <StationCheckPanel
         state={ready()}

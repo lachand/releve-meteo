@@ -1,18 +1,25 @@
 import { CACHE_TTL_MS } from '../domain/constants';
+import { departmentAt } from '../domain/departments';
+import type { Department } from '../domain/departments';
 import type { EnsembleHourly } from '../domain/ensemble';
-import type { StationRecord } from '../domain/stationCheck';
+import { FORECAST_GRID, gridPoints } from '../domain/grid';
+import type { ForecastGrid } from '../domain/grid';
+import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
 import type { Station, StationMatch } from '../domain/stations';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
+import type { VigilanceBulletin } from '../domain/vigilance';
 import { fetchAirQuality } from './clients/airQuality';
 import type { AirQualitySeries } from './clients/airQuality';
 import { fetchEnsemble } from './clients/ensemble';
+import { fetchForecastGrid } from './clients/forecastGrid';
 import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
 import { fetchStationYear, parseStationRecords } from './clients/meteostat';
-import { fetchForecast, fetchNowcast } from './clients/openMeteo';
+import { fetchForecast, fetchNowcast, fetchStationPoint } from './clients/openMeteo';
 import { fetchVerifications } from './clients/verification';
+import { fetchVigilance } from './clients/vigilance';
 import type { VerificationReport } from './clients/verification';
 import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
@@ -236,6 +243,22 @@ export async function getVerifications(
   });
 }
 
+/**
+ * Verification deja en cache pour ce lieu, meme perimee, sans jamais
+ * interroger le reseau : pour les apercus (carte des favoris), ou une
+ * erreur mesuree la semaine passee vaut mieux que pas d'erreur du tout.
+ */
+export async function peekVerifications(
+  place: Place,
+  models: readonly ModelId[],
+): Promise<VerificationReport | null> {
+  const cached = await getDataset<VerificationReport>(
+    'verification',
+    `${place.id}|${[...models].sort().join(',')}`,
+  );
+  return cached?.value ?? null;
+}
+
 export function getAirQuality(place: Place): Promise<HttpResult<DatasetResult<AirQualitySeries>>> {
   return throughCache({
     kind: 'airQuality',
@@ -262,6 +285,11 @@ export interface StationReport {
   /** null : aucune station ne represente ce lieu. */
   readonly match: StationMatch | null;
   readonly records: readonly StationRecord[];
+  /**
+   * Temperatures des modeles au point et a l'altitude de la station, pour
+   * une comparaison station a station ; null si indisponibles.
+   */
+  readonly models: StationModelSeries | null;
 }
 
 /**
@@ -274,19 +302,28 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export async function getStationReport(
   place: Place,
+  models: readonly ModelId[],
 ): Promise<HttpResult<DatasetResult<StationReport>>> {
   const match = await stationFor(place);
   if (match === null) {
-    const report: StationReport = { match: null, records: [] };
+    const report: StationReport = { match: null, records: [], models: null };
     return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
   }
   return throughCache({
     kind: 'station',
-    placeId: place.id,
+    placeId: `${place.id}|${[...models].sort().join(',')}`,
     ttlMs: CACHE_TTL_MS.station,
     fetcher: async (): Promise<HttpResult<StationReport>> => {
       const now = Date.now();
       const since = now - STATION_REPORT_HOURS * HOUR_MS;
+      // Modeles lus au point et a l'altitude de la station, en parallele des
+      // releves : la comparaison se fait station a station.
+      const modelsAtStation = fetchStationPoint({
+        latitude: match.station.latitude,
+        longitude: match.station.longitude,
+        elevation: match.station.elevation,
+        models,
+      });
       // Deux fichiers annuels les premieres heures de janvier. Le fichier
       // de l'annee qui commence peut manquer : on garde ce qui repond.
       const years = [
@@ -302,10 +339,79 @@ export async function getStationReport(
           failure = text;
         }
       }
+      // Sans valeurs de modele, le releve reste utile : rendu sans ecart.
+      const atStation = await modelsAtStation;
       if (failure !== null && records.length === 0) {
         return failure;
       }
-      return { ok: true, value: { match, records } };
+      return {
+        ok: true,
+        value: { match, records, models: atStation.ok ? atStation.value : null },
+      };
+    },
+  });
+}
+
+/**
+ * Carte de prevision autour du lieu, pour un modele. Chargee seulement a
+ * l'ouverture de la carte : une requete couvre toute la grille, mais
+ * Open-Meteo la compte comme autant d'appels que de points.
+ */
+export function getForecastGrid(
+  place: Place,
+  model: ModelId,
+): Promise<HttpResult<DatasetResult<ForecastGrid>>> {
+  const points = gridPoints(place, FORECAST_GRID.size, FORECAST_GRID.stepKm);
+  return throughCache({
+    kind: 'grid',
+    placeId: `${place.id}|${model}`,
+    ttlMs: CACHE_TTL_MS.forecast,
+    fetcher: () => fetchForecastGrid({ points, model, stepKm: FORECAST_GRID.stepKm }),
+  });
+}
+
+let departmentsPromise: Promise<readonly Department[]> | null = null;
+
+/**
+ * Contours simplifies des departements, generes par
+ * `scripts/generate-departments.py` et servis avec l'application. Liste
+ * vide si le fichier manque : la vigilance est alors indisponible.
+ */
+export function loadDepartments(): Promise<readonly Department[]> {
+  departmentsPromise ??= request<readonly Department[]>('/data/departements-fr.json', {
+    retries: 0,
+  }).then((result) => (result.ok && Array.isArray(result.value) ? result.value : []));
+  return departmentsPromise;
+}
+
+/** Reinitialise les contours memorises. Utilise par les tests. */
+export function resetDepartmentsForTests(): void {
+  departmentsPromise = null;
+}
+
+/** Vigilance Meteo-France du departement du lieu. */
+export interface VigilanceReport {
+  /** null : lieu hors de France metropolitaine (ou contours indisponibles). */
+  readonly department: { readonly code: string; readonly name: string } | null;
+  readonly bulletin: VigilanceBulletin | null;
+}
+
+export async function getVigilance(
+  place: Place,
+): Promise<HttpResult<DatasetResult<VigilanceReport>>> {
+  const found = departmentAt(place.latitude, place.longitude, await loadDepartments());
+  if (found === null) {
+    const report: VigilanceReport = { department: null, bulletin: null };
+    return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
+  }
+  const department = { code: found.code, name: found.name };
+  return throughCache({
+    kind: 'vigilance',
+    placeId: department.code,
+    ttlMs: CACHE_TTL_MS.vigilance,
+    fetcher: async (): Promise<HttpResult<VigilanceReport>> => {
+      const result = await fetchVigilance(department.code);
+      return result.ok ? { ok: true, value: { department, bulletin: result.value } } : result;
     },
   });
 }

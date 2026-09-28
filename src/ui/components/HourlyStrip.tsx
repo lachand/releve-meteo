@@ -13,7 +13,7 @@ import {
 import type { CascadeView } from '../hooks/useCascadeView';
 import { MODEL_LABELS, modelColorVar } from '../modelPresentation';
 import { WeatherSymbol } from '../symbols/WeatherSymbol';
-import { WindBarb } from '../symbols/WindBarb';
+import { WindArrow } from '../symbols/WindArrow';
 import { weatherCodeLabel } from '../weatherCodePresentation';
 import { convertWindSpeed, windUnitLabel } from '../windUnit';
 import styles from './HourlyStrip.module.css';
@@ -127,6 +127,7 @@ export function HourlyStrip({
                 <WeatherSymbol
                   code={c.point.weatherCode}
                   cloudCover={c.point.cloudCover.value}
+                  isDay={c.point.isDay}
                   size={30}
                 />
                 {weatherCodeLabel(c.point.weatherCode) === null && (
@@ -199,22 +200,24 @@ export function HourlyStrip({
               const gust = convertWindSpeed(c.point.windGust.value, windUnit);
               return (
                 <td key={c.index} className={styles.col} data-new-day={c.newDay || undefined}>
-                  <WindBarb
+                  <WindArrow
                     speedKmh={c.point.windSpeed.value}
                     directionDeg={c.point.windDirection.value}
-                    size={36}
+                    size={30}
                   />
                   <span className={styles.small} data-donnee>
                     {formatInteger(speed)}
-                    <span className="visually-hidden">
-                      {' '}
-                      {unit} du {compassPoint(c.point.windDirection.value)}
-                    </span>
+                    <span className="visually-hidden"> {unit}</span>
                   </span>
                   {gust !== null && (
                     <span className={styles.gust} data-donnee>
                       <span className="visually-hidden">rafales </span>
                       {formatInteger(gust)}
+                    </span>
+                  )}
+                  {c.point.windDirection.value !== null && (
+                    <span className={styles.windFrom}>
+                      du {compassPoint(c.point.windDirection.value)}
                     </span>
                   )}
                 </td>
@@ -247,8 +250,8 @@ export function HourlyStrip({
         </tbody>
       </table>
       <p className={styles.legend}>
-        Vent en {unit}, rafales en petit. Barbules : demi-trait 5 nœuds, trait 10, fanion 50. Un
-        filet tireté marque chaque changement de modèle.
+        Vent en {unit}, rafales en petit. La flèche montre où va le vent, plus épaisse quand il
+        forcit ; « du SO » dit d’où il vient. Un filet tireté marque chaque changement de modèle.
       </p>
     </div>
   );

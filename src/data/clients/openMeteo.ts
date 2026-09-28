@@ -1,4 +1,5 @@
-import type { ModelId } from '../../domain/types';
+import type { StationModelSeries } from '../../domain/stationCheck';
+import type { LocalIsoHour, ModelId } from '../../domain/types';
 import { request } from './http';
 import type { HttpResult } from './http';
 
@@ -122,4 +123,78 @@ export async function fetchNowcast(
   signal?: AbortSignal,
 ): Promise<HttpResult<RawForecastResponse>> {
   return request<RawForecastResponse>(buildNowcastUrl(latitude, longitude), { signal });
+}
+
+/**
+ * Heures passees demandees au point de la station : de quoi couvrir les
+ * releves recents (repository.STATION_REPORT_HOURS).
+ */
+export const STATION_POINT_PAST_HOURS = 36;
+
+/**
+ * Temperature de chaque modele au point exact d'une station, a son
+ * altitude (le reechantillonnage d'Open-Meteo corrige alors la
+ * temperature du relief) : la comparaison au releve se fait station a
+ * station, jamais station a lieu.
+ */
+export function buildStationPointUrl(input: {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly elevation: number | null;
+  readonly models: readonly ModelId[];
+}): string {
+  const url = new URL('https://api.open-meteo.com/v1/forecast');
+  url.searchParams.set('latitude', String(input.latitude));
+  url.searchParams.set('longitude', String(input.longitude));
+  if (input.elevation !== null) {
+    url.searchParams.set('elevation', String(input.elevation));
+  }
+  url.searchParams.set(
+    'models',
+    input.models.map((model) => OPEN_METEO_MODEL_IDS[model]).join(','),
+  );
+  url.searchParams.set('hourly', 'temperature_2m');
+  url.searchParams.set('past_hours', String(STATION_POINT_PAST_HOURS));
+  url.searchParams.set('forecast_hours', '1');
+  url.searchParams.set('timezone', 'Europe/Paris');
+  return url.toString();
+}
+
+/**
+ * Reponse au point de la station vers series par modele. Plusieurs modeles :
+ * cles suffixees par l'identifiant Open-Meteo ; un seul : cle nue. Un
+ * modele entierement vide est omis ; une valeur absente reste null.
+ */
+export function mapStationPoint(
+  raw: RawForecastResponse,
+  models: readonly ModelId[],
+): HttpResult<StationModelSeries> {
+  const hourly = raw.hourly;
+  const time = hourly?.time as readonly LocalIsoHour[] | undefined;
+  if (hourly === undefined || time === undefined) {
+    return {
+      ok: false,
+      failure: { kind: 'malformed', detail: 'point de station sans bloc horaire' },
+    };
+  }
+  const temperature: Partial<Record<ModelId, readonly (number | null)[]>> = {};
+  for (const model of models) {
+    const key =
+      models.length === 1 ? 'temperature_2m' : `temperature_2m_${OPEN_METEO_MODEL_IDS[model]}`;
+    const values = hourly[key] as readonly (number | null)[] | undefined;
+    if (values !== undefined && values.some((value) => value !== null)) {
+      temperature[model] = time.map((_, index) => values[index] ?? null);
+    }
+  }
+  return { ok: true, value: { timeline: time, temperature } };
+}
+
+export async function fetchStationPoint(input: {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly elevation: number | null;
+  readonly models: readonly ModelId[];
+}): Promise<HttpResult<StationModelSeries>> {
+  const result = await request<RawForecastResponse>(buildStationPointUrl(input));
+  return result.ok ? mapStationPoint(result.value, input.models) : result;
 }
