@@ -16,6 +16,7 @@ import type { ForecastBundle, ModelId } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { CONFIDENCE_LEVEL_LABELS, MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
 import { weatherCodeLabel } from '../weatherCodePresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './Timeline48h.module.css';
 
 Chart.register(
@@ -219,17 +220,12 @@ export function Timeline48h({ bundle, cascade, confidence }: Timeline48hProps) {
       animation: false,
       layout: { padding: { top: 18 } },
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { color: cssVar('--grille-faible') },
-        },
-        y: {
-          title: { display: true, text: '°C' },
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY('°C') },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           filter: (item) => item.datasetIndex === 0,
           callbacks: {
             label: (item) => {

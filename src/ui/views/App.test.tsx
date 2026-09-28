@@ -156,7 +156,8 @@ describe('App', () => {
     await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
 
     await user.click(screen.getByRole('tab', { name: 'Modèles' }));
-    const chooser = screen.getByRole('group', { name: 'Modèle de référence pour ce lieu' });
+    // Vue chargee a la demande : on attend son apparition.
+    const chooser = await screen.findByRole('group', { name: 'Modèle de référence pour ce lieu' });
     await user.click(within(chooser).getByRole('radio', { name: /ARPEGE/ }));
 
     expect(await screen.findByText('Choix manuel')).toBeInTheDocument();

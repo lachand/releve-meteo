@@ -13,7 +13,8 @@ import { spreadBand } from '../../domain/confidence';
 import type { ForecastBundle, ModelId, WeatherVariable } from '../../domain/types';
 import { MODEL_ORDER, MODEL_SPECS } from '../../domain/models';
 import { MISSING } from '../format';
-import { MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
+import { MODEL_LABELS, modelColor } from '../modelPresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './ComparisonView.module.css';
 
 Chart.register(CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip);
@@ -125,17 +126,12 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { color: cssVar('--grille-faible') },
-        },
-        y: {
-          title: { display: true, text: VARIABLE_UNITS[variable] },
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY(VARIABLE_UNITS[variable]) },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           callbacks: {
             label: (item) =>
               `${MODEL_LABELS[availableModels[item.datasetIndex] as ModelId]} : ${item.formattedValue} ${VARIABLE_UNITS[variable]}`,

@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import type { ForecastBundle, ModelId } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { MODEL_LABELS, cssVar, modelColor } from '../modelPresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './PressureChart.module.css';
 
 Chart.register(CategoryScale, LinearScale, LineController, LineElement, PointElement, Tooltip);
@@ -72,17 +73,12 @@ export function PressureChart({ bundle, cascade }: PressureChartProps) {
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { color: cssVar('--grille-faible') },
-        },
-        y: {
-          title: { display: true, text: 'hPa' },
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY('hPa') },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           callbacks: {
             label: (item) => {
               const point = points[item.dataIndex];

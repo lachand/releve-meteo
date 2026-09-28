@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { ForecastBundle, Provenance } from '../../domain/types';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { cssVar } from '../modelPresentation';
+import { TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import styles from './PrecipitationChart.module.css';
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
@@ -62,18 +63,12 @@ export function PrecipitationChart({ bundle, cascade }: PrecipitationChartProps)
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: {
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          grid: { display: false },
-        },
-        y: {
-          title: { display: true, text: 'mm' },
-          beginAtZero: true,
-          grid: { color: cssVar('--grille-faible') },
-        },
+        x: axisX(8),
+        y: { ...axisY('mm'), beginAtZero: true },
       },
       plugins: {
         tooltip: {
+          ...TOOLTIP_STYLE,
           callbacks: {
             label: (item) => {
               const point = points[item.dataIndex];
