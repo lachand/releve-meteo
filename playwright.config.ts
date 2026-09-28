@@ -1,5 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Local dev container : le Chromium telecharge par Playwright est absent,
+// mais un build utilisable existe hors de son cache habituel. CI ne
+// positionne pas cette variable et garde le telechargement normal.
+const chromiumExecutablePath = process.env.PW_CHROMIUM_PATH;
+const chromiumLaunchOptions =
+  chromiumExecutablePath !== undefined
+    ? { launchOptions: { executablePath: chromiumExecutablePath } }
+    : {};
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -11,12 +20,16 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], ...chromiumLaunchOptions } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
     {
       name: 'mobile-380',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 380, height: 720 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 380, height: 720 },
+        ...chromiumLaunchOptions,
+      },
     },
   ],
   webServer: {

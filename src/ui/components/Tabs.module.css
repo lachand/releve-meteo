@@ -67,8 +67,18 @@
 }
 
 @media (max-width: 639px) {
+  /*
+   * Libelle complet masque visuellement mais garde dans l'arbre
+   * d'accessibilite : le court est aria-hidden, le nom de l'onglet vient
+   * toujours du complet. Un display:none le retirerait (WCAG 4.1.2).
+   */
   .full {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .short {
@@ -76,6 +86,7 @@
   }
 
   .tab {
+    position: relative;
     padding-inline: var(--esp-3);
   }
 }

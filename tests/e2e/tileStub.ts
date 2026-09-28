@@ -18,16 +18,23 @@ const TRANSPARENT_PNG_BASE64 =
  */
 export async function stubTileRequests(page: Page): Promise<void> {
   const png = Buffer.from(TRANSPARENT_PNG_BASE64, 'base64');
+  // RadarMap.tsx charge ces tuiles avec `crossOrigin: true` (commentaire du
+  // composant : necessaire pour des reponses non opaques, cachables par le
+  // service worker). Sans l'en-tete CORS ici aussi, le navigateur rejette
+  // ces reponses bouchonnees comme il rejetterait une vraie reponse sans
+  // Access-Control-Allow-Origin, ce qui journalise une erreur console.
+  const corsHeaders = { 'access-control-allow-origin': '*' };
   await page.route('https://tile.openstreetmap.org/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'image/png', body: png }),
+    route.fulfill({ status: 200, contentType: 'image/png', headers: corsHeaders, body: png }),
   );
   await page.route('https://tilecache.rainviewer.com/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'image/png', body: png }),
+    route.fulfill({ status: 200, contentType: 'image/png', headers: corsHeaders, body: png }),
   );
   await page.route('https://api.rainviewer.com/**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
+      headers: corsHeaders,
       body: JSON.stringify({
         host: 'https://tilecache.rainviewer.com',
         radar: { past: [{ time: 1700000000, path: '/v2/radar/stub' }] },
