@@ -214,6 +214,26 @@ describe('App', { timeout: 30000 }, () => {
     expect(await favourites.findByText(/selon AROME$/)).toBeInTheDocument();
   });
 
+  it('signale une alerte personnelle franchie par la prevision', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    const form = within(screen.getByRole('form', { name: 'Nouvelle alerte' }));
+    await user.selectOptions(form.getByLabelText('Sens'), 'gt');
+    const threshold = form.getByLabelText('Seuil (°C)');
+    await user.clear(threshold);
+    await user.type(threshold, '25');
+    await user.click(form.getByRole('button', { name: 'Ajouter' }));
+
+    const banner = await screen.findByRole('region', { name: 'Votre alerte est franchie' });
+    expect(banner).toHaveTextContent(/Température au-dessus de 25 °C : dès lundi 16h/);
+    expect(banner).toHaveTextContent(/selon AROME/);
+    expect(
+      screen.getByRole('checkbox', { name: /^Température au-dessus de 25\s°C$/ }),
+    ).toBeChecked();
+  });
+
   it('laisse choisir un modele manuellement, puis revenir a la selection automatique', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();

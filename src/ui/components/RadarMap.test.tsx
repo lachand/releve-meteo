@@ -107,8 +107,10 @@ describe('RadarMap', () => {
       .map((result) => result.value as L.TileLayer)
       .filter((layer) => (layer as unknown as { _url: string })._url.includes('rainviewer'));
     expect(radarLayers).toHaveLength(2);
-    for (const layer of radarLayers) {
-      expect(layer.options.maxNativeZoom).toBe(7);
+    for (const { options } of radarLayers) {
+      // Zoom demande au serveur = min(zoom, maxNativeZoom) + zoomOffset.
+      expect((options.maxNativeZoom ?? Infinity) + (options.zoomOffset ?? 0)).toBe(7);
+      expect(options.tileSize).toBe(512);
     }
     spy.mockRestore();
   });

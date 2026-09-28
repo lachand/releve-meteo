@@ -8,7 +8,7 @@ test('recherche et ouverture de Lyon : tampon du modele et justification visible
   await openLyon(page);
 
   await expect(page.getByRole('heading', { level: 1, name: 'Lyon' })).toBeVisible();
-  await expect(page.getByText('Modèle retenu')).toBeVisible();
+  await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible();
   // Le tampon porte le nom du modele choisi (AGENTS.md regle 7, provenance
   // toujours visible) : verifie sur le conteneur plutot que sur un texte
   // compose, pour ne pas dependre de la mise en forme interne.

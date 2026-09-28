@@ -28,6 +28,33 @@ function isPreferences(value: unknown): value is Preferences {
   );
 }
 
+const ALERT_VARIABLES: ReadonlySet<unknown> = new Set(['temperature', 'precipitation', 'wind']);
+
+function isAlertRule(value: unknown): value is AlertRule {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const rule = value as Record<string, unknown>;
+  return (
+    typeof rule.id === 'string' &&
+    typeof rule.placeId === 'string' &&
+    ALERT_VARIABLES.has(rule.variable) &&
+    (rule.comparator === 'lt' || rule.comparator === 'gt') &&
+    typeof rule.threshold === 'number' &&
+    Number.isFinite(rule.threshold) &&
+    typeof rule.enabled === 'boolean'
+  );
+}
+
+/** Regles lisibles seulement : une regle mal formee est ecartee, jamais evaluee. */
+function normalize(preferences: Preferences): Preferences {
+  const alerts: unknown = (preferences as { alerts?: unknown }).alerts;
+  return {
+    ...preferences,
+    alerts: Array.isArray(alerts) ? alerts.filter(isAlertRule) : [],
+  };
+}
+
 export function readPreferences(): Preferences {
   if (memoryFallback !== null) {
     return memoryFallback;
@@ -41,7 +68,7 @@ export function readPreferences(): Preferences {
       return defaultPreferences();
     }
     const parsed: unknown = JSON.parse(raw);
-    return isPreferences(parsed) ? parsed : defaultPreferences();
+    return isPreferences(parsed) ? normalize(parsed) : defaultPreferences();
   } catch {
     return defaultPreferences();
   }
@@ -131,4 +158,22 @@ export function setApiKey(
 
 export function setAlerts(preferences: Preferences, alerts: readonly AlertRule[]): Preferences {
   return { ...preferences, alerts };
+}
+
+export function addAlert(preferences: Preferences, rule: AlertRule): Preferences {
+  return setAlerts(preferences, [...preferences.alerts, rule]);
+}
+
+export function toggleAlert(preferences: Preferences, id: string): Preferences {
+  return setAlerts(
+    preferences,
+    preferences.alerts.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)),
+  );
+}
+
+export function removeAlert(preferences: Preferences, id: string): Preferences {
+  return setAlerts(
+    preferences,
+    preferences.alerts.filter((rule) => rule.id !== id),
+  );
 }

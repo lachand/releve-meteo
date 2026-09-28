@@ -1,16 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Place } from '../../domain/types';
+import type { AlertRule, Place } from '../../domain/types';
 import {
+  addAlert,
   addFavourite,
   defaultPreferences,
   reorderFavourites,
   removeFavourite,
   readPreferences,
+  removeAlert,
   resetMemoryPreferencesForTests,
   setAlias,
   setApiKey,
   setTheme,
   setWindUnit,
+  toggleAlert,
   writePreferences,
 } from './preferences';
 
@@ -159,5 +162,39 @@ describe('repli memoire quand localStorage est indisponible', () => {
     const withFavourite = addFavourite(defaultPreferences(), virieu).preferences;
     writePreferences(withFavourite);
     expect(readPreferences()).toEqual(withFavourite);
+  });
+});
+
+describe('alertes', () => {
+  const frost: AlertRule = {
+    id: 'gel',
+    placeId: virieu.id,
+    variable: 'temperature',
+    comparator: 'lt',
+    threshold: 2,
+    enabled: true,
+  };
+
+  it('ajoute, desactive puis retire une regle', () => {
+    const added = addAlert(defaultPreferences(), frost);
+    expect(added.alerts).toEqual([frost]);
+    const toggled = toggleAlert(added, 'gel');
+    expect(toggled.alerts[0]?.enabled).toBe(false);
+    expect(removeAlert(toggled, 'gel').alerts).toEqual([]);
+  });
+
+  it('relit les regles enregistrees et ecarte une regle mal formee', () => {
+    const stored = {
+      ...defaultPreferences(),
+      alerts: [frost, { id: 'x', placeId: virieu.id, variable: 'neige', comparator: 'gt' }],
+    };
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(stored));
+    expect(readPreferences().alerts).toEqual([frost]);
+  });
+
+  it('vaut une liste vide quand le champ manque dans un enregistrement ancien', () => {
+    const { alerts: _omitted, ...withoutAlerts } = defaultPreferences();
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(withoutAlerts));
+    expect(readPreferences().alerts).toEqual([]);
   });
 });

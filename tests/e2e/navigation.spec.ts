@@ -37,6 +37,6 @@ test('l URL partagee ouvre directement le releve, sans recherche', async ({ page
   await page.goto(LYON_URL);
 
   await expect(page.getByRole('heading', { level: 1, name: 'Lyon' })).toBeVisible();
-  await expect(page.getByText('Modèle retenu')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-model]').first()).toContainText('AROME');
 });

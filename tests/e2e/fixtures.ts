@@ -81,7 +81,7 @@ export async function openLyon(page: Page): Promise<void> {
   await page.goto('/');
   await page.getByLabel('Chercher une commune').fill('Lyon');
   await page.getByRole('button', { name: 'Lyon, Rhône', exact: true }).click();
-  await expect(page.getByText('Modèle retenu')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible({ timeout: 15000 });
 }
 
 /**

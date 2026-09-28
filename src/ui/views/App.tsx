@@ -6,6 +6,7 @@ import {
   getStationReport,
   getVerifications,
 } from '../../data/repository';
+import { evaluateAlerts } from '../../domain/alerts';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
@@ -243,6 +244,16 @@ export function App() {
       navigate,
       favourites: preferences.preferences.favourites,
       openPlace: setPlace,
+      alertRules: preferences.preferences.alerts.filter((rule) => rule.placeId === place.id),
+      alertHits: evaluateAlerts({
+        rules: preferences.preferences.alerts,
+        placeId: place.id,
+        points: cascade.points.filter((point) => point !== null),
+        now,
+      }),
+      addAlert: preferences.addAlert,
+      toggleAlert: preferences.toggleAlert,
+      removeAlert: preferences.removeAlert,
     };
   }, [
     terrain,
@@ -261,6 +272,10 @@ export function App() {
     setPreferred,
     navigate,
     preferences.preferences.favourites,
+    preferences.preferences.alerts,
+    preferences.addAlert,
+    preferences.toggleAlert,
+    preferences.removeAlert,
   ]);
 
   const isFavourite =

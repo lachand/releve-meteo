@@ -2,12 +2,14 @@ import type { AirQualitySeries } from '../../data/clients/airQuality';
 import type { VerificationReport } from '../../data/clients/verification';
 import type { Nowcast } from '../../data/mappers/nowcastMapper';
 import type { StationReport } from '../../data/repository';
+import type { AlertHit } from '../../domain/alerts';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
 import type { EnsembleDay } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
 import type { StationCheck } from '../../domain/stationCheck';
 import type {
+  AlertRule,
   ForecastBundle,
   ModelId,
   Place,
@@ -62,4 +64,10 @@ export interface ForecastViewModel {
   readonly favourites: readonly Place[];
   /** Ouvre le releve d'un autre lieu, dans la vue courante. */
   readonly openPlace: (place: Place) => void;
+  /** Alertes personnelles de ce lieu, et celles que la prevision franchit. */
+  readonly alertRules: readonly AlertRule[];
+  readonly alertHits: readonly AlertHit[];
+  readonly addAlert: (rule: Omit<AlertRule, 'id'>) => void;
+  readonly toggleAlert: (id: string) => void;
+  readonly removeAlert: (id: string) => void;
 }

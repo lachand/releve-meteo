@@ -1,7 +1,11 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
-import { RAINVIEWER_MAX_NATIVE_ZOOM, fetchRadarFrames } from '../../data/clients/rainviewer';
+import {
+  RAINVIEWER_MAX_NATIVE_ZOOM,
+  RAINVIEWER_TILE_SIZE,
+  fetchRadarFrames,
+} from '../../data/clients/rainviewer';
 import type { RadarAnimationFrame } from '../../data/clients/rainviewer';
 import type { Place } from '../../domain/types';
 import { addPaperBaseLayer } from '../mapBase';
@@ -97,9 +101,12 @@ export function RadarMap({ place }: RadarMapProps) {
           attribution: RAINVIEWER_ATTRIBUTION,
           opacity: 0,
           crossOrigin: true,
-          // Tuiles demandees au zoom 7 au plus, agrandies au-dela : seule
-          // plage servie par l'API gratuite.
-          maxNativeZoom: RAINVIEWER_MAX_NATIVE_ZOOM,
+          // Tuiles de 512 px : zoom d'URL = zoom de carte - 1. Jamais au-dela
+          // du zoom 7 (plafond de l'API gratuite), agrandies ensuite.
+          tileSize: RAINVIEWER_TILE_SIZE,
+          zoomOffset: -1,
+          minNativeZoom: 1,
+          maxNativeZoom: RAINVIEWER_MAX_NATIVE_ZOOM + 1,
           maxZoom: 19,
         }).addTo(map),
       );

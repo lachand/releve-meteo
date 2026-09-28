@@ -1,4 +1,5 @@
 import { AirQualityPanel } from '../components/AirQualityPanel';
+import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
 import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
 import { HourlyStrip } from '../components/HourlyStrip';
@@ -20,6 +21,7 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
 
   return (
     <div className={styles.stack}>
+      <AlertBanner hits={vm.alertHits} windUnit={vm.windUnit} />
       <Section eyebrow="Maintenant" className={styles.nowSheet}>
         <NowPanel
           point={nowPoint}
@@ -90,6 +92,18 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           <AirQualityPanel state={vm.airQuality} hour={vm.currentHour} />
         </Section>
       </div>
+
+      <Section eyebrow="Alertes personnelles" title="Me signaler, pour ce lieu">
+        <AlertRulesEditor
+          placeId={vm.place.id}
+          placeName={vm.place.alias ?? vm.place.name}
+          rules={vm.alertRules}
+          windUnit={vm.windUnit}
+          onAdd={vm.addAlert}
+          onToggle={vm.toggleAlert}
+          onRemove={vm.removeAlert}
+        />
+      </Section>
     </div>
   );
 }
