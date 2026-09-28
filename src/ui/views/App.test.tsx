@@ -112,6 +112,24 @@ describe('App', () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
+  it("ouvre directement le releve d'un lieu d'exemple", async () => {
+    server.use(...liveHandlers());
+    const user = userEvent.setup();
+    render(<App />);
+
+    const examples = ['Paris', 'Chamonix-Mont-Blanc', 'Brest', 'Marseille', 'Strasbourg'];
+    for (const name of examples) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${name}, `) })).toBeInTheDocument();
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Chamonix-Mont-Blanc, montagne' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Chamonix-Mont-Blanc' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Aucun lieu au carnet.')).not.toBeInTheDocument();
+  });
+
   it('ouvre le releve du lieu choisi, avec le modele retenu et sa justification', async () => {
     server.use(...liveHandlers());
     await openLyon();

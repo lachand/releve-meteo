@@ -210,6 +210,65 @@
   gap: var(--esp-3);
 }
 
+.primaryAction {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 var(--esp-6);
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+  background: var(--encre);
+  color: var(--papier-haut);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.examples {
+  display: grid;
+  gap: var(--esp-3);
+  margin-top: var(--esp-3);
+  padding-top: var(--esp-4);
+  border-top: 1px dotted var(--grille);
+}
+
+.examples ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--esp-2);
+}
+
+.examples button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--esp-2) var(--esp-3);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  background: var(--papier);
+  color: var(--encre);
+  font-family: var(--font-titre);
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.examples button span {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}
+
+.examples button:hover {
+  border-color: var(--encre);
+}
+
 .emptyTitle {
   font-family: var(--font-titre);
   font-size: 1.6rem;

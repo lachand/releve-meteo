@@ -53,6 +53,42 @@ const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'fiabilite', label: 'Fiabilité', short: 'Fiabilité' },
 ];
 
+function examplePlace(
+  name: string,
+  latitude: number,
+  longitude: number,
+  elevation: number,
+  admin: string,
+): Place {
+  return {
+    id: `${latitude.toFixed(4)}:${longitude.toFixed(4)}`,
+    name,
+    latitude,
+    longitude,
+    elevation,
+    admin,
+    alias: null,
+  };
+}
+
+/** Lieux d'exemple de l'ecran vide : un par type de terrain, pour voir la selection varier. */
+const EXAMPLE_PLACES: readonly { readonly place: Place; readonly terrain: string }[] = [
+  { place: examplePlace('Paris', 48.8566, 2.3522, 35, 'Paris'), terrain: 'grande ville' },
+  {
+    place: examplePlace('Chamonix-Mont-Blanc', 45.9237, 6.8694, 1035, 'Haute-Savoie'),
+    terrain: 'montagne',
+  },
+  { place: examplePlace('Brest', 48.3904, -4.4861, 52, 'Finistère'), terrain: 'côte atlantique' },
+  {
+    place: examplePlace('Marseille', 43.2965, 5.3698, 12, 'Bouches-du-Rhône'),
+    terrain: 'Méditerranée',
+  },
+  {
+    place: examplePlace('Strasbourg', 48.5734, 7.7521, 142, 'Bas-Rhin'),
+    terrain: 'plaine d’Alsace',
+  },
+];
+
 const dateTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Europe/Paris',
   day: '2-digit',
@@ -317,6 +353,38 @@ export function App() {
                 Cherchez une commune de France métropolitaine, ou utilisez votre position, pour
                 ouvrir son relevé : le meilleur modèle y est choisi automatiquement, et justifié.
               </p>
+              {geolocation.isSupported && (
+                <button
+                  type="button"
+                  className={styles.primaryAction}
+                  onClick={geolocation.locate}
+                  disabled={geolocation.state.status === 'loading'}
+                >
+                  Utiliser ma position
+                </button>
+              )}
+              {geolocation.state.status === 'error' && (
+                <p role="alert">{geolocation.state.message}</p>
+              )}
+              <div className={styles.examples}>
+                <p className="note">
+                  Ou ouvrir un lieu d’exemple, chacun sur un terrain différent :
+                </p>
+                <ul>
+                  {EXAMPLE_PLACES.map((example) => (
+                    <li key={example.place.id}>
+                      <button
+                        type="button"
+                        aria-label={`${example.place.name}, ${example.terrain}`}
+                        onClick={() => setPlace(example.place)}
+                      >
+                        {example.place.name}
+                        <span>{example.terrain}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
 
