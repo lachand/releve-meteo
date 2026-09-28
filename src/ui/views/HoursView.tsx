@@ -41,7 +41,7 @@ export function HoursView({ vm }: { readonly vm: ForecastViewModel }) {
           <PressureChart bundle={vm.bundle} cascade={vm.cascade} />
         </Section>
         <Section eyebrow="48 heures" title="Rose des vents">
-          <WindRose bundle={vm.bundle} cascade={vm.cascade} />
+          <WindRose bundle={vm.bundle} cascade={vm.cascade} windUnit={vm.windUnit} />
         </Section>
       </div>
       <Section eyebrow="Légende" title="Symboles du relevé">

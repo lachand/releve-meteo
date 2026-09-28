@@ -187,6 +187,7 @@ Plan détaillé dans `ROADMAP.md`. Démarré le 2026-09-28.
 - [x] Vigilance Météo-France officielle, sans clé, par département retrouvé hors ligne
 - [x] Pictogrammes du temps lisibles sans légende (retour utilisateur : symboles OMM « difficilement compréhensibles ») : soleil, lune la nuit (`isDay`), nuage, gouttes, flocons, éclair, brouillard, cristal de verglas, au trait d'encre avec lavis `--picto-*` ; gel, chaleur et vent fort ont leur pictogramme ; nébulosité en % dans « Maintenant »
 - [x] Flèches de vent à la place des barbules (retour utilisateur) : la flèche pointe là où va le vent, s'épaissit quand il forcit, et « du SO » est écrit partout où le vent est affiché, ruban horaire compris
+- [x] Rose des vents redessinée en SVG (retour utilisateur : « vraiment laid ») : pétales par force du vent, calme au centre, boussole graduée, synthèse en toutes lettres, modèles des heures nommés, table équivalente pour les lecteurs d'écran
 
 **Sortie** : le modèle retenu est justifié par des critères chiffrés, vérifiés contre des mesures réelles quand une station représentative existe ; `npm run verify` vert.
 

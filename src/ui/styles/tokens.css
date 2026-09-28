@@ -113,6 +113,12 @@
   --picto-neige: #4f8fc4;
   --picto-eclair: #f2c230;
 
+  /* Rose des vents : lavis sépia, du vent faible au très fort. */
+  --rose-1: #ebe0c6;
+  --rose-2: #cfb07a;
+  --rose-3: #9a7340;
+  --rose-4: #5a3c18;
+
   --font-titre: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
   --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;
   --font-corps: 'IBM Plex Sans', system-ui, sans-serif;
@@ -182,6 +188,10 @@
     --picto-pluie: #6db2ec;
     --picto-neige: #b9d8f2;
     --picto-eclair: #f5cf4a;
+    --rose-1: #5b5242;
+    --rose-2: #6f5d3e;
+    --rose-3: #a8854f;
+    --rose-4: #e2c287;
     --ombre-feuillet: 0 1px 0 rgb(0 0 0 / 30%), 0 8px 24px -16px rgb(0 0 0 / 70%);
   }
 }
@@ -217,6 +227,10 @@
   --picto-pluie: #6db2ec;
   --picto-neige: #b9d8f2;
   --picto-eclair: #f5cf4a;
+  --rose-1: #5b5242;
+  --rose-2: #6f5d3e;
+  --rose-3: #a8854f;
+  --rose-4: #e2c287;
 }
 
 .eyebrow {
