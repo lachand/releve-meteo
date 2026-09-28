@@ -86,14 +86,14 @@ Lire `SERVICE_WORKER.md` en entier avant de commencer.
 
 ## Lot 4 : observé contre estimé
 
-- [ ] **Valider empiriquement le CORS d'Infoclimat depuis le navigateur avant toute UI.** Si bloqué, consigner l'écart et livrer uniquement le repli Open-Meteo
-- [ ] `data/clients/infoclimat.ts` et son mapper
-- [ ] Recherche de station dans un rayon paramétrable, 15 km par défaut
-- [ ] Saisie de la clé Infoclimat dans les réglages, stockage local
-- [ ] Repli sur `past_days` étiqueté `estimated` si aucune station proche
-- [ ] `domain/derived.ts` : `rollingSum` branché sur les cumuls 24 h et 7 j
-- [ ] Encodage de la provenance dans l'UI selon `DESIGN.md` 5, pastille pleine et creuse
-- [ ] Test transverse d'attribution de provenance, `TESTING.md` 3.4
+- [ ] ~~Valider le CORS d'Infoclimat~~ : remplacé par Meteostat, sans clé (voir Écarts constatés du 2026-09-28)
+- [ ] ~~`data/clients/infoclimat.ts` et son mapper~~ : remplacés par `data/clients/meteostat.ts`
+- [x] Recherche de station représentative : moins de 30 km et de 200 m de dénivelé (`domain/stations.ts`)
+- [ ] ~~Saisie de la clé Infoclimat dans les réglages~~ : sans objet, Meteostat ne demande pas de clé
+- [x] Repli étiqueté `estimated` si aucune station proche : réanalyse ERA5, variable par variable
+- [x] Cumuls : `windowTotal` (domaine) branché sur les cumuls 24 h et 48 h (Heure par heure) et 7 jours (15 jours) ; une heure sans donnée donne « au moins », jamais un zéro
+- [x] Encodage de la provenance dans l'UI selon `DESIGN.md` 5 : pastille pleine ou creuse, barre pleine pour une mesure, hachurée pour une prévision
+- [x] Test transverse d'attribution de provenance, `TESTING.md` 3.4 (`src/data/mappers/provenance.test.ts`, sur réponses réelles)
 
 **Sortie** : aucune valeur affichée sans provenance. Le repli fonctionne sans clé Infoclimat.
 
@@ -119,7 +119,7 @@ Lire `SERVICE_WORKER.md` en entier avant de commencer.
 
 - [x] Carte Leaflet, tuiles OpenStreetMap, attribution conforme
 - [x] Overlay radar RainViewer, cache `tiles` avec expiration 15 min
-- [ ] **Valider le CORS de l'API Vigilance avant de construire l'UI.** Si bloqué, masquer proprement la fonctionnalité et consigner (bloqué : voir `D5`, même contrainte que pour Infoclimat, en attente d'un compte Météo-France Vigilance)
+- [x] **Valider le CORS de l'API Vigilance avant de construire l'UI.** Validé le 2026-09-28 : CORS ouvert, en-tête `apikey` accepté. Reste bloqué par la clé personnelle (voir Écarts constatés)
 - [ ] Bandeau de vigilance par département, `DESIGN.md` 6.2 haut d'écran
 - [ ] Saisie de la clé Vigilance dans les réglages
 - [x] Vérifier que le cache de tuiles survit à un déploiement
@@ -175,7 +175,13 @@ Plan détaillé dans `ROADMAP.md`. Démarré le 2026-09-28.
 - [x] Design « carnet » : papier de registre, EB Garamond, symboles synoptiques OMM, barbules, tampon, intercalaires, thème sombre
 - [x] Onglets avec vue dans l'URL, découpage du paquet (vues chargées à la demande)
 - [x] Tests : domaine à 100 %, couche données, parcours complet de l'application sur réponses réelles enregistrées
-- [ ] Tests e2e Playwright sans réseau, sur fixtures réelles (en cours)
+- [x] Tests e2e Playwright sans réseau, sur fixtures réelles : 17 scénarios, bureau et 380 px, garde-fou qui échoue sur toute requête non bouchée
+- [x] Tests de composants des vues et des nouveaux modules d'interface
+- [x] Contrôle au dernier relevé : mesure de la station face à chaque modèle, **station à station** (modèles lus au point et à l'altitude de la station, jamais au lieu)
+- [x] Carte de prévision sur 48 h : pluie et température du modèle retenu, grille de 9 × 9 cases de 12,5 km, valeurs écrites, fin de portée signalée
+- [x] Favoris sur la carte, en étiquettes de station (symbole, température, modèle), sans chevauchement ; barre des favoris sur une seule ligne, mode « Organiser »
+- [x] Fond de carte sépia commun au radar et à la prévision
+- [x] Accessibilité : les onglets gardent leur nom sous 640 px (régression couverte en e2e)
 - [ ] Alertes (Lot 7) : règles, évaluation à l'ouverture, Web Push
 
 **Sortie** : le modèle retenu est justifié par des critères chiffrés, vérifiés contre des mesures réelles quand une station représentative existe ; `npm run verify` vert.
@@ -223,6 +229,12 @@ Consigner ici toute divergence entre la spécification et la réalité, avec la 
 | 2026-09-28 | Environnement de développement | L'accès réseau aux API a d'abord été refusé par la politique de l'environnement, puis le quota journalier Open-Meteo de l'IP partagée a été atteint (HTTP 429, sans en-tête CORS, donc vu comme une erreur CORS par le navigateur). | Réponses réelles enregistrées le 2026-09-28 à 13h27 UTC pour Lyon (`tests/fixtures/live/`) : test du parcours complet (Vitest + MSW) et e2e Playwright sans réseau, horloge figée. Chez un utilisateur, le quota est celui de sa propre IP (10 000 appels par jour). |
 | 2026-09-28 | AGENTS.md règle 8 | Le code existant affichait des tirets cadratins pour les valeurs absentes. | Remplacés partout par un tiret demi-cadratin (`MISSING` dans `ui/format.ts`) ; un test vérifie les textes du catalogue des modèles. |
 | 2026-09-28 | DESIGN.md §1 et §5 | « Pas de grandes icônes soleil-nuage stylisées » et « condition météo en étiquette texte, jamais en icône » contredisent la demande de pictogrammes de prévision. | Symboles synoptiques de l'OMM au trait, une seule encre, toujours accompagnés de l'étiquette texte : le vocabulaire du carnet de météorologue plutôt que des pictogrammes grand public. DESIGN.md mis à jour. |
+| 2026-09-28 | Radar RainViewer | L'API gratuite de RainViewer ne sert plus ses tuiles qu'au zoom 7 au plus : au-delà, une image « Zoom Level Not Supported » (signalé par l'utilisateur, vérifié en direct). Elle ne publie plus non plus de trames d'extrapolation (`nowcast` vide). | Tuiles demandées au zoom 7 au plus (`maxNativeZoom`) et agrandies par Leaflet ; texte de la carte corrigé (plus de promesse d'extrapolation, qui resterait marquée « prévu » si elle revenait). Test de non-régression dans `RadarMap.test.tsx`. |
+| 2026-09-28 | Vigilance Météo-France | CORS vérifié : `public-api.meteofrance.fr` répond `Access-Control-Allow-Origin: *` et accepte l'en-tête `apikey`. Mais toute requête exige une clé personnelle (compte sur le portail Météo-France), et le format exact des données ne peut pas être vérifié sans elle. | Non intégrée, plutôt qu'improvisée sur un format non vérifié. La page Sources le dit ; les « phénomènes à surveiller » restent calculés depuis les modèles, présentés comme tels. Réalisable dès qu'une clé de test est disponible : champ de clé dans les réglages, stockage local. |
+| 2026-09-28 | Contrôle au dernier relevé | Première version : la mesure de la station était comparée à la valeur du modèle **au lieu**, jusqu'à 30 km plus loin (remarque de l'utilisateur). | Comparaison station à station : les sept modèles sont lus au point exact de la station et à son altitude (paramètre `elevation` d'Open-Meteo). La vérification sur 30 jours, déjà faite au point de la station, transmet aussi son altitude. |
+| 2026-09-28 | Open-Meteo, requêtes multi-points | Une requête de grille (81 points pour la carte de prévision) compte comme autant d'appels dans le quota d'usage libre. | La carte n'est chargée qu'à l'ouverture de l'onglet Cartes, en une seule requête, mise en cache une heure. |
+| 2026-09-28 | Fixture du point de station | Le quota Open-Meteo de l'environnement de développement était de nouveau épuisé au moment d'enregistrer la réponse au point de la station Lyon-Bron. | `tests/fixtures/stationPoint.ts` est synthétique, et le dit : valeurs constantes par modèle, distinctes de celles du lieu, pour prouver en test que l'écart est bien calculé au point de la station. |
+| 2026-09-28 | Leaflet et horloge figée | Le fondu d'apparition des tuiles se calcule avec la date courante : sous horloge figée (tests e2e, captures), les tuiles restent invisibles. | Fondu désactivé (`fadeAnimation: false`) : c'est aussi une animation décorative, que `DESIGN.md` exclut. |
 
 ---
 

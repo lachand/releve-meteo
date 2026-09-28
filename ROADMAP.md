@@ -68,10 +68,10 @@ Sombre (« carnet de nuit ») : papier `#141A21`, encre `#E6DFD0`, marge `#E0715
 - [x] **Z4.** Jeu de **symboles synoptiques OMM** en SVG inline (`src/ui/symbols/`) : ciel clair, nébulosité en octas (cercle rempli par quarts), bruine, pluie (points), averse (triangle), neige (astérisque), grêle, orage, brouillard, brume, vent fort (hampe à barbules), gel, jour/nuit. Composant `<WeatherSymbol code cloudCover isDay size />` avec `aria-label` français. Planche de référence dans la page « Sources et légende ».
 - [x] **Z5.** Tampon « MODÈLE RETENU » : cartouche encadré double filet, légèrement incliné (-2°), couleur `--tampon`, avec le nom du modèle et la note de justification en italique à côté.
 - [x] **Z6.** Onglets de carnet (intercalaires) pour la navigation : Aujourd'hui, Heure par heure, 15 jours, Carte, Modèles, Fiabilité. Barre fixe en bas sur mobile, onglets en haut sur desktop.
-- [ ] **Z7.** Graphiques Chart.js harmonisés : grille sépia, axes en petites capitales, trait d'encre légèrement épais, bande hachurée conservée (signature), histogrammes en barres hachurées pour le prévu et pleines pour l'observé.
+- [x] **Z7.** Graphiques Chart.js harmonisés : grille sépia, axes en petites capitales, trait d'encre légèrement épais, bande hachurée conservée (signature), histogrammes en barres hachurées pour le prévu et pleines pour l'observé.
 - [x] **Z8.** Micro-interactions sobres : changement d'onglet en fondu 150 ms, aucune animation décorative, `prefers-reduced-motion` respecté.
-- [ ] **Z9.** Icône d'application et `mark.svg` redessinés (cercle de station synoptique + plume).
-- [ ] **Z10.** Revue visuelle : captures Playwright clair/sombre, mobile 380 px / desktop 1280 px, relues avant validation ; contraste AA vérifié par script.
+- [x] **Z9.** Icône d'application et `mark.svg` redessinés (cercle de station synoptique + plume).
+- [x] **Z10.** Revue visuelle : captures Playwright clair/sombre, mobile 380 px / desktop 1280 px, relues avant validation ; contraste AA vérifié par un test sur `tokens.css` (`src/ui/styles/contrast.test.ts`, texte 4,5:1, tracés 3:1, deux thèmes).
 
 **Maquette de l'accueil (mobile)**
 
@@ -135,18 +135,20 @@ Sombre (« carnet de nuit ») : papier `#141A21`, encre `#E6DFD0`, marge `#E0715
 - [ ] **C4.** ~~Archive locale continue~~ : inutile, la Previous Runs API conserve les prévisions jusqu'à J-7 sur des mois (BACKLOG.md, Écarts constatés).
 - [x] **C5.** Écran Fiabilité : classement par variable et échéance, barres horizontales, courbe erreur en fonction de l'échéance, mention « calcul local », état « en collecte ».
 - [x] **C6.** Boucle fermée : les scores alimentent A1.
+- [x] **C7.** Contrôle au dernier relevé : la mesure de la station face à chaque modèle, station à station.
 
 ### Phase D : carte
 
-- [ ] **D1.** Carte radar animée (boucle des 2 dernières heures + nowcast RainViewer), lecture pas à pas, horodatage.
-- [ ] **D2.** Marqueurs des favoris avec symbole et température du modèle retenu.
+- [x] **D1.** Carte radar animée (boucle des 2 dernières heures + nowcast RainViewer), lecture pas à pas, horodatage.
+- [x] **D2.** Marqueurs des favoris avec symbole et température du modèle retenu.
+- [x] **D3.** Carte de prévision 48 h (pluie et température du modèle retenu, grille de 12,5 km), fond de carte sépia commun.
 
 ### Phase E : qualité
 
 - [x] **E1.** Tests unitaires domaine à 100 % sur les nouveaux modules.
-- [ ] **E2.** Tests composants des nouvelles vues, quatre états.
-- [ ] **E3.** e2e mis à jour (sélection de modèle, onglets, fiabilité).
-- [ ] **E4.** Captures de régression visuelle relues.
+- [x] **E2.** Tests composants des nouvelles vues, quatre états.
+- [x] **E3.** e2e mis à jour (sélection de modèle, onglets, fiabilité), sans réseau.
+- [ ] **E4.** Captures de régression visuelle relues : relues à la main à chaque livraison ; pas encore de comparaison automatique d'images.
 
 ## 5. Ordre d'exécution
 
