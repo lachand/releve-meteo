@@ -55,7 +55,7 @@ const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
   { key: 'heures', label: 'Heure par heure', short: 'Heures' },
   { key: 'jours', label: '15 jours', short: '15 j' },
-  { key: 'carte', label: 'Radar', short: 'Radar' },
+  { key: 'carte', label: 'Cartes', short: 'Cartes' },
   { key: 'modeles', label: 'Modèles', short: 'Modèles' },
   { key: 'fiabilite', label: 'Fiabilité', short: 'Fiabilité' },
 ];

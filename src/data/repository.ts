@@ -1,5 +1,7 @@
 import { CACHE_TTL_MS } from '../domain/constants';
 import type { EnsembleHourly } from '../domain/ensemble';
+import { FORECAST_GRID, gridPoints } from '../domain/grid';
+import type { ForecastGrid } from '../domain/grid';
 import type { StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
 import type { Station, StationMatch } from '../domain/stations';
@@ -7,6 +9,7 @@ import type { ForecastBundle, ModelId, Place } from '../domain/types';
 import { fetchAirQuality } from './clients/airQuality';
 import type { AirQualitySeries } from './clients/airQuality';
 import { fetchEnsemble } from './clients/ensemble';
+import { fetchForecastGrid } from './clients/forecastGrid';
 import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
@@ -307,5 +310,23 @@ export async function getStationReport(
       }
       return { ok: true, value: { match, records } };
     },
+  });
+}
+
+/**
+ * Carte de prevision autour du lieu, pour un modele. Chargee seulement a
+ * l'ouverture de la carte : une requete couvre toute la grille, mais
+ * Open-Meteo la compte comme autant d'appels que de points.
+ */
+export function getForecastGrid(
+  place: Place,
+  model: ModelId,
+): Promise<HttpResult<DatasetResult<ForecastGrid>>> {
+  const points = gridPoints(place, FORECAST_GRID.size, FORECAST_GRID.stepKm);
+  return throughCache({
+    kind: 'grid',
+    placeId: `${place.id}|${model}`,
+    ttlMs: CACHE_TTL_MS.forecast,
+    fetcher: () => fetchForecastGrid({ points, model, stepKm: FORECAST_GRID.stepKm }),
   });
 }

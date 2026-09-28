@@ -21,8 +21,8 @@ test('navigation entre onglets a la souris et au clavier, reflete dans l URL', a
 
   // Clavier : fleche droite, motif ARIA des onglets (activation automatique).
   await page.keyboard.press('ArrowRight');
-  const radarTab = tabByLabel(page, 'Radar');
-  await expect(radarTab).toHaveAttribute('aria-selected', 'true');
+  const mapsTab = tabByLabel(page, 'Cartes');
+  await expect(mapsTab).toHaveAttribute('aria-selected', 'true');
   await expect(daysTab).toHaveAttribute('aria-selected', 'false');
   await expect(page).toHaveURL(/vue=carte/);
 

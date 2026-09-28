@@ -7,7 +7,8 @@ import { getDb } from './db';
  * exception propagee.
  */
 
-export type DatasetKind = 'ensemble' | 'verification' | 'airQuality' | 'nowcast' | 'station';
+export type DatasetKind =
+  'ensemble' | 'verification' | 'airQuality' | 'nowcast' | 'station' | 'grid';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -22,6 +23,7 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   airQuality: 1,
   nowcast: 1,
   station: 1,
+  grid: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

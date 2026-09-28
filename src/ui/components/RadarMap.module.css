@@ -5,10 +5,19 @@
 }
 
 .map {
+  /* Contexte d'empilement propre : les volets Leaflet (z-index 400 a 1000)
+     restent sous la barre d'onglets collante. */
+  isolation: isolate;
   height: min(62vh, 520px);
   min-height: 320px;
   border: var(--filet-encre);
   border-radius: var(--rayon);
+}
+
+/* Fond du conteneur a la couleur du papier : les coutures entre tuiles ne
+   laissent plus voir le gris par defaut de Leaflet. */
+.map:global(.leaflet-container) {
+  background: var(--papier-creux);
 }
 
 .caption {

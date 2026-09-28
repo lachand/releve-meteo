@@ -10,6 +10,7 @@ import {
   getAirQuality,
   getEnsemble,
   getForecast,
+  getForecastGrid,
   getNowcast,
   getStationReport,
   getVerifications,
@@ -511,5 +512,34 @@ describe('getStationReport', () => {
     );
     const result = await getStationReport(place);
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('getForecastGrid', () => {
+  it('interroge toute la grille en une requete et la met en cache par modele', async () => {
+    const requests: URL[] = [];
+    server.use(
+      http.get('https://api.open-meteo.com/v1/forecast', ({ request }) => {
+        const url = new URL(request.url);
+        requests.push(url);
+        const count = url.searchParams.get('latitude')?.split(',').length ?? 0;
+        return HttpResponse.json(
+          Array.from({ length: count }, () => ({
+            hourly: { time: ['2026-09-28T16:00'], temperature_2m: [21], precipitation: [0] },
+          })),
+        );
+      }),
+    );
+    const first = await getForecastGrid(place, 'arome');
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.value.points).toHaveLength(81);
+    expect(first.value.value.temperature[0]).toHaveLength(81);
+
+    await getForecastGrid(place, 'arome');
+    expect(requests).toHaveLength(1);
+    await getForecastGrid(place, 'ecmwf');
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.searchParams.get('models')).toBe('ecmwf_ifs025');
   });
 });

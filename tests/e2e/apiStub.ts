@@ -47,6 +47,10 @@ export async function stubApis(page: Page, options: StubOptions = {}): Promise<v
     if (url.searchParams.has('minutely_15')) {
       return route.fulfill(json(fixture('nowcast-lyon.json')));
     }
+    // Carte de prevision : une grille de points en listes paralleles.
+    if (url.searchParams.get('latitude')?.includes(',') === true) {
+      return route.fulfill(json(fixture('grid-lyon-arome.json')));
+    }
     if (options.failForecast === true) {
       return route.fulfill({ status: 503, headers: { 'access-control-allow-origin': '*' } });
     }

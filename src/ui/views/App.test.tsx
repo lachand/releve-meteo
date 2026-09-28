@@ -15,6 +15,7 @@ import archiveRaw from '../../../tests/fixtures/live/archive-lyon.json?raw';
 import ensembleRaw from '../../../tests/fixtures/live/ensemble-lyon.json?raw';
 import forecastRaw from '../../../tests/fixtures/live/forecast-lyon.json?raw';
 import geocodingRaw from '../../../tests/fixtures/live/geocoding-lyon.json?raw';
+import gridRaw from '../../../tests/fixtures/live/grid-lyon-arome.json?raw';
 import meteostatDataUrl from '../../../tests/fixtures/live/meteostat-07480-2026.csv.gz?inline';
 import nowcastRaw from '../../../tests/fixtures/live/nowcast-lyon.json?raw';
 import previousRunsRaw from '../../../tests/fixtures/live/previous-runs-bron.json?raw';
@@ -45,8 +46,12 @@ function liveHandlers(options: { failForecast?: boolean; failVerification?: bool
       HttpResponse.json(live(geocodingRaw)),
     ),
     http.get('https://api.open-meteo.com/v1/forecast', ({ request }) => {
-      if (new URL(request.url).searchParams.has('minutely_15')) {
+      const params = new URL(request.url).searchParams;
+      if (params.has('minutely_15')) {
         return HttpResponse.json(live(nowcastRaw));
+      }
+      if (params.get('latitude')?.includes(',') === true) {
+        return HttpResponse.json(JSON.parse(gridRaw) as unknown[]);
       }
       return options.failForecast === true
         ? HttpResponse.error()
@@ -166,7 +171,24 @@ describe('App', { timeout: 30000 }, () => {
 
     // Fleche droite : onglet suivant, motif ARIA des onglets.
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Radar' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Cartes' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('ouvre les cartes : radar observe et prevision du modele retenu sur la grille', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    await user.click(screen.getByRole('tab', { name: 'Cartes' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Pluie et température selon AROME, 48 heures' }),
+    ).toBeInTheDocument();
+    const slider = await screen.findByRole('slider', { name: 'Échéance de la carte' });
+    // Grille reelle enregistree a 17 h : la carte commence a sa premiere heure.
+    expect(slider).toHaveAttribute('aria-valuetext', 'lundi 17h, dans 2 h');
+    await user.click(screen.getByRole('button', { name: 'Température' }));
+    expect(screen.getByText(/^De -?\d+ à -?\d+ °C sur la zone\.$/)).toBeInTheDocument();
+    expect(window.location.search).toContain('vue=carte');
   });
 
   it('laisse choisir un modele manuellement, puis revenir a la selection automatique', async () => {

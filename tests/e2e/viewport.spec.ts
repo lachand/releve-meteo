@@ -40,7 +40,7 @@ test('a 380 px de large, chaque onglet garde son nom accessible complet', async 
     'Aujourd’hui',
     'Heure par heure',
     '15 jours',
-    'Radar',
+    'Cartes',
     'Modèles',
     'Fiabilité',
   ]) {

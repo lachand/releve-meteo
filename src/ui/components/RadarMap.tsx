@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchRadarFrames } from '../../data/clients/rainviewer';
 import type { RadarAnimationFrame } from '../../data/clients/rainviewer';
 import type { Place } from '../../domain/types';
+import { addPaperBaseLayer } from '../mapBase';
 import { cssVar } from '../modelPresentation';
 import styles from './RadarMap.module.css';
 
@@ -12,9 +13,6 @@ interface RadarMapProps {
 }
 
 const DEFAULT_ZOOM = 8;
-const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const RAINVIEWER_ATTRIBUTION = '<a href="https://www.rainviewer.com/">RainViewer</a>';
 const RADAR_OPACITY = 0.7;
 /** Duree d'affichage d'une trame en lecture, ms ; la derniere observee dure plus. */
@@ -56,15 +54,12 @@ export function RadarMap({ place }: RadarMapProps) {
     if (container === null) {
       return;
     }
-    const map = L.map(container).setView([place.latitude, place.longitude], DEFAULT_ZOOM);
-    // crossOrigin : OSM et RainViewer envoient Access-Control-Allow-Origin: *.
-    // Sans cette option, les tuiles arrivent en reponses opaques que le
-    // service worker ne peut pas horodater (sw.ts, piege 1).
-    L.tileLayer(OSM_TILE_URL, {
-      attribution: OSM_ATTRIBUTION,
-      maxZoom: 19,
-      crossOrigin: true,
-    }).addTo(map);
+    // Sans fondu des tuiles : aucune animation decorative (DESIGN.md).
+    const map = L.map(container, { fadeAnimation: false }).setView(
+      [place.latitude, place.longitude],
+      DEFAULT_ZOOM,
+    );
+    addPaperBaseLayer(map);
     const ink = cssVar('--encre') || '#1c2733';
     L.circleMarker([place.latitude, place.longitude], {
       radius: 6,
