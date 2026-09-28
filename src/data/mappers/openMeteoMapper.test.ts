@@ -1,3 +1,4 @@
+import { TEST_PLACE } from '../../../tests/factories';
 import { describe, expect, it } from 'vitest';
 import aromeMissing from '../../../tests/fixtures/arome-missing.json';
 import aromeTruncated from '../../../tests/fixtures/arome-truncated.json';
@@ -300,5 +301,53 @@ describe('mapOpenMeteoResponse', () => {
     expect(daily?.[1]?.sunrise).toBeNull();
     expect(daily?.[1]?.sunset).toBeNull();
     expect(daily?.[1]?.weatherCode).toBeNull();
+  });
+});
+
+describe('altitude du lieu', () => {
+  it('remplace une altitude inconnue (0) par celle du terrain renvoyee par le service', () => {
+    const result = mapOpenMeteoResponse({
+      place: { ...TEST_PLACE, elevation: 0 },
+      requestedModels: ['arome'],
+      response: {
+        latitude: 45.49,
+        longitude: 5.47,
+        elevation: 452,
+        timezone: 'Europe/Paris',
+        utc_offset_seconds: 7200,
+        hourly: {
+          time: ['2026-08-17T00:00'],
+          temperature_2m: [14],
+          precipitation: [0],
+          wind_speed_10m: [5],
+        },
+      },
+      now: new Date('2026-08-16T20:00:00Z'),
+      fetchedAt: 0,
+    });
+    expect(result.ok && result.value.bundle.place.elevation).toBe(452);
+  });
+
+  it('garde une altitude connue', () => {
+    const result = mapOpenMeteoResponse({
+      place: TEST_PLACE,
+      requestedModels: ['arome'],
+      response: {
+        latitude: 45.49,
+        longitude: 5.47,
+        elevation: 452,
+        timezone: 'Europe/Paris',
+        utc_offset_seconds: 7200,
+        hourly: {
+          time: ['2026-08-17T00:00'],
+          temperature_2m: [14],
+          precipitation: [0],
+          wind_speed_10m: [5],
+        },
+      },
+      now: new Date('2026-08-16T20:00:00Z'),
+      fetchedAt: 0,
+    });
+    expect(result.ok && result.value.bundle.place).toBe(TEST_PLACE);
   });
 });

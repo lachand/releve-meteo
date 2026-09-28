@@ -1,19 +1,27 @@
 {
-  "name": "Relevé, prevision multi-modeles",
+  "name": "Relevé, carnet météorologique",
   "short_name": "Relevé",
-  "description": "Previsions pour la France metropolitaine, avec le modele et la confiance affiches.",
+  "description": "Prévisions pour la France métropolitaine : le meilleur modèle choisi pour le lieu, justifié et vérifié contre les mesures.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#E9EDEA",
-  "theme_color": "#16232B",
+  "background_color": "#F2EDE2",
+  "theme_color": "#1C2733",
   "lang": "fr",
   "dir": "ltr",
   "categories": ["weather", "utilities"],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
     {
       "src": "/icons/maskable-512.png",
       "sizes": "512x512",
@@ -22,7 +30,17 @@
     }
   ],
   "shortcuts": [
-    { "name": "Ma position", "url": "/?geo=1" },
-    { "name": "Comparer les modeles", "url": "/?view=compare" }
+    {
+      "name": "Ma position",
+      "url": "/?geo=1"
+    },
+    {
+      "name": "Radar autour de moi",
+      "url": "/?geo=1&vue=carte"
+    },
+    {
+      "name": "Fiabilité des modèles près de moi",
+      "url": "/?geo=1&vue=fiabilite"
+    }
   ]
 }

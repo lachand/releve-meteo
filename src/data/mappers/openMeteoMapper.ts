@@ -294,10 +294,22 @@ export function mapOpenMeteoResponse(input: MapOpenMeteoInput): HttpResult<Mappe
     series[model] = { model, hourly: hourlySeries, daily: dailySeries };
   }
 
+  // Altitude inconnue (0 : position GPS sans altitude, lien partage ancien) :
+  // celle du modele numerique de terrain d'Open-Meteo la remplace. Elle sert
+  // au classement du terrain et au choix de la station de reference.
+  const elevation =
+    place.elevation === 0 && Number.isFinite(response.elevation)
+      ? response.elevation
+      : place.elevation;
   return {
     ok: true,
     value: {
-      bundle: { place, fetchedAt, timeline: timeline as readonly LocalIsoHour[], series },
+      bundle: {
+        place: elevation === place.elevation ? place : { ...place, elevation },
+        fetchedAt,
+        timeline: timeline as readonly LocalIsoHour[],
+        series,
+      },
       missingModels,
     },
   };

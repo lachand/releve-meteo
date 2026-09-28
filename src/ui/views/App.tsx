@@ -5,7 +5,7 @@ import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
-import type { Place } from '../../domain/types';
+import type { ForecastBundle, Place } from '../../domain/types';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { PlaceSwitcher } from '../components/PlaceSwitcher';
@@ -19,6 +19,7 @@ import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
+import { useGeolocation } from '../hooks/useGeolocation';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useModelChoice } from '../hooks/useModelChoice';
 import { usePreferences } from '../hooks/usePreferences';
@@ -85,11 +86,18 @@ export function App() {
   const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
-  const terrain = useTerrain(place);
+  // Le lieu de la prevision peut porter une altitude plus juste (terrain
+  // d'Open-Meteo quand la position n'en donnait pas) : c'est lui qui sert
+  // au terrain et au choix de la station de reference.
+  const resolvedPlace = bundle?.place ?? place;
+  const terrain = useTerrain(resolvedPlace);
+  const geolocation = useGeolocation(setPlace);
 
-  const verification = useDataset(place === null ? null : `verification|${place.id}`, () =>
-    // `place` est non nul des que la cle l'est.
-    getVerifications(place as Place, MODEL_ORDER),
+  // La verification attend la prevision : elle a besoin de l'altitude
+  // resolue pour retenir une station representative.
+  const verification = useDataset(bundle === null ? null : `verification|${bundle.place.id}`, () =>
+    // `bundle` est non nul des que la cle l'est.
+    getVerifications((bundle as ForecastBundle).place, MODEL_ORDER),
   );
   const ensemble = useDataset(place === null ? null : `ensemble|${place.id}`, () =>
     getEnsemble(place as Place),
@@ -109,6 +117,18 @@ export function App() {
   const confidence = useConfidenceView(bundle, terrain);
 
   useAppliedTheme(preferences.preferences.theme);
+
+  // Raccourci « Ma position » du manifeste : `?geo=1` localise au demarrage.
+  const { locate } = geolocation;
+  const [geoRequested] = useState(
+    () => new URLSearchParams(window.location.search).get('geo') === '1',
+  );
+  useEffect(() => {
+    if (geoRequested && place === null) {
+      locate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule tentative au demarrage.
+  }, [geoRequested]);
 
   useEffect(() => {
     if (place === null) {
@@ -132,9 +152,10 @@ export function App() {
   );
 
   const vm = useMemo((): ForecastViewModel | null => {
-    if (place === null || bundle === null || cascade === null) {
+    if (bundle === null || cascade === null) {
       return null;
     }
+    const place = bundle.place;
     const now = new Date();
     const nowIso = localIsoFromUtc(now.getTime());
     const today = nowIso.slice(0, 10);
@@ -170,7 +191,6 @@ export function App() {
       navigate,
     };
   }, [
-    place,
     terrain,
     bundle,
     cascade,
@@ -190,6 +210,7 @@ export function App() {
   const isFavourite =
     place !== null && preferences.preferences.favourites.some((f) => f.id === place.id);
   const displayName = place === null ? null : (place.alias ?? place.name);
+  const metaPlace = resolvedPlace ?? place;
 
   return (
     <div className={styles.page}>
@@ -251,7 +272,7 @@ export function App() {
             <p className={styles.placeMeta}>
               {[
                 place.admin,
-                `${Math.round(place.elevation)} m`,
+                metaPlace === null ? null : `${Math.round(metaPlace.elevation)} m`,
                 terrain !== null ? TERRAIN_KIND_LABELS[terrain.kind] : null,
                 coordinates(place),
               ]
