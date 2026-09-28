@@ -1,9 +1,16 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { getAirQuality, getEnsemble, getNowcast, getVerifications } from '../../data/repository';
+import {
+  getAirQuality,
+  getEnsemble,
+  getNowcast,
+  getStationReport,
+  getVerifications,
+} from '../../data/repository';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
+import { stationCheck } from '../../domain/stationCheck';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
 import type { ForecastBundle, Place } from '../../domain/types';
 import { InstallPrompt } from '../components/InstallPrompt';
@@ -144,6 +151,10 @@ export function App() {
   const nowcast = useDataset(place === null ? null : `nowcast|${place.id}`, () =>
     getNowcast(place as Place),
   );
+  // Meme dependance que la verification : la station depend de l'altitude resolue.
+  const station = useDataset(bundle === null ? null : `station|${bundle.place.id}`, () =>
+    getStationReport((bundle as ForecastBundle).place),
+  );
 
   const verifications = useMemo(
     () => (verification.status === 'ready' ? verification.value.verifications : []),
@@ -216,6 +227,11 @@ export function App() {
       verification,
       airQuality,
       nowcast,
+      station,
+      stationCheck:
+        station.status === 'ready'
+          ? stationCheck({ records: station.value.records, bundle, now })
+          : null,
       episodes: detectPhenomena(horizon.filter((p) => p !== null)),
       explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),
       windUnit: preferences.preferences.units.wind,
@@ -237,6 +253,7 @@ export function App() {
     verification,
     airQuality,
     nowcast,
+    station,
     preferences.preferences.units.wind,
     preferred,
     setPreferred,

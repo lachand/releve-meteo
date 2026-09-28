@@ -1,12 +1,15 @@
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../../tests/msw';
 import {
   buildStationYearUrl,
   fetchStationObservations,
+  fetchStationYear,
   mergeObservations,
   OBSERVATION_SOURCES,
   parseMeteostatCsv,
+  parseStationRecords,
+  STATION_DOWNLOAD_SHARE_MS,
 } from './meteostat';
 
 /**
@@ -254,5 +257,122 @@ describe('fetchStationObservations', () => {
     });
     expect(result.ok).toBe(false);
     expect(secondYearCalls).toBe(0);
+  });
+});
+
+describe('parseStationRecords', () => {
+  const since = Date.UTC(2026, 8, 28, 0);
+
+  it('garde chaque grandeur observee avec sa provenance, en heure locale', () => {
+    const content = csv([
+      row({
+        year: '2026',
+        month: '9',
+        day: '28',
+        hour: '10',
+        temp: '26.0',
+        temp_source: 'metar',
+        rhum: '37',
+        rhum_source: 'metar',
+        prcp: '0.0',
+        prcp_source: 'dwd_mosmix',
+        wdir: '170',
+        wdir_source: 'metar',
+        wspd: '15.0',
+        wspd_source: 'metar',
+        wpgt: '46.3',
+        wpgt_source: 'dwd_mosmix',
+        pres: '1021.0',
+        pres_source: 'metar',
+      }),
+    ]);
+    expect(parseStationRecords(content, since)).toEqual([
+      {
+        time: '2026-09-28T12:00',
+        temperature: { value: 26, provenance: 'observed' },
+        humidity: { value: 37, provenance: 'observed' },
+        // Pluie et rafale prevues par MOSMIX : jamais presentees comme mesurees.
+        precipitation: { value: null, provenance: 'observed' },
+        windSpeed: { value: 15, provenance: 'observed' },
+        windDirection: { value: 170, provenance: 'observed' },
+        windGust: { value: null, provenance: 'observed' },
+        pressure: { value: 1021, provenance: 'observed' },
+      },
+    ]);
+  });
+
+  it('ignore les heures anterieures a la borne et les heures sans aucune mesure', () => {
+    const content = csv([
+      row({ year: '2026', month: '9', day: '27', hour: '23', temp: '18', temp_source: 'metar' }),
+      row({ year: '2026', month: '9', day: '28', hour: '0', temp: '17', temp_source: 'metar' }),
+      row({
+        year: '2026',
+        month: '9',
+        day: '28',
+        hour: '1',
+        temp: '17',
+        temp_source: 'dwd_mosmix',
+      }),
+    ]);
+    const records = parseStationRecords(content, since);
+    expect(records.map((record) => record.time)).toEqual(['2026-09-28T02:00']);
+  });
+
+  it('renvoie une liste vide sans colonnes de date', () => {
+    expect(parseStationRecords('temp,temp_source\n5.2,metar', since)).toEqual([]);
+  });
+});
+
+describe('fetchStationYear', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('partage un meme telechargement entre deux lecteurs', async () => {
+    let calls = 0;
+    server.use(
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        calls += 1;
+        return new HttpResponse(await gzip(csv([])));
+      }),
+    );
+    const [first, second] = await Promise.all([
+      fetchStationYear('07480', 2026),
+      fetchStationYear('07480', 2026),
+    ]);
+    await fetchStationYear('07480', 2026);
+    expect(first.ok && second.ok).toBe(true);
+    expect(calls).toBe(1);
+  });
+
+  it('telecharge a nouveau passe la duree de partage', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:00:00Z'));
+    let calls = 0;
+    server.use(
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        calls += 1;
+        return new HttpResponse(await gzip(csv([])));
+      }),
+    );
+    await fetchStationYear('07480', 2026);
+    vi.setSystemTime(new Date(Date.now() + STATION_DOWNLOAD_SHARE_MS));
+    await fetchStationYear('07480', 2026);
+    expect(calls).toBe(2);
+  });
+
+  it('ne partage jamais un echec', async () => {
+    let calls = 0;
+    server.use(
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', () => {
+        calls += 1;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    const first = await fetchStationYear('07480', 2026);
+    const second = await fetchStationYear('07480', 2026);
+    expect(first.ok).toBe(false);
+    expect(second.ok).toBe(false);
+    expect(calls).toBe(2);
   });
 });

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedPoint } from '../../domain/modelCascade';
 import type { Preferences } from '../../domain/types';
@@ -19,6 +20,8 @@ interface NowPanelProps {
   readonly explanation: SelectionExplanation;
   readonly manual: boolean;
   readonly onExplain: () => void;
+  /** Place sous le releve chiffre : le controle au dernier releve de station. */
+  readonly children?: ReactNode;
 }
 
 function Reading({ label, value, unit }: { label: string; value: string; unit?: string }) {
@@ -40,13 +43,17 @@ export function NowPanel({
   explanation,
   manual,
   onExplain,
+  children,
 }: NowPanelProps) {
   if (point === null) {
     return (
-      <p className={styles.empty}>
-        Aucun modèle ne couvre l’instant présent pour ce lieu. Les échéances suivantes restent
-        consultables dans l’onglet « Heures ».
-      </p>
+      <div className={styles.main}>
+        <p className={styles.empty}>
+          Aucun modèle ne couvre l’instant présent pour ce lieu. Les échéances suivantes restent
+          consultables dans l’onglet « Heures ».
+        </p>
+        {children}
+      </div>
     );
   }
 
@@ -111,6 +118,7 @@ export function NowPanel({
           <Reading label="Visibilité" value={formatCompact(visibilityKm)} unit="km" />
           <Reading label="Pluie" value={formatCompact(point.precipitation.value)} unit="mm/h" />
         </dl>
+        {children}
       </div>
 
       <aside className={styles.margin} aria-label="Modèle retenu et justification">

@@ -2,12 +2,12 @@ import { getDb } from './db';
 
 /**
  * Cache generique a expiration pour les jeux de donnees secondaires
- * (ensemble, verification, qualite de l'air). Meme contrat que
+ * (ensemble, verification, qualite de l'air, releve de station). Meme contrat que
  * forecastStore : repli memoire si IndexedDB est indisponible, aucune
  * exception propagee.
  */
 
-export type DatasetKind = 'ensemble' | 'verification' | 'airQuality' | 'nowcast';
+export type DatasetKind = 'ensemble' | 'verification' | 'airQuality' | 'nowcast' | 'station';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -21,6 +21,7 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   verification: 1,
   airQuality: 1,
   nowcast: 1,
+  station: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

@@ -299,10 +299,11 @@ export async function fetchVerifications(input: {
     request<RawHourlyResponse>(buildReanalysisUrl({ ...point, window: reanalysisWindow }), options),
     input.station === null
       ? Promise.resolve(null)
-      : fetchStationObservations({
+      : // Telechargement partage avec le releve du jour : jamais interrompu
+        // par un seul de ses lecteurs, donc sans signal d'annulation.
+        fetchStationObservations({
           stationId: input.station.station.id,
           years: yearsOf(stationWindow),
-          signal: input.signal,
         }),
   ]);
   if (!previousRuns.ok) {

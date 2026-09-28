@@ -1,10 +1,12 @@
 import type { AirQualitySeries } from '../../data/clients/airQuality';
 import type { VerificationReport } from '../../data/clients/verification';
 import type { Nowcast } from '../../data/mappers/nowcastMapper';
+import type { StationReport } from '../../data/repository';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
 import type { EnsembleDay } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
+import type { StationCheck } from '../../domain/stationCheck';
 import type {
   ForecastBundle,
   ModelId,
@@ -41,6 +43,10 @@ export interface ForecastViewModel {
   readonly verification: DatasetState<VerificationReport>;
   readonly airQuality: DatasetState<AirQualitySeries>;
   readonly nowcast: DatasetState<Nowcast>;
+  /** Releves recents de la station representative du lieu. */
+  readonly station: DatasetState<StationReport>;
+  /** Dernier releve face aux modeles, null tant qu'il n'existe pas. */
+  readonly stationCheck: StationCheck | null;
   readonly episodes: readonly PhenomenonEpisode[];
   readonly explanation: SelectionExplanation;
   readonly windUnit: Preferences['units']['wind'];

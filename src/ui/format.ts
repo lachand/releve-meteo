@@ -27,6 +27,18 @@ export function formatCompact(value: number | null): string {
   return value === null ? MISSING : upToOneDecimal.format(value);
 }
 
+/** Ecart signe a une decimale : « +0,6 », « −1,2 », « 0,0 ». Signe moins typographique. */
+export function formatSignedOneDecimal(value: number | null): string {
+  if (value === null) {
+    return MISSING;
+  }
+  const rounded = Math.round(value * 10) / 10 + 0;
+  if (rounded === 0) {
+    return oneDecimal.format(0);
+  }
+  return `${rounded > 0 ? '+' : '−'}${oneDecimal.format(Math.abs(rounded))}`;
+}
+
 /** Temperature arrondie au degre, avec signe typographique moins. */
 export function formatTemperature(value: number | null): string {
   if (value === null) {

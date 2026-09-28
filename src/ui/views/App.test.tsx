@@ -105,7 +105,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('App', () => {
+// Parcours complets, vues chargees a la demande : delai large sous charge.
+describe('App', { timeout: 30000 }, () => {
   it("invite a chercher un lieu quand aucun lieu n'est selectionne", () => {
     render(<App />);
     expect(screen.getByText('Aucun lieu au carnet.')).toBeInTheDocument();
@@ -201,7 +202,27 @@ describe('App', () => {
       { timeout: 12000 },
     );
     expect(observed).toHaveLength(2);
-    expect(screen.getByRole('table', { name: /Température/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('table', { name: /Erreur absolue moyenne.*Température/ }),
+    ).toBeInTheDocument();
+
+    // Controle au dernier releve : METAR de 10 h UTC (12 h locale), 26 °C.
+    const gaps = screen.getByRole('table', { name: /face à la mesure/ });
+    expect(within(gaps).getAllByRole('row').length).toBeGreaterThan(2);
+    expect(screen.getByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
+  }, 20000);
+
+  it('confronte la valeur du modele retenu au dernier releve de la station', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    const line = await screen.findByText(/Mesuré à/, {}, { timeout: 12000 });
+    expect(line).toHaveTextContent('Mesuré à Lyon / Bron à 12h : 26 °C (il y a 3 h 27).');
+    expect(line).toHaveTextContent(/donnait .* ici à la même heure \(écart [+−]?\d+,\d °C\)/);
+    expect(
+      screen.getByRole('button', { name: 'Tous les modèles face à la mesure' }),
+    ).toBeInTheDocument();
   }, 20000);
 
   it('se replie sur la maille et l echeance quand la verification echoue', async () => {

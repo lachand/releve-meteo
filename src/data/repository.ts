@@ -1,7 +1,8 @@
 import { CACHE_TTL_MS } from '../domain/constants';
 import type { EnsembleHourly } from '../domain/ensemble';
+import type { StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
-import type { Station } from '../domain/stations';
+import type { Station, StationMatch } from '../domain/stations';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
 import { fetchAirQuality } from './clients/airQuality';
 import type { AirQualitySeries } from './clients/airQuality';
@@ -9,6 +10,7 @@ import { fetchEnsemble } from './clients/ensemble';
 import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
+import { fetchStationYear, parseStationRecords } from './clients/meteostat';
 import { fetchForecast, fetchNowcast } from './clients/openMeteo';
 import { fetchVerifications } from './clients/verification';
 import type { VerificationReport } from './clients/verification';
@@ -204,16 +206,21 @@ export function resetStationsForTests(): void {
   stationsPromise = null;
 }
 
-export async function getVerifications(
-  place: Place,
-  models: readonly ModelId[],
-): Promise<HttpResult<DatasetResult<VerificationReport>>> {
-  const station = nearestStation({
+/** Station representative du lieu (distance et denivele bornes), ou null. */
+async function stationFor(place: Place): Promise<StationMatch | null> {
+  return nearestStation({
     latitude: place.latitude,
     longitude: place.longitude,
     elevation: place.elevation,
     stations: await loadStations(),
   });
+}
+
+export async function getVerifications(
+  place: Place,
+  models: readonly ModelId[],
+): Promise<HttpResult<DatasetResult<VerificationReport>>> {
+  const station = await stationFor(place);
   return throughCache({
     kind: 'verification',
     placeId: `${place.id}|${[...models].sort().join(',')}`,
@@ -246,6 +253,59 @@ export function getNowcast(place: Place): Promise<HttpResult<DatasetResult<Nowca
     fetcher: async () => {
       const result = await fetchNowcast(place.latitude, place.longitude);
       return result.ok ? mapNowcast(result.value) : result;
+    },
+  });
+}
+
+/** Releves recents de la station representative du lieu. */
+export interface StationReport {
+  /** null : aucune station ne represente ce lieu. */
+  readonly match: StationMatch | null;
+  readonly records: readonly StationRecord[];
+}
+
+/**
+ * Profondeur du releve, heures : de quoi calculer l'ecart recent meme
+ * quand la station publie avec retard ou se tait la nuit.
+ */
+export const STATION_REPORT_HOURS = 36;
+
+const HOUR_MS = 60 * 60 * 1000;
+
+export async function getStationReport(
+  place: Place,
+): Promise<HttpResult<DatasetResult<StationReport>>> {
+  const match = await stationFor(place);
+  if (match === null) {
+    const report: StationReport = { match: null, records: [] };
+    return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
+  }
+  return throughCache({
+    kind: 'station',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.station,
+    fetcher: async (): Promise<HttpResult<StationReport>> => {
+      const now = Date.now();
+      const since = now - STATION_REPORT_HOURS * HOUR_MS;
+      // Deux fichiers annuels les premieres heures de janvier. Le fichier
+      // de l'annee qui commence peut manquer : on garde ce qui repond.
+      const years = [
+        ...new Set([new Date(since).getUTCFullYear(), new Date(now).getUTCFullYear()]),
+      ];
+      const records: StationRecord[] = [];
+      let failure: HttpResult<StationReport> | null = null;
+      for (const year of years) {
+        const text = await fetchStationYear(match.station.id, year);
+        if (text.ok) {
+          records.push(...parseStationRecords(text.value, since));
+        } else {
+          failure = text;
+        }
+      }
+      if (failure !== null && records.length === 0) {
+        return failure;
+      }
+      return { ok: true, value: { match, records } };
     },
   });
 }

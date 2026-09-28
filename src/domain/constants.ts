@@ -38,4 +38,6 @@ export const CACHE_TTL_MS = {
   airQuality: 3 * 60 * 60 * 1000,
   /** Pas de 15 min : le nowcast vieillit vite. */
   nowcast: 10 * 60 * 1000,
+  /** Meteostat publie les releves horaires avec quelques heures de retard. */
+  station: 30 * 60 * 1000,
 } as const;

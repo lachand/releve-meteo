@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../tests/msw';
 import { deleteDbForTests } from './cache/db';
 import { resetMemoryDatasetStore, setDataset } from './cache/datasetStore';
@@ -11,6 +11,7 @@ import {
   getEnsemble,
   getForecast,
   getNowcast,
+  getStationReport,
   getVerifications,
   loadStations,
   PAST_DAYS,
@@ -407,5 +408,108 @@ describe('loadStations', () => {
     await loadStations();
     await loadStations();
     expect(calls).toBe(1);
+  });
+});
+
+describe('getStationReport', () => {
+  const STATIONS_URL = 'http://localhost:3000/data/stations-fr.json';
+  const HEADER = 'year,month,day,hour,temp,temp_source,rhum,rhum_source';
+
+  /** Compresse un texte en gzip via l'API Web standard. */
+  async function gzip(text: string): Promise<Uint8Array> {
+    const body = new Response(text).body;
+    if (body === null) {
+      return new Uint8Array();
+    }
+    const compressed = body.pipeThrough(new CompressionStream('gzip'));
+    return new Uint8Array(await new Response(compressed).arrayBuffer());
+  }
+
+  const nearby = {
+    id: '07480',
+    name: 'Lyon / Bron',
+    latitude: 45.5,
+    longitude: 5.5,
+    elevation: 450,
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('ne telecharge rien quand aucune station ne represente le lieu', async () => {
+    let meteostatCalls = 0;
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([])),
+      http.get('https://data.meteostat.net/hourly/:year/:station', () => {
+        meteostatCalls += 1;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    const result = await getStationReport(place);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value).toEqual({ match: null, records: [] });
+    expect(meteostatCalls).toBe(0);
+  });
+
+  it('garde les releves des 36 dernieres heures de la station retenue', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        const body = [
+          HEADER,
+          '2026,9,26,10,12.0,metar,80,metar', // plus de 36 h : ignore
+          '2026,9,28,9,25.0,metar,41,metar',
+          '2026,9,28,10,26.0,metar,37,metar',
+        ].join('\n');
+        return new HttpResponse(await gzip(body));
+      }),
+    );
+    const result = await getStationReport(place);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const report = result.value.value;
+    expect(report.match?.station.id).toBe('07480');
+    expect(report.records.map((record) => record.time)).toEqual([
+      '2026-09-28T11:00',
+      '2026-09-28T12:00',
+    ]);
+    expect(report.records[1]?.temperature).toEqual({ value: 26, provenance: 'observed' });
+  });
+
+  it("garde l'annee precedente quand le fichier de la nouvelle annee manque", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-01-01T05:00:00Z'));
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get(
+        'https://data.meteostat.net/hourly/2026/07480.csv.gz',
+        async () =>
+          new HttpResponse(await gzip([HEADER, '2026,12,31,22,3.0,metar,90,metar'].join('\n'))),
+      ),
+      http.get(
+        'https://data.meteostat.net/hourly/2027/07480.csv.gz',
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+    );
+    const result = await getStationReport(place);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value.records.map((record) => record.time)).toEqual(['2026-12-31T23:00']);
+  });
+
+  it('propage l echec quand aucun fichier ne repond', async () => {
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get(
+        'https://data.meteostat.net/hourly/:year/:station',
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+    );
+    const result = await getStationReport(place);
+    expect(result.ok).toBe(false);
   });
 });

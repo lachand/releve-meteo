@@ -5,6 +5,7 @@ import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
 import { NowPanel } from '../components/NowPanel';
 import { PhenomenaPanel } from '../components/PhenomenaPanel';
+import { StationLine } from '../components/StationCheck';
 import { Section } from './Section';
 import styles from './Views.module.css';
 import type { ForecastViewModel } from './viewModel';
@@ -27,7 +28,14 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           explanation={vm.explanation}
           manual={vm.preferred !== null && vm.preferred === nowPoint?.model}
           onExplain={() => vm.navigate('modeles')}
-        />
+        >
+          <StationLine
+            state={vm.station}
+            check={vm.stationCheck}
+            activeModel={cascade.activeModel}
+            onDetail={() => vm.navigate('fiabilite')}
+          />
+        </NowPanel>
       </Section>
 
       <div className={styles.twoColumns}>
