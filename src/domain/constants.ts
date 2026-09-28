@@ -37,4 +37,11 @@ export const CACHE_TTL_MS = {
   geocoding: 30 * 24 * 60 * 60 * 1000,
   vigilance: 15 * 60 * 1000,
   radar: 15 * 60 * 1000,
+  /** L'ensemble ECMWF est reexecute toutes les 6 h. */
+  ensemble: 3 * 60 * 60 * 1000,
+  /** La fenetre de verification glisse d'un jour par jour. */
+  verification: 12 * 60 * 60 * 1000,
+  airQuality: 3 * 60 * 60 * 1000,
+  /** Pas de 15 min : le nowcast vieillit vite. */
+  nowcast: 10 * 60 * 1000,
 } as const;

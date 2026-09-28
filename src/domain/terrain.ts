@@ -7,7 +7,7 @@ export interface CoastlinePoint {
   readonly lon: number;
 }
 
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const earthRadiusKm = 6371;
   const p1 = (lat1 * Math.PI) / 180;
   const p2 = (lat2 * Math.PI) / 180;

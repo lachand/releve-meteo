@@ -100,6 +100,28 @@ export function leadHoursFrom(now: Date, point: LocalIsoHour): number {
   return (parseLocalIso(point) - now.getTime()) / (60 * 60 * 1000);
 }
 
+/**
+ * Heure murale Europe/Paris ('YYYY-MM-DDTHH:mm') d'un instant UTC. Sert a
+ * aligner des observations horodatees en UTC (stations) sur la timeline
+ * locale des previsions.
+ */
+export function localIsoFromUtc(utcMs: number): LocalIsoHour {
+  const parts = ZONE_FORMATTER.formatToParts(new Date(utcMs));
+  const get = (type: string): string => {
+    const part = parts.find((p) => p.type === type);
+    // Meme garantie que dans offsetMinutesAt : chaque type demande est une
+    // option du formateur, toujours present.
+    /* v8 ignore next */
+    return part === undefined ? '00' : part.value;
+  };
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
+
+/** Instant UTC (epoch ms) d'une heure murale locale Europe/Paris. */
+export function utcMsFromLocalIso(iso: LocalIsoHour): number {
+  return parseLocalIso(iso);
+}
+
 /** Index du premier point de timeline egal ou posterieur a now. -1 si aucun. */
 export function indexOfNow(timeline: readonly LocalIsoHour[], now: Date): number {
   const nowMs = now.getTime();

@@ -14,9 +14,17 @@ export interface CachedForecast {
   readonly expiresAt: number;
 }
 
+/**
+ * Version de la forme de `ForecastBundle`. Incrementee a chaque ajout de
+ * champ dans `HourlyPoint` / `DailyPoint` : un bundle mis en cache par une
+ * version anterieure n'a pas les nouveaux champs et ne doit jamais etre
+ * relu (il ferait lire `undefined.value`).
+ */
+export const BUNDLE_SCHEMA_VERSION = 2;
+
 function cacheKey({ placeId, models, pastDays, forecastDays }: ForecastCacheKey): string {
   const modelsHash = [...models].sort().join(',');
-  return `${placeId}|${modelsHash}|${pastDays}|${forecastDays}`;
+  return `v${BUNDLE_SCHEMA_VERSION}|${placeId}|${modelsHash}|${pastDays}|${forecastDays}`;
 }
 
 const memoryStore = new Map<string, CachedForecast>();

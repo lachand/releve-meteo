@@ -20,18 +20,22 @@ export interface RawForecastResponse {
   readonly hourly_units?: Readonly<Record<string, string>>;
   readonly daily?: Readonly<Record<string, readonly (number | null)[] | readonly string[]>>;
   readonly daily_units?: Readonly<Record<string, string>>;
+  readonly minutely_15?: Readonly<Record<string, readonly (number | null)[] | readonly string[]>>;
 }
 
-// ARCHITECTURE.md section 4.1. Verifie contre l'API reelle au lot 1 :
-// les quatre identifiants sont exacts au 17/08/2026.
+// ARCHITECTURE.md section 4.1. Identifiants verifies contre la
+// documentation Open-Meteo (meteofrance-api, dwd-api, ecmwf-api, gfs-api).
 export const OPEN_METEO_MODEL_IDS: Readonly<Record<ModelId, string>> = {
   arome: 'meteofrance_arome_france_hd',
+  arome_france: 'meteofrance_arome_france',
+  icon_d2: 'icon_d2',
   arpege: 'meteofrance_arpege_europe',
   icon_eu: 'icon_eu',
+  ecmwf: 'ecmwf_ifs025',
   gfs: 'gfs_seamless',
 } as const;
 
-const HOURLY_VARIABLES = [
+export const HOURLY_VARIABLES = [
   'temperature_2m',
   'precipitation',
   'wind_speed_10m',
@@ -41,14 +45,27 @@ const HOURLY_VARIABLES = [
   'dew_point_2m',
   'cloud_cover',
   'shortwave_radiation',
+  'relative_humidity_2m',
+  'apparent_temperature',
+  'precipitation_probability',
+  'snowfall',
+  'cape',
+  'visibility',
+  'freezing_level_height',
+  'is_day',
   'weather_code',
 ] as const;
 
-const DAILY_VARIABLES = [
+export const DAILY_VARIABLES = [
   'temperature_2m_max',
   'temperature_2m_min',
   'precipitation_sum',
   'uv_index_max',
+  'wind_gusts_10m_max',
+  'wind_speed_10m_max',
+  'wind_direction_10m_dominant',
+  'precipitation_hours',
+  'snowfall_sum',
   'sunrise',
   'sunset',
   'weather_code',
@@ -80,4 +97,29 @@ export async function fetchForecast(
   signal?: AbortSignal,
 ): Promise<HttpResult<RawForecastResponse>> {
   return request<RawForecastResponse>(buildForecastUrl(query), { signal });
+}
+
+/**
+ * Nowcast : precipitation au pas de 15 min sur les 2 prochaines heures,
+ * AROME 1,3 km uniquement (seul modele a fournir ce pas nativement chez
+ * Open-Meteo, les autres sont interpoles).
+ */
+export function buildNowcastUrl(latitude: number, longitude: number): string {
+  const url = new URL('https://api.open-meteo.com/v1/forecast');
+  url.searchParams.set('latitude', String(latitude));
+  url.searchParams.set('longitude', String(longitude));
+  url.searchParams.set('models', OPEN_METEO_MODEL_IDS.arome);
+  url.searchParams.set('minutely_15', 'precipitation');
+  url.searchParams.set('forecast_minutely_15', '12');
+  url.searchParams.set('past_minutely_15', '4');
+  url.searchParams.set('timezone', 'Europe/Paris');
+  return url.toString();
+}
+
+export async function fetchNowcast(
+  latitude: number,
+  longitude: number,
+  signal?: AbortSignal,
+): Promise<HttpResult<RawForecastResponse>> {
+  return request<RawForecastResponse>(buildNowcastUrl(latitude, longitude), { signal });
 }

@@ -1,3 +1,10 @@
+/*
+ * Tokens du « carnet du météorologue » (DESIGN.md, ROADMAP.md phase Z).
+ * Papier de registre crème, encre bleu-noir de stylo-plume, filet de marge
+ * rouge. La couleur reste réservée aux modèles (Okabe-Ito, ajustés pour
+ * tenir l'AA sur le papier crème).
+ */
+
 @font-face {
   font-family: 'IBM Plex Sans';
   src: url('/fonts/plex-sans-400.woff2') format('woff2');
@@ -22,39 +29,78 @@
   font-weight: 400;
   font-display: swap;
 }
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('/fonts/garamond-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('/fonts/garamond-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('/fonts/garamond-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  /* Surfaces */
-  --papier: #e9edea; /* fond, gris-vert tres pale, papier d'enregistreur */
-  --papier-haut: #f4f6f3; /* cartes, panneaux */
-  --grille: #c3ccc8; /* lignes de grille, filets */
-  --grille-faible: #d8dfdb; /* grille secondaire */
+  color-scheme: light;
+
+  /* Surfaces : papier de registre */
+  --papier: #f2ede2; /* fond, papier vergé crème */
+  --papier-haut: #fbf8f1; /* feuillets, panneaux */
+  --papier-creux: #e9e2d3; /* champs, zones en retrait */
+  --grille: #d6ccb8; /* filets, grille sépia */
+  --grille-faible: #e4dccb; /* grille secondaire */
 
   /* Encre */
-  --encre: #16232b; /* texte principal, axes */
-  --encre-faible: #5a6b72; /* labels, unites, texte secondaire */
+  --encre: #1c2733; /* encre bleu-noir de stylo-plume */
+  --encre-faible: #5b6570; /* annotations, unités */
+  --marge: #ac4336; /* filet de marge rouge */
 
-  /* Traces de modele (Okabe-Ito, assombri pour tenir sur fond clair) */
-  --arome: #005b8f; /* bleu */
-  --arpege: #b35300; /* vermillon fonce */
-  --icon-eu: #007a5a; /* vert bleute */
+  /*
+   * Tracés de modèle (Okabe-Ito assombri). Contraste >= 3:1 sur papier
+   * (WCAG 1.4.11, éléments graphiques). Un nom de modèle en couleur n'est
+   * composé qu'en grand corps (>= 22 px gras) ; en petit corps, il est à
+   * l'encre avec une pastille de couleur.
+   */
+  --arome: #005b8f; /* bleu profond */
+  --arome-france: #2f7fb5; /* bleu ciel */
+  --icon-d2: #3b7d4f; /* vert tendre */
+  --arpege: #b35300; /* vermillon foncé */
+  --icon-eu: #00664b; /* vert bleuté */
+  --ecmwf: #7d6300; /* ocre */
   --gfs: #9b4e7e; /* pourpre */
 
   /* Signaux */
   --alerte: #a32020; /* vigilance, seuil franchi */
-  --observe: #16232b; /* provenance mesuree: encre pleine */
-  --estime: #5a6b72; /* provenance estimee: encre affaiblie */
+  --observe: #1c2733; /* provenance mesurée : encre pleine */
+  --estime: #5b6570; /* provenance estimée : encre affaiblie */
 
+  /* Niveaux de risque : intensité d'encre, jamais un feu tricolore */
+  --risque-faible: #6d6455;
+  --risque-modere: #9a4b21;
+  --risque-fort: #a32020;
+
+  --font-titre: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
   --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;
   --font-corps: 'IBM Plex Sans', system-ui, sans-serif;
   --font-donnee: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --pas-xs: 0.6875rem; /* 11px, etiquettes d'axe, unites */
+  --pas-xs: 0.6875rem; /* 11px, étiquettes d'axe, unités */
   --pas-s: 0.8125rem; /* 13px, corps secondaire */
   --pas-m: 1rem; /* 16px, corps */
   --pas-l: 1.375rem; /* 22px, valeurs secondaires */
   --pas-xl: 2.5rem; /* 40px, valeur principale */
-  --pas-xxl: 4rem; /* 64px, temperature du moment */
+  --pas-xxl: 4rem; /* 64px, température du moment */
 
   --u: 4px;
   --esp-1: calc(var(--u) * 1); /*  4px */
@@ -65,50 +111,75 @@
   --esp-8: calc(var(--u) * 8); /* 32px */
   --esp-12: calc(var(--u) * 12); /* 48px */
 
-  --rayon: 2px; /* quasi nul: c'est un releve, pas une carte de visite */
+  --rayon: 2px; /* quasi nul : c'est un relevé, pas une carte de visite */
   --filet: 1px solid var(--grille);
-  --largeur-max: 1120px;
+  --filet-encre: 1px solid var(--encre);
+  --ombre-feuillet: 0 1px 0 rgb(60 45 20 / 6%), 0 8px 24px -16px rgb(60 45 20 / 30%);
+  --largeur-max: 1180px;
+
+  --duree-courte: 150ms;
+  --duree-moyenne: 220ms;
 }
 
 /*
- * Theme "auto" (par defaut, aucun attribut) suit prefers-color-scheme.
- * Le reglage manuel des Reglages (BACKLOG.md Lot 5) pose data-theme sur
- * <html> : :not([data-theme='light']) laisse l'auto sombre l'emporter tant
- * que rien ne force le clair, et le bloc [data-theme='dark'] force le
- * sombre meme sur un systeme clair.
+ * Thème « auto » (par défaut, aucun attribut) suit prefers-color-scheme.
+ * Le réglage manuel pose data-theme sur <html> : :not([data-theme='light'])
+ * laisse l'auto sombre l'emporter tant que rien ne force le clair, et le
+ * bloc [data-theme='dark'] force le sombre même sur un système clair.
+ * Sombre : « carnet de nuit », encre claire sur papier bleu-noir.
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --papier: #10181c;
-    --papier-haut: #18232a;
-    --grille: #2c3a42;
-    --grille-faible: #212c33;
-    --encre: #dce5e2;
-    --encre-faible: #8fa1a8;
-    --arome: #4ba3dc;
-    --arpege: #e8863a;
-    --icon-eu: #34b48c;
-    --gfs: #c784ac;
-    --alerte: #e05252;
-    --observe: #dce5e2;
-    --estime: #8fa1a8;
+    color-scheme: dark;
+    --papier: #131920;
+    --papier-haut: #1a222b;
+    --papier-creux: #0f141a;
+    --grille: #2f3a45;
+    --grille-faible: #232c36;
+    --encre: #e8e1d2;
+    --encre-faible: #a39a8b;
+    --marge: #e0715f;
+    --arome: #5ab0e8;
+    --arome-france: #8fc6ea;
+    --icon-d2: #7fc78f;
+    --arpege: #ee9150;
+    --icon-eu: #3fbf98;
+    --ecmwf: #d9b640;
+    --gfs: #d08fb8;
+    --alerte: #f06a5a;
+    --observe: #e8e1d2;
+    --estime: #a39a8b;
+    --risque-faible: #b4aa98;
+    --risque-modere: #e59a5e;
+    --risque-fort: #f06a5a;
+    --ombre-feuillet: 0 1px 0 rgb(0 0 0 / 30%), 0 8px 24px -16px rgb(0 0 0 / 70%);
   }
 }
 
 :root[data-theme='dark'] {
-  --papier: #10181c;
-  --papier-haut: #18232a;
-  --grille: #2c3a42;
-  --grille-faible: #212c33;
-  --encre: #dce5e2;
-  --encre-faible: #8fa1a8;
-  --arome: #4ba3dc;
-  --arpege: #e8863a;
-  --icon-eu: #34b48c;
-  --gfs: #c784ac;
-  --alerte: #e05252;
-  --observe: #dce5e2;
-  --estime: #8fa1a8;
+  color-scheme: dark;
+  --papier: #131920;
+  --papier-haut: #1a222b;
+  --papier-creux: #0f141a;
+  --grille: #2f3a45;
+  --grille-faible: #232c36;
+  --encre: #e8e1d2;
+  --encre-faible: #a39a8b;
+  --marge: #e0715f;
+  --arome: #5ab0e8;
+  --arome-france: #8fc6ea;
+  --icon-d2: #7fc78f;
+  --arpege: #ee9150;
+  --icon-eu: #3fbf98;
+  --ecmwf: #d9b640;
+  --gfs: #d08fb8;
+  --alerte: #f06a5a;
+  --observe: #e8e1d2;
+  --estime: #a39a8b;
+  --risque-faible: #b4aa98;
+  --risque-modere: #e59a5e;
+  --risque-fort: #f06a5a;
+  --ombre-feuillet: 0 1px 0 rgb(0 0 0 / 30%), 0 8px 24px -16px rgb(0 0 0 / 70%);
 }
 
 .eyebrow {

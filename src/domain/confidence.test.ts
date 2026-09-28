@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { confidenceAt, dispersionAt, gradeDispersion, spreadBand } from './confidence';
 import type { ForecastBundle, HourlyPoint, ModelId, Place, TerrainProfile } from './types';
+import { hourlyPoint } from '../../tests/factories';
 
 const place: Place = {
   id: '45.4900:5.4700',
@@ -21,20 +22,7 @@ function measure(value: number | null) {
 }
 
 function point(overrides: Partial<HourlyPoint> = {}): HourlyPoint {
-  return {
-    time: '2026-08-17T14:00',
-    temperature: measure(14),
-    precipitation: measure(0),
-    windSpeed: measure(10),
-    windGust: measure(20),
-    windDirection: measure(180),
-    pressure: measure(1013),
-    dewPoint: measure(8),
-    cloudCover: measure(50),
-    radiation: measure(200),
-    weatherCode: 1,
-    ...overrides,
-  };
+  return { ...hourlyPoint('2026-08-17T14:00'), ...overrides };
 }
 
 function bundleWith(series: Partial<Record<ModelId, HourlyPoint>>): ForecastBundle {
