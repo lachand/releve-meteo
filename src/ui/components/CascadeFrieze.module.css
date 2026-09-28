@@ -29,6 +29,9 @@
 }
 
 .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--font-display);
   font-size: var(--pas-xs);
   font-weight: 600;
@@ -52,6 +55,27 @@
   font-size: 0.625rem;
   color: var(--encre-faible);
   white-space: nowrap;
+}
+
+/* Etiquettes de jour : « mar. 29 » en grand, le seul quantieme en petit. */
+.short {
+  display: none;
+}
+
+@media (max-width: 559px) {
+  .long {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+}
+
+.relay {
+  margin-top: var(--esp-2);
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
 }
 
 .empty {

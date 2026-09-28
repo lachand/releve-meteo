@@ -41,5 +41,7 @@ describe('CascadeFrieze', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(cascade.segments.length);
     expect(screen.getByText('AROME')).toBeInTheDocument();
     expect(screen.getByText('ARPEGE')).toBeInTheDocument();
+    // Relais ecrit en toutes lettres, lisible meme quand un troncon est etroit.
+    expect(screen.getByText(/^AROME jusqu’à .+, puis ARPEGE jusqu’à .+\.$/)).toBeInTheDocument();
   });
 });

@@ -22,13 +22,28 @@ export function CascadeFrieze({ bundle, cascade }: CascadeFriezeProps) {
     return <p className={styles.empty}>Aucune échéance couverte.</p>;
   }
   const total = last.endIndex - first.startIndex + 1;
-  const dayStarts: { index: number; label: string }[] = [];
+  const dayStarts: { index: number; label: string; day: string }[] = [];
   for (let i = first.startIndex; i <= last.endIndex; i += 1) {
     const time = bundle.timeline[i];
     if (time !== undefined && time.endsWith('T00:00')) {
-      dayStarts.push({ index: i, label: formatDayShort(time) });
+      dayStarts.push({
+        index: i,
+        label: formatDayShort(time),
+        day: String(Number(time.slice(8, 10))),
+      });
     }
   }
+  // Relais en toutes lettres : lisible a toute largeur, meme quand un
+  // troncon est trop etroit pour porter son nom.
+  const relay = segments
+    .map((segment, index) => {
+      const to = bundle.timeline[segment.endIndex] ?? '';
+      const name = MODEL_LABELS[segment.model];
+      return index === segments.length - 1
+        ? `${name} jusqu’à ${formatDayShort(to)}`
+        : `${name} jusqu’à ${formatDayShort(to)} ${formatHour(to)}`;
+    })
+    .join(', puis ');
   return (
     <figure className={styles.figure}>
       <ol className={styles.bar} aria-label="Modèle retenu par échéance">
@@ -63,10 +78,12 @@ export function CascadeFrieze({ bundle, cascade }: CascadeFriezeProps) {
             className={styles.tick}
             style={{ left: `${((tick.index - first.startIndex) / total) * 100}%` }}
           >
-            {tick.label}
+            <span className={styles.long}>{tick.label}</span>
+            <span className={styles.short}>{tick.day}</span>
           </span>
         ))}
       </div>
+      <figcaption className={styles.relay}>{relay}.</figcaption>
     </figure>
   );
 }
