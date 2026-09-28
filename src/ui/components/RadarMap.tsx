@@ -151,7 +151,12 @@ export function RadarMap({ place }: RadarMapProps) {
       {!radarUnavailable && frames === null && (
         <p className={styles.caption}>Chargement du radar…</p>
       )}
-      {frames !== null && frame !== undefined && (
+      {frames !== null && frames.length === 1 && frame !== undefined && (
+        <p className={styles.caption}>
+          Radar : {frameTimeFormatter.format(new Date(frame.time * 1000))}
+        </p>
+      )}
+      {frames !== null && frames.length > 1 && frame !== undefined && (
         <div className={styles.controls}>
           <button
             type="button"

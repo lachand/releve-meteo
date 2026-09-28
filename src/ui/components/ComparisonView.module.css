@@ -5,6 +5,11 @@
   padding: var(--esp-6);
 }
 
+.embedded {
+  display: grid;
+  gap: var(--esp-3);
+}
+
 .header {
   display: flex;
   align-items: baseline;

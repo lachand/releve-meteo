@@ -6,10 +6,11 @@ import type { ForecastViewModel } from './viewModel';
 export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
   return (
     <div className={styles.stack}>
-      <Section eyebrow="Radar" title="Précipitations observées">
+      <Section eyebrow="Radar" title="Pluie observée, deux dernières heures">
         <p className={styles.lede}>
-          Réflectivité radar composite (RainViewer), dernière image disponible. Contrairement au
-          reste du relevé, c’est une observation, pas une prévision.
+          Réflectivité radar composite (RainViewer) : les deux dernières heures, observées, puis une
+          extrapolation d’une demi-heure, marquée « prévu ». Contrairement au reste du relevé,
+          l’essentiel de cette carte est une observation.
         </p>
         <RadarMap key={vm.place.id} place={vm.place} />
       </Section>

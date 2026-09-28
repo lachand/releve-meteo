@@ -108,6 +108,9 @@ export function EnsembleChart({ days, memberCount }: EnsembleChartProps) {
             borderColor: ink(),
             borderWidth: { top: 1.5, left: 0, right: 0, bottom: 0 },
             barPercentage: 0.55,
+            // Chart.js dessine d'abord les jeux d'ordre eleve : les barres
+            // restent a l'arriere-plan, sous l'eventail et les medianes.
+            order: 2,
             yAxisID: 'rain',
           },
         ],

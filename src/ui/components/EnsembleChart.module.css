@@ -52,7 +52,7 @@
   width: 10px;
   height: 12px;
   border-top: 2px solid var(--encre);
-  background: repeating-linear-gradient(-45deg, var(--encre) 0 1px, transparent 1px 3px);
+  background: var(--grille-faible);
 }
 
 .members {

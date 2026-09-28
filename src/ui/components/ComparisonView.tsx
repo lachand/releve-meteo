@@ -164,10 +164,12 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
   }, [bundle, nowIndex, windowHours, variable]);
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.header}>
-        <h2>Comparer les modèles</h2>
-        {onClose !== undefined && (
+    // Sans onClose, la comparaison est integree a un feuillet (onglet
+    // Modeles) : ni cadre ni titre propres, le feuillet les porte deja.
+    <div className={onClose === undefined ? styles.embedded : styles.overlay}>
+      {onClose !== undefined && (
+        <div className={styles.header}>
+          <h2>Comparer les modèles</h2>
           <button
             type="button"
             className={styles.closeButton}
@@ -176,8 +178,8 @@ export function ComparisonView({ bundle, nowIndex, onClose }: ComparisonViewProp
           >
             ✕
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className={styles.controls}>
         <label>
