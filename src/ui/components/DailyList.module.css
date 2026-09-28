@@ -18,13 +18,20 @@
   border-bottom: 1px dotted var(--grille);
 }
 
-/* Petits écrans : pluie, vent et modèle sur une ligne qui se replie. */
+/*
+ * Petits écrans : pluie et vent côte à côte, modèle dessous, pour que
+ * toutes les journées aient la même disposition quelle que soit la
+ * longueur des textes.
+ */
 .meta {
   grid-area: meta;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--esp-1) var(--esp-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'rain wind'
+    'model model';
+  align-items: start;
+  gap: var(--esp-1) var(--esp-3);
   min-width: 0;
 }
 
