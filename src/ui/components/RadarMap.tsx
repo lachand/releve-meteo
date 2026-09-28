@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
-import { fetchRadarFrames } from '../../data/clients/rainviewer';
+import { RAINVIEWER_MAX_NATIVE_ZOOM, fetchRadarFrames } from '../../data/clients/rainviewer';
 import type { RadarAnimationFrame } from '../../data/clients/rainviewer';
 import type { Place } from '../../domain/types';
 import { addPaperBaseLayer } from '../mapBase';
@@ -35,7 +35,7 @@ function prefersReducedMotion(): boolean {
 
 /**
  * Fond OpenStreetMap et boucle radar RainViewer : deux heures observees
- * (pas de 10 min) puis le nowcast, marque « prévu ». Lecture automatique
+ * (pas de 10 min) puis, s'il est publie, le nowcast, marque « prévu ». Lecture automatique
  * sauf si l'utilisateur demande de reduire les animations ; curseur et
  * bouton de lecture pour parcourir les trames. App monte ce composant avec
  * `key={place.id}` : changer de lieu recree l'instance.
@@ -97,6 +97,10 @@ export function RadarMap({ place }: RadarMapProps) {
           attribution: RAINVIEWER_ATTRIBUTION,
           opacity: 0,
           crossOrigin: true,
+          // Tuiles demandees au zoom 7 au plus, agrandies au-dela : seule
+          // plage servie par l'API gratuite.
+          maxNativeZoom: RAINVIEWER_MAX_NATIVE_ZOOM,
+          maxZoom: 19,
         }).addTo(map),
       );
       // Demarre sur la derniere trame observee : l'etat present.
