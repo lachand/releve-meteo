@@ -89,7 +89,7 @@ describe('NowPanel', () => {
     expect(readingValue('Visibilité')).toBe('8km');
     expect(readingValue('Pluie')).toBe('0,6mm/h');
     const wind = readingValue('Vent');
-    expect(wind).toContain('SO');
+    expect(wind).toContain('du SO');
     expect(wind).toContain('18');
     expect(wind).toContain('km/h');
   });

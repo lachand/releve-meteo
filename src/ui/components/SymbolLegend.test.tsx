@@ -11,11 +11,11 @@ describe('SymbolLegend', () => {
     expect(within(list).getByText('Ciel dégagé')).toBeInTheDocument();
   });
 
-  it('associe chaque barbule a son libelle de vitesse', () => {
+  it('explique chaque fleche de vent, ou elle va et d ou vient le vent', () => {
     render(<SymbolLegend />);
-    const list = screen.getByRole('list', { name: 'Barbules de vent' });
-    expect(within(list).getByText('Vent d’ouest, calme')).toBeInTheDocument();
-    expect(within(list).getByText('Vent d’ouest, 50 nœuds')).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: 'Flèches de vent' });
+    expect(within(list).getByText('Calme, moins de 5 km/h')).toBeInTheDocument();
+    expect(within(list).getByText('Vent du sud modéré : il va vers le nord')).toBeInTheDocument();
   });
 
   it('rappelle que le symbole ne porte jamais seul l information', () => {

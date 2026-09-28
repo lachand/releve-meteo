@@ -63,7 +63,7 @@ src/
 │   └── repository.ts
 ├── ui/
 │   ├── components/
-│   ├── symbols/           # symboles synoptiques OMM, barbules
+│   ├── symbols/           # pictogrammes du temps, flèches de vent
 │   ├── views/             # App + une vue par onglet
 │   ├── hooks/
 │   └── styles/

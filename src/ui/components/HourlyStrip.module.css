@@ -124,6 +124,14 @@ thead .col {
   color: var(--encre);
 }
 
+.windFrom {
+  display: block;
+  font-size: 0.625rem;
+  letter-spacing: 0.02em;
+  color: var(--encre-faible);
+  white-space: nowrap;
+}
+
 .gust {
   display: block;
   font-size: 0.625rem;

@@ -113,7 +113,9 @@ export function DailyList({ days, ensemble, windUnit, today }: DailyListProps) {
                   {gust !== null && <span className="unit">{unit}</span>}
                 </span>
                 <span className={styles.detail}>
-                  raf. max · {compassPoint(day.windDirectionDominant.value)}
+                  raf. max
+                  {day.windDirectionDominant.value !== null &&
+                    ` · vent du ${compassPoint(day.windDirectionDominant.value)}`}
                 </span>
               </div>
               <div

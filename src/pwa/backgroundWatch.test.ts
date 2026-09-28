@@ -22,6 +22,8 @@ interface FakeBrowser {
   tags: string[];
   registerFails: boolean;
   withSync: boolean;
+  /** Service worker pas encore enregistre au premier appel (premiere visite). */
+  lateRegistration: boolean;
 }
 
 const posted: unknown[] = [];
@@ -35,6 +37,7 @@ function install(overrides: Partial<FakeBrowser> = {}) {
     tags: [],
     registerFails: false,
     withSync: true,
+    lateRegistration: false,
     ...overrides,
   };
   const periodicSync = {
@@ -67,7 +70,10 @@ function install(overrides: Partial<FakeBrowser> = {}) {
   });
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
-    value: { getRegistration: () => Promise.resolve(registration) },
+    value: {
+      getRegistration: () => Promise.resolve(browser.lateRegistration ? undefined : registration),
+      ready: Promise.resolve(registration),
+    },
   });
   Object.defineProperty(navigator, 'permissions', {
     configurable: true,
@@ -95,6 +101,11 @@ describe('readWatchStatus', () => {
     expect(await readWatchStatus()).toBe('unsupported');
     install({ withSync: false });
     expect(await readWatchStatus()).toBe('unsupported');
+  });
+
+  it('attend l enregistrement du service worker a la premiere visite', async () => {
+    install({ lateRegistration: true });
+    expect(await readWatchStatus()).toBe('off');
   });
 
   it('distingue bloque, a installer, eteinte et active', async () => {

@@ -146,7 +146,7 @@ describe('StationCheckPanel', () => {
 
     const measures = within(screen.getByLabelText('Mesures de 12h'));
     expect(measures.getByText('Température').nextSibling).toHaveTextContent('26°C');
-    expect(measures.getByText('Vent').nextSibling).toHaveTextContent('S 15km/h');
+    expect(measures.getByText('Vent').nextSibling).toHaveTextContent('15km/h du S');
     // Rafale et pluie non mesurees : tiret de valeur absente, jamais zero.
     expect(measures.getByText('Rafales').nextSibling).toHaveTextContent('–');
     expect(measures.getByText('Pluie').nextSibling).toHaveTextContent('–');
@@ -189,7 +189,7 @@ describe('StationCheckPanel', () => {
       <StationCheckPanel state={ready()} check={CHECK} activeModel="arome" windUnit="kt" />,
     );
     const measures = () => within(screen.getByLabelText('Mesures de 12h'));
-    expect(measures().getByText('Vent').nextSibling).toHaveTextContent('S 8kt');
+    expect(measures().getByText('Vent').nextSibling).toHaveTextContent('8kt du S');
     rerender(
       <StationCheckPanel
         state={ready()}

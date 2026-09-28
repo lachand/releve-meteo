@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import type { Place } from '../../domain/types';
 import { formatTemperature } from '../format';
 import type { FavouriteSnapshot } from '../hooks/useFavouriteSnapshots';
-import { addPaperBaseLayer } from '../mapBase';
+import { addPaperBaseLayer, removeMap } from '../mapBase';
 import { ANCHOR_PX, COMPACT_MAP_WIDTH_PX, plotSides, plotWidth } from '../plotLayout';
 import { MODEL_LABELS } from '../modelPresentation';
 import { WeatherSymbol } from '../symbols/WeatherSymbol';
@@ -119,7 +119,7 @@ export function FavouritesMap({ snapshots, activePlaceId, onOpen }: FavouritesMa
     addPaperBaseLayer(map);
     mapRef.current = map;
     return () => {
-      map.remove();
+      removeMap(map);
       mapRef.current = null;
     };
   }, []);

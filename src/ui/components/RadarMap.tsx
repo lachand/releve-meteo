@@ -8,7 +8,7 @@ import {
 } from '../../data/clients/rainviewer';
 import type { RadarAnimationFrame } from '../../data/clients/rainviewer';
 import type { Place } from '../../domain/types';
-import { addPaperBaseLayer } from '../mapBase';
+import { addPaperBaseLayer, removeMap } from '../mapBase';
 import { cssVar } from '../modelPresentation';
 import styles from './RadarMap.module.css';
 
@@ -77,7 +77,7 @@ export function RadarMap({ place }: RadarMapProps) {
     mapRef.current = map;
 
     return () => {
-      map.remove();
+      removeMap(map);
       mapRef.current = null;
       layersRef.current = [];
     };

@@ -7,7 +7,7 @@ import { MISSING, compassPoint, formatCompact, formatInteger, formatOneDecimal }
 import { CONFIDENCE_LEVEL_LABELS, MODEL_LABELS } from '../modelPresentation';
 import type { SelectionExplanation } from '../selectionExplanation';
 import { WeatherSymbol } from '../symbols/WeatherSymbol';
-import { WindBarb } from '../symbols/WindBarb';
+import { WindArrow } from '../symbols/WindArrow';
 import { weatherCodeLabel } from '../weatherCodePresentation';
 import { convertWindSpeed, windUnitLabel } from '../windUnit';
 import { ModelStamp } from './ModelStamp';
@@ -99,14 +99,20 @@ export function NowPanel({
           <div className={styles.reading}>
             <dt>Vent</dt>
             <dd data-donnee className={styles.wind}>
-              <WindBarb
+              <WindArrow
                 speedKmh={point.windSpeed.value}
                 directionDeg={point.windDirection.value}
-                size={30}
+                size={28}
               />
               <span>
-                {compassPoint(point.windDirection.value)} {formatInteger(speed)}
+                {formatInteger(speed)}
                 {speed !== null && <span className="unit">{unit}</span>}
+                {point.windDirection.value !== null && (
+                  <span className={styles.windFrom}>
+                    {' '}
+                    du {compassPoint(point.windDirection.value)}
+                  </span>
+                )}
               </span>
             </dd>
           </div>

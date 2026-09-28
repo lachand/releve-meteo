@@ -4,7 +4,7 @@
 
 **Sujet** : le carnet d'un météorologue. Un instrument de mesure tenu à la plume, pas une application météo grand public. L'audience sait déjà ce qu'est un modèle de prévision, ou vient l'apprendre. Le travail de la page est de rendre lisible ce qui est mesuré, ce qui est estimé, ce qui est incertain, et quel modèle parle.
 
-**Le vocabulaire visuel vient du monde du sujet** : papier de registre quadrillé, filet de marge rouge, encre bleu-noir de stylo-plume, pictogrammes du temps dessinés au trait d'encre et rehaussés de lavis discrets, barbules de vent de l'OMM, tampon d'encre, annotations en italique. Pas de dégradés de ciel, pas de photo de fond, pas d'icônes en relief ou animées. L'interface a l'aspect d'un relevé, parce que c'est ce qu'elle est. (Évolutions du 2026-09-28 : pictogrammes demandés à la place de l'étiquette texte seule ; puis les symboles synoptiques de l'OMM, jugés difficilement compréhensibles par l'utilisateur, remplacés par des pictogrammes lisibles sans légende, voir section 5.)
+**Le vocabulaire visuel vient du monde du sujet** : papier de registre quadrillé, filet de marge rouge, encre bleu-noir de stylo-plume, pictogrammes du temps dessinés au trait d'encre et rehaussés de lavis discrets, flèches de vent, tampon d'encre, annotations en italique. Pas de dégradés de ciel, pas de photo de fond, pas d'icônes en relief ou animées. L'interface a l'aspect d'un relevé, parce que c'est ce qu'elle est. (Évolutions du 2026-09-28 : pictogrammes demandés à la place de l'étiquette texte seule ; puis les symboles synoptiques de l'OMM, jugés difficilement compréhensibles par l'utilisateur, remplacés par des pictogrammes lisibles sans légende, et les barbules de vent par des flèches, voir section 5.)
 
 **Élément signature** : la bande d'incertitude en hachures diagonales. Là où toutes les applications météo tracent une courbe unique et confiante, celle-ci trace la courbe du modèle retenu sur une bande hachurée représentant l'écart entre modèles. Quand les modèles s'accordent, la bande disparaît presque. Quand ils divergent, elle s'ouvre visiblement. L'incertitude devient une forme, pas un badge. Le même principe vaut pour l'éventail de l'ensemble ECMWF au-delà de dix jours.
 
@@ -105,7 +105,7 @@ Cette table est normative. Aucun composant ne doit inventer un autre encodage.
 | Transition de modèle | Filet vertical tireté (graphiques, ruban horaire, frise) + nom du nouveau modèle | Aucun marqueur |
 | Condition météo (code WMO) | Pictogramme au trait d'encre (soleil, lune la nuit, nuage, gouttes, flocons, éclair, brouillard), lavis `--picto-*` discrets, intensité par le nombre de gouttes ou de flocons, + étiquette texte française (visible ou accessible) | Icône sans texte, icône en relief ou animée, soleil en pleine nuit |
 | Nébulosité | Pictogramme du ciel affiné par la nébulosité de l'heure (soleil seul, soleil et petit nuage, nuage devant le soleil, deux nuages) ; valeur chiffrée en % dans « Maintenant » | Huitièmes (octas) sans explication |
-| Vent | Barbule synoptique (demi-trait 5 nœuds, trait 10, fanion 50, double cercle si calme) + vitesse chiffrée | Flèche décorative animée |
+| Vent | Flèche qui pointe là où va le vent, trait plus épais quand il forcit (seuils 20, 40, 60 km/h), cercle si calme (moins de 5 km/h) + vitesse chiffrée + « du SO » écrit (d'où il vient) | Flèche sans direction écrite, flèche animée, barbule sans explication |
 | Niveau de risque d'un phénomène | Intensité d'encre (`--risque-*`) + mot « faible », « modéré », « fort » | Feu tricolore |
 | Vigilance Météo-France | Bandeau pleine largeur, filet `--alerte`, en tête du relevé ; pastille cerclée d'encre à la couleur officielle du niveau (`--vigilance-*`) + mot « jaune », « orange », « rouge » + source et heure du bulletin | Icône seule, couleur sans mot, vigilance présentée comme un calcul de Relevé |
 | Donnée périmée | Bandeau d'horodatage en haut du contenu | Griser le contenu |
@@ -165,7 +165,7 @@ Seule la vue « Aujourd'hui » est dans le paquet initial ; les autres sont char
 │ HEURE  16h 17h 18h ┊ 00h …  →    │  ruban défilant
 │ TEMPS   ◍   ◍   ◔  ┊  ●         │
 │ °C     29° 29° 28° ┊ 23°         │
-│ VENT    ⌐   ⌐   ⌐  ┊  ⌐          │  barbules
+│ VENT    ↑   ↑   ↗  ┊  ↗          │  flèches
 │ MODÈLE AROME       ┊ ICON-EU     │  filet tireté = transition
 └──────────────────────────────────┘
 ```

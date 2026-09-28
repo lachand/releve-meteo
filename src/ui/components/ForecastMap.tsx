@@ -8,7 +8,7 @@ import { hoursBetween, localIsoFromUtc } from '../../domain/time';
 import type { LocalIsoHour, ModelId, Place } from '../../domain/types';
 import { formatCompact, formatDayHour, formatTemperature } from '../format';
 import type { DatasetState } from '../hooks/useDataset';
-import { addPaperBaseLayer } from '../mapBase';
+import { addPaperBaseLayer, removeMap } from '../mapBase';
 import {
   RAIN_COLORS,
   RAIN_THRESHOLDS,
@@ -152,7 +152,7 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
     mapRef.current = map;
     return () => {
       map.off('zoomend', updateDensity);
-      map.remove();
+      removeMap(map);
       mapRef.current = null;
       cellsRef.current = [];
     };

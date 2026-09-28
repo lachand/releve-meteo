@@ -30,3 +30,15 @@ export function addPaperBaseLayer(map: L.Map): L.TileLayer {
     pane: BASE_PANE,
   }).addTo(map);
 }
+
+/**
+ * Detruit une carte. Leaflet 1.9 acheve une animation de zoom par une
+ * minuterie de 250 ms liee au moment du zoom, qui s'execute meme apres
+ * remove() et leve alors une erreur (volets detruits) : quitter l'onglet
+ * pendant un zoom suffisait. La minuterie ne fait rien si la carte n'est
+ * plus marquee « en train de zoomer ».
+ */
+export function removeMap(map: L.Map): void {
+  (map as unknown as { _animatingZoom: boolean })._animatingZoom = false;
+  map.remove();
+}

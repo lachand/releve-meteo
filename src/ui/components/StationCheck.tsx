@@ -216,8 +216,10 @@ export function StationCheckPanel({ state, check, activeModel, windUnit }: Stati
               MISSING
             ) : (
               <>
-                {compassPoint(latest.windDirection.value)} {formatInteger(speed)}
+                {formatInteger(speed)}
                 <span className="unit">{unit}</span>
+                {latest.windDirection.value !== null &&
+                  ` du ${compassPoint(latest.windDirection.value)}`}
               </>
             )}
           </dd>

@@ -20,6 +20,9 @@ type SyncRegistration = ServiceWorkerRegistration & {
   readonly periodicSync?: PeriodicSyncManager;
 };
 
+/** Attente maximale de l'enregistrement du service worker, ms. */
+const READY_WAIT_MS = 5000;
+
 /** Rythme demande ; le navigateur l'allonge a sa guise, souvent a 12 h ou plus. */
 export const WATCH_MIN_INTERVAL_MS = 3 * 60 * 60 * 1000;
 
@@ -34,8 +37,14 @@ async function syncManager(): Promise<{
   ) {
     return null;
   }
-  const registration = (await navigator.serviceWorker.getRegistration()) as
-    SyncRegistration | undefined;
+  // Premiere visite : l'enregistrement du service worker suit le chargement
+  // de la page. On l'attend un temps, sans bloquer si le service worker est
+  // desactive (developpement), ou `ready` ne se resout jamais.
+  const registration = ((await navigator.serviceWorker.getRegistration()) ??
+    (await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), READY_WAIT_MS)),
+    ]))) as SyncRegistration | undefined;
   const sync = registration?.periodicSync;
   return registration === undefined || sync === undefined ? null : { registration, sync };
 }

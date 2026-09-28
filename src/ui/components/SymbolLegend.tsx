@@ -1,5 +1,5 @@
 import { WeatherSymbol } from '../symbols/WeatherSymbol';
-import { WindBarb } from '../symbols/WindBarb';
+import { WindArrow } from '../symbols/WindArrow';
 import { weatherCodeLabel } from '../weatherCodePresentation';
 import styles from './SymbolLegend.module.css';
 
@@ -10,14 +10,13 @@ const CODES = [
 /** La nuit, la lune remplace le soleil. */
 const NIGHT_CODES = [0, 2, 80] as const;
 
-const BARBS: readonly { readonly kmh: number; readonly label: string }[] = [
-  { kmh: 2, label: 'calme' },
-  { kmh: 9, label: '5 nœuds' },
-  { kmh: 19, label: '10 nœuds' },
-  { kmh: 46, label: '25 nœuds' },
-  { kmh: 93, label: '50 nœuds' },
+const WINDS: readonly { readonly kmh: number; readonly from: number; readonly label: string }[] = [
+  { kmh: 3, from: 270, label: 'Calme, moins de 5 km/h' },
+  { kmh: 12, from: 270, label: 'Vent d’ouest faible : il va vers l’est' },
+  { kmh: 30, from: 180, label: 'Vent du sud modéré : il va vers le nord' },
+  { kmh: 50, from: 0, label: 'Vent du nord fort, 40 km/h et plus' },
+  { kmh: 75, from: 315, label: 'Vent du nord-ouest très fort, 60 km/h et plus' },
 ];
-
 /**
  * Planche de référence des pictogrammes employés par le relevé, chacun
  * avec son libellé : le pictogramme n'est jamais la seule information.
@@ -39,18 +38,18 @@ export function SymbolLegend() {
           </li>
         ))}
       </ul>
-      <ul className={styles.grid} aria-label="Barbules de vent">
-        {BARBS.map((barb) => (
-          <li key={barb.label} className={styles.item}>
-            <WindBarb speedKmh={barb.kmh} directionDeg={270} size={36} />
-            <span>Vent d’ouest, {barb.label}</span>
+      <ul className={styles.grid} aria-label="Flèches de vent">
+        {WINDS.map((wind) => (
+          <li key={wind.label} className={styles.item}>
+            <WindArrow speedKmh={wind.kmh} directionDeg={wind.from} size={32} />
+            <span>{wind.label}</span>
           </li>
         ))}
       </ul>
       <p className={styles.note}>
         Plus il y a de gouttes ou de flocons, plus la pluie ou la neige est forte ; un cristal de
-        glace signale le verglas. La barbule de vent pointe d’où il vient : chaque grand trait vaut
-        10 nœuds (environ 19 km/h), un demi-trait 5, un fanion 50.
+        glace signale le verglas. La flèche montre où va le vent et s’épaissit quand il forcit ; le
+        texte « du SO » dit d’où il vient, comme dans les bulletins.
       </p>
     </div>
   );

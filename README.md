@@ -54,7 +54,7 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
   donnée empruntée à un autre modèle est nommée ; les changements de modèle
   sont marqués, jamais lissés ; l'incertitude est une bande hachurée.
 - **Ressemble à un carnet de météorologue** : papier de registre, encre de
-  plume, pictogrammes du temps au trait (lune la nuit), barbules de vent,
+  plume, pictogrammes du temps au trait (lune la nuit), flèches de vent,
   thème sombre.
 - **Fonctionne hors ligne** (PWA installable), sans backend ni clé d'API.
 
