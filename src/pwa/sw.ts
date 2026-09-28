@@ -29,12 +29,26 @@ const PRECACHE_SHELL: readonly string[] = [
   '/fonts/plex-sans-600.woff2',
   '/fonts/plex-sans-condensed-600.woff2',
   '/fonts/plex-mono-400.woff2',
+  '/fonts/garamond-400-normal.woff2',
+  '/fonts/garamond-400-italic.woff2',
+  '/fonts/garamond-600-normal.woff2',
   '/data/coastline-fr.json',
+  '/data/stations-fr.json',
 ];
 
 const STATIC_PREFIXES = ['/fonts/', '/icons/', '/data/'];
 
-const API_HOSTS = new Set(['api.open-meteo.com', 'geocoding-api.open-meteo.com']);
+// Jamais interceptees : chaque reponse est mise en cache par la couche
+// donnees (IndexedDB, TTL par jeu de donnees), cf. SERVICE_WORKER.md 7.
+const API_HOSTS = new Set([
+  'api.open-meteo.com',
+  'geocoding-api.open-meteo.com',
+  'ensemble-api.open-meteo.com',
+  'previous-runs-api.open-meteo.com',
+  'archive-api.open-meteo.com',
+  'air-quality-api.open-meteo.com',
+  'data.meteostat.net',
+]);
 
 // Vide au lot 3, peuple au lot 6 : fond de carte OpenStreetMap et overlay
 // radar RainViewer (data/clients/rainviewer.ts construit les URLs de

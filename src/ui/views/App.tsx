@@ -210,32 +210,34 @@ export function App() {
           <div className={styles.searchColumn}>
             <PlaceSearch onSelect={setPlace} />
           </div>
-          {place !== null && (
+          <div className={styles.buttons}>
+            {place !== null && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-pressed={isFavourite}
+                onClick={() =>
+                  isFavourite
+                    ? preferences.removeFavourite(place.id)
+                    : preferences.addFavourite(place)
+                }
+                aria-label={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                title={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              >
+                {isFavourite ? '★' : '☆'}
+              </button>
+            )}
             <button
               type="button"
               className={styles.iconButton}
-              aria-pressed={isFavourite}
-              onClick={() =>
-                isFavourite
-                  ? preferences.removeFavourite(place.id)
-                  : preferences.addFavourite(place)
-              }
-              aria-label={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              title={isFavourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              onClick={() => setSettingsOpen((open) => !open)}
+              aria-label="Réglages"
+              aria-expanded={settingsOpen}
+              title="Réglages"
             >
-              {isFavourite ? '★' : '☆'}
+              ⚙
             </button>
-          )}
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={() => setSettingsOpen((open) => !open)}
-            aria-label="Réglages"
-            aria-expanded={settingsOpen}
-            title="Réglages"
-          >
-            ⚙
-          </button>
+          </div>
         </div>
         {place !== null && (
           <div className={styles.placeBlock}>

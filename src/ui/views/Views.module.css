@@ -85,3 +85,17 @@
   margin-top: var(--esp-4);
   font-size: 1.15rem;
 }
+
+.caveats {
+  margin: 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
+.caveats li::marker {
+  content: '\2212  ';
+  color: var(--marge);
+}

@@ -31,6 +31,13 @@ export function ModelsView({ vm }: { readonly vm: ForecastViewModel }) {
                 <li key={reason}>{reason}</li>
               ))}
             </ul>
+            {explanation.caveats.length > 0 && (
+              <ul className={styles.caveats}>
+                {explanation.caveats.map((caveat) => (
+                  <li key={caveat}>{caveat}</li>
+                ))}
+              </ul>
+            )}
             {explanation.runnerUp !== null && (
               <p className={styles.muted}>{explanation.runnerUp}</p>
             )}

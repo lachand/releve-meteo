@@ -112,9 +112,14 @@
     width: 100%;
   }
 
-  .actions > button {
+  .buttons {
     grid-area: actions;
   }
+}
+
+.buttons {
+  display: flex;
+  gap: var(--esp-2);
 }
 
 .iconButton {
@@ -132,12 +137,6 @@
 .iconButton[aria-pressed='true'] {
   color: var(--marge);
   border-color: var(--marge);
-}
-
-@media (max-width: 639px) {
-  .actions .iconButton + .iconButton {
-    margin-left: var(--esp-2);
-  }
 }
 
 .placeBlock {

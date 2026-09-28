@@ -51,7 +51,7 @@ export function criterionSentence(model: ModelId, criterion: Criterion): string 
         return null;
       }
       const terrain = criterion.detail.terrain ?? 'plain';
-      return `Maille de ${formatCompact(spec.resolutionKm)} km : ${TERRAIN_REASON[terrain]} (terrain ${TERRAIN_KIND_LABELS[terrain]}).`;
+      return `Maille de ${formatCompact(spec.resolutionKm)}\u00a0km\u00a0: ${TERRAIN_REASON[terrain]} (terrain ${TERRAIN_KIND_LABELS[terrain]}).`;
     }
     case 'mediumRange': {
       if (criterion.points < 1) {
@@ -72,16 +72,21 @@ export function criterionSentence(model: ModelId, criterion: Criterion): string 
       ) {
         return null;
       }
-      const unit = VARIABLE_UNITS[variable];
-      const comparison = mae <= peerMae ? 'mieux que' : 'moins bien que';
-      return `Erreur mesurée ici sur ${VARIABLE_WITH_ARTICLE[variable]} à J+${leadDays} : ${formatOneDecimal(mae)} ${unit} (${sampleCount} h vérifiées), ${comparison} la moyenne des autres modèles (${formatOneDecimal(peerMae)} ${unit}).`;
+      const unit = `\u00a0${VARIABLE_UNITS[variable]}`;
+      const figures = `${formatOneDecimal(mae)}${unit} d’erreur moyenne à J+${leadDays} sur ${sampleCount}\u00a0h vérifiées, contre ${formatOneDecimal(peerMae)}${unit} pour les autres modèles`;
+      return mae <= peerMae
+        ? `Plus juste ici sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`
+        : `Moins juste ici sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`;
     }
   }
 }
 
 export interface SelectionExplanation {
   readonly headline: string;
+  /** Criteres qui ont porte le choix, du plus lourd au plus leger. */
   readonly reasons: readonly string[];
+  /** Criteres defavorables au modele retenu, dits franchement. */
+  readonly caveats: readonly string[];
   readonly runnerUp: string | null;
 }
 
@@ -95,6 +100,7 @@ export function explainSelection(
     return {
       headline: 'Aucun modèle ne couvre cet instant.',
       reasons: [],
+      caveats: [],
       runnerUp: null,
     };
   }
@@ -106,21 +112,30 @@ export function explainSelection(
       best !== undefined && best.model !== activeModel
         ? `La sélection automatique aurait retenu ${MODEL_LABELS[best.model]}.`
         : 'C’est aussi le choix de la sélection automatique.';
-    return { headline: `${label}, choisi manuellement.`, reasons: [note], runnerUp: null };
+    return {
+      headline: `${label}, choisi manuellement.`,
+      reasons: [note],
+      caveats: [],
+      runnerUp: null,
+    };
   }
-  // L'erreur mesuree ici passe en tete : c'est l'argument le plus concret.
-  const ordered = [...(active?.criteria ?? [])].sort(
-    (a, b) => Number(b.kind === 'localSkill') - Number(a.kind === 'localSkill'),
+  const criteria = active?.criteria ?? [];
+  const sentences = (list: readonly Criterion[]) =>
+    list
+      .map((criterion) => criterionSentence(activeModel, criterion))
+      .filter((sentence): sentence is string => sentence !== null);
+  // Arguments du plus lourd au plus leger ; les criteres defavorables sont
+  // gardes a part plutot que presentes comme des raisons du choix.
+  const reasons = sentences(
+    criteria.filter((c) => c.points > 0).sort((a, b) => b.points - a.points),
   );
-  const reasons = ordered
-    .map((criterion) => criterionSentence(activeModel, criterion))
-    .filter((sentence): sentence is string => sentence !== null);
+  const caveats = sentences(criteria.filter((c) => c.points < 0));
   const eligible = ranking.filter((r) => r.eligible);
   const second = eligible.find((r) => r.model !== activeModel);
   const runnerUp =
     second === undefined || active === undefined
       ? null
-      : `Suivant : ${MODEL_LABELS[second.model]}, ${formatOneDecimal(second.score)} points contre ${formatOneDecimal(active.score)}.`;
+      : `Suivant\u00a0: ${MODEL_LABELS[second.model]}, ${formatOneDecimal(second.score)}\u00a0points contre ${formatOneDecimal(active.score)}.`;
   const headline =
     preferred !== null
       ? `${label} retenu : ${MODEL_LABELS[preferred]}, votre choix, ne couvre pas cet instant.`
@@ -128,6 +143,7 @@ export function explainSelection(
   return {
     headline,
     reasons: reasons.length > 0 ? reasons : ['Seul modèle disponible à cette échéance.'],
+    caveats,
     runnerUp,
   };
 }
