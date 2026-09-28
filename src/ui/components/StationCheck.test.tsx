@@ -139,7 +139,7 @@ describe('StationCheckPanel', () => {
       'ECMWF IFS',
       'GFS',
     ]);
-    expect(rows[1]).toHaveTextContent('25,6 °C−0,4 °C−0,9 °C trop froid');
+    expect(rows[1]).toHaveTextContent('AROMEretenu25,6−0,4−0,9trop froid');
     expect(rows[0]).toHaveTextContent('au plus près de la mesure');
     expect(rows[2]).toHaveTextContent('trop peu d’heures');
     expect(rows[3]).toHaveTextContent('GFS––trop peu d’heures');

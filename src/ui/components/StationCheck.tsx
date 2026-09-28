@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { CSSProperties } from 'react';
 import type { StationReport } from '../../data/repository';
 import { STATION_CHECK } from '../../domain/stationCheck';
@@ -49,11 +50,6 @@ function gapPhrase(gap: number): string {
     return 'au plus près de la mesure';
   }
   return gap > 0 ? 'trop chaud' : 'trop froid';
-}
-
-/** Valeur de modele, toujours a une decimale ; valeur mesuree, a sa precision. */
-function modelTemperatureText(value: number | null): string {
-  return value === null ? MISSING : `${formatOneDecimal(value)}\u00a0°C`;
 }
 
 function Pastille() {
@@ -147,21 +143,27 @@ function GapRow({ gap, active }: { readonly gap: ModelGap; readonly active: bool
       style={{ '--model': modelColorVar(gap.model) } as CSSProperties}
     >
       <th scope="row" className={styles.model}>
-        <span className={styles.dot} aria-hidden="true" />
-        {MODEL_LABELS[gap.model]}
+        <span className={styles.modelName}>
+          <span className={styles.dot} aria-hidden="true" />
+          {MODEL_LABELS[gap.model]}
+        </span>
         {active && <span className={styles.tag}>retenu</span>}
       </th>
-      <td data-donnee>{modelTemperatureText(gap.temperature)}</td>
-      <td data-donnee>
-        {gap.gap === null ? MISSING : `${formatSignedOneDecimal(gap.gap)}\u00a0°C`}
+      <td data-donnee className={styles.number}>
+        {formatOneDecimal(gap.temperature)}
+      </td>
+      <td data-donnee className={styles.number}>
+        {formatSignedOneDecimal(gap.gap)}
       </td>
       <td>
         {gap.recentMeanGap === null ? (
           <span className={styles.muted}>trop peu d’heures</span>
         ) : (
           <>
-            <span data-donnee>{`${formatSignedOneDecimal(gap.recentMeanGap)}\u00a0°C`}</span>{' '}
-            <span className={styles.muted}>{gapPhrase(gap.recentMeanGap)}</span>
+            <span data-donnee className={styles.number}>
+              {formatSignedOneDecimal(gap.recentMeanGap)}
+            </span>
+            <span className={styles.verdict}>{gapPhrase(gap.recentMeanGap)}</span>
           </>
         )}
       </td>
@@ -178,6 +180,7 @@ interface StationCheckPanelProps {
 
 /** Detail du controle : releve complet et ecart de chaque modele. */
 export function StationCheckPanel({ state, check, activeModel, windUnit }: StationCheckPanelProps) {
+  const captionId = `${useId().replace(/:/g, '')}-ecarts`;
   const unavailable = unavailableSentence(state, check);
   if (unavailable !== null || check === null || state.status !== 'ready') {
     return <p className={styles.muted}>{unavailable}</p>;
@@ -219,17 +222,19 @@ export function StationCheckPanel({ state, check, activeModel, windUnit }: Stati
         <Reading label="Pluie" value={formatCompact(latest.precipitation.value)} unit="mm/h" />
       </dl>
 
+      {/* Legende hors de la zone defilante : elle ne s'elargit jamais avec le tableau. */}
+      <p id={captionId} className={styles.caption}>
+        Température de chaque modèle au lieu, en °C, face à la mesure, du plus proche au plus
+        éloigné. L’écart est la valeur du modèle moins la mesure.
+      </p>
       <div className={styles.scroller}>
-        <table className={styles.table}>
-          <caption className={styles.caption}>
-            Température de chaque modèle au lieu, face à la mesure, du plus proche au plus éloigné
-          </caption>
+        <table className={styles.table} aria-labelledby={captionId}>
           <thead>
             <tr>
               <th scope="col">Modèle</th>
               <th scope="col">À {hour}</th>
               <th scope="col">Écart</th>
-              <th scope="col">Écart moyen, {STATION_CHECK.recentHours} h</th>
+              <th scope="col">Sur {STATION_CHECK.recentHours} h</th>
             </tr>
           </thead>
           <tbody>
