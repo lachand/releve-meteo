@@ -25,11 +25,25 @@
   gap: var(--esp-1);
 }
 
-.swatch {
+.total {
+  margin: 0;
+  font-size: var(--pas-s);
+}
+
+.swatchSolid,
+.swatchHatched {
   display: inline-block;
   width: 0.9em;
   height: 0.9em;
-  border-radius: 1px;
+  border-top: 1.5px solid var(--encre);
+}
+
+.swatchSolid {
+  background: var(--observe);
+}
+
+.swatchHatched {
+  background: repeating-linear-gradient(-45deg, var(--encre) 0 1px, transparent 1px 4px);
 }
 
 .dataTable {

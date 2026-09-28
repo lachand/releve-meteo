@@ -67,7 +67,7 @@ describe('criterionSentence', () => {
       detail: { mae: 1.2, peerMae: 2, sampleCount: 50, variable: 'temperature', leadDays: 1 },
     };
     expect(criterionSentence('arome', criterion)).toBe(
-      'Plus juste ici sur la température : 1,2 °C d’erreur moyenne à J+1 sur 50 h vérifiées, contre 2,0 °C pour les autres modèles.',
+      'Plus juste ici que la moyenne des modèles sur la température : 1,2 °C d’erreur moyenne à J+1 sur 50 h vérifiées, contre 2,0 °C en moyenne pour les autres.',
     );
   });
 
@@ -78,7 +78,7 @@ describe('criterionSentence', () => {
       detail: { mae: 2.5, peerMae: 1.5, sampleCount: 40, variable: 'wind', leadDays: 3 },
     };
     expect(criterionSentence('gfs', criterion)).toBe(
-      'Moins juste ici sur le vent : 2,5 km/h d’erreur moyenne à J+3 sur 40 h vérifiées, contre 1,5 km/h pour les autres modèles.',
+      'Moins juste ici que la moyenne des modèles sur le vent : 2,5 km/h d’erreur moyenne à J+3 sur 40 h vérifiées, contre 1,5 km/h en moyenne pour les autres.',
     );
   });
 
@@ -126,7 +126,7 @@ describe('explainSelection', () => {
     expect(result.reasons[0]).toContain('Maille de 1,3');
     expect(result.reasons[1]).toBe('Tenue correcte en moyenne échéance pour un modèle régional.');
     expect(result.caveats).toEqual([
-      'Moins juste ici sur la température : 2,5 °C d’erreur moyenne à J+1 sur 40 h vérifiées, contre 1,5 °C pour les autres modèles.',
+      'Moins juste ici que la moyenne des modèles sur la température : 2,5 °C d’erreur moyenne à J+1 sur 40 h vérifiées, contre 1,5 °C en moyenne pour les autres.',
     ]);
     expect(result.runnerUp).toBe('Suivant : ARPEGE, 7,2 points contre 9,5.');
   });

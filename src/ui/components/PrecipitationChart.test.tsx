@@ -57,25 +57,37 @@ function Harness({ bundle }: { readonly bundle: ForecastBundle }) {
 }
 
 describe('PrecipitationChart', () => {
-  it('expose une table de donnees equivalente avec la provenance de chaque mesure', () => {
+  it('expose une table de donnees equivalente, en francais, avec modele et provenance', () => {
     const bundle = buildBundle();
     render(<Harness bundle={bundle} />);
     const table = screen.getByRole('table');
-    expect(table).toHaveAccessibleName(/Precipitations horaires/);
-    expect(screen.getAllByText('3.5 mm').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('forecast').length).toBeGreaterThan(0);
+    expect(table).toHaveAccessibleName(/Précipitations horaires/);
+    // Virgule decimale et provenance en francais, jamais un code anglais.
+    expect(screen.getAllByText('3,5 mm').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('prévu').length).toBeGreaterThan(1);
+    expect(screen.queryByText('forecast')).not.toBeInTheDocument();
+    expect(screen.getAllByText('AROME').length).toBeGreaterThan(0);
   });
 
   it('rend un canvas avec un libelle accessible', () => {
     const bundle = buildBundle();
     render(<Harness bundle={bundle} />);
-    expect(screen.getByRole('img', { name: /Precipitations horaires/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Précipitations horaires/ })).toBeInTheDocument();
   });
 
-  it('affiche la legende observe/prevu', () => {
+  // Regression : la legende annoncait « observé » alors qu'aucune barre
+  // n'est une mesure.
+  it('ne legende que les provenances presentes', () => {
     const bundle = buildBundle();
     render(<Harness bundle={bundle} />);
-    expect(screen.getByText('observé')).toBeInTheDocument();
-    expect(screen.getByText('prévu')).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Légende' });
+    expect(legend).toHaveTextContent('prévu');
+    expect(legend).not.toHaveTextContent('observé');
+  });
+
+  it('donne le cumul prevu sur la periode, sans compter un trou comme zero', () => {
+    const bundle = buildBundle();
+    render(<Harness bundle={bundle} />);
+    expect(screen.getByText(/Cumul prévu/)).toHaveTextContent('Cumul prévu : 3,5 mm sur 6 h.');
   });
 });

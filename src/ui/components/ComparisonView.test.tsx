@@ -44,7 +44,8 @@ describe('ComparisonView', () => {
     const bundle = buildBundle();
     render(<ComparisonView bundle={bundle} nowIndex={0} onClose={vi.fn()} />);
     // arome=14, arpege=20 au premier point : ecart de 6.
-    expect(screen.getByText(/Écart maximal 6,?\.?0? °C/)).toBeInTheDocument();
+    // Virgule decimale francaise, jamais un point.
+    expect(screen.getByText(/Écart maximal 6,0 °C/)).toBeInTheDocument();
   });
 
   it('appelle onClose au clic sur fermer', async () => {

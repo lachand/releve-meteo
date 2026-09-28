@@ -63,6 +63,26 @@ export function rollingSum(
   });
 }
 
+/**
+ * Cumul d'une fenetre : total des valeurs connues et nombre d'heures sans
+ * valeur, pour dire « au moins » plutot que de compter un trou comme zero.
+ * `total` est null si aucune valeur n'est connue.
+ */
+export function windowTotal(values: readonly (number | null)[]): {
+  readonly total: number | null;
+  readonly missing: number;
+} {
+  let total = 0;
+  let known = 0;
+  for (const value of values) {
+    if (value !== null) {
+      total += value;
+      known += 1;
+    }
+  }
+  return { total: known === 0 ? null : total, missing: values.length - known };
+}
+
 const STANDARD_TEST_CONDITION_WM2 = 1000;
 const DEFAULT_SYSTEM_LOSS = 0.2;
 

@@ -172,6 +172,10 @@ describe('App', { timeout: 30000 }, () => {
     await user.click(screen.getByRole('tab', { name: '15 jours' }));
     expect(screen.getByRole('tab', { name: '15 jours' })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByText('Ce que dit l’ensemble ECMWF')).toBeInTheDocument();
+    // Cumul hebdomadaire, avec les modeles qui le donnent.
+    expect(screen.getByText(/Cumul de pluie prévu, aujourd’hui compris/)).toHaveTextContent(
+      /\d+(,\d)? mm sur 7 jours, selon .+\./,
+    );
     expect(window.location.search).toContain('vue=jours');
 
     // Fleche droite : onglet suivant, motif ARIA des onglets.
