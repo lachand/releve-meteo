@@ -4,6 +4,8 @@ playwright-report
 test-results
 public/fonts
 public/data/coastline-fr.json
+public/data/stations-fr.json
+tests/fixtures/live
 src/domain/franceBoundary.ts
 node_modules
 
@@ -17,3 +19,4 @@ SERVICE_WORKER.md
 TESTING.md
 IMPLEMENTATION_PLAN.md
 README.md
+.claude

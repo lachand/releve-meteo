@@ -1,0 +1,65 @@
+.figure {
+  margin: 0;
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.wrapper {
+  position: relative;
+  height: 300px;
+}
+
+@media (min-width: 820px) {
+  .wrapper {
+    height: 340px;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2) var(--esp-4);
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
+}
+
+.legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+}
+
+.swatchLine,
+.swatchDashed {
+  display: inline-block;
+  width: 22px;
+  border-top: 2px solid var(--encre);
+}
+
+.swatchDashed {
+  border-top: 2px dashed var(--encre-faible);
+}
+
+.swatchHachure {
+  display: inline-block;
+  width: 22px;
+  height: 11px;
+  background: repeating-linear-gradient(-45deg, var(--encre-faible) 0 1px, transparent 1px 5px);
+}
+
+.swatchBar {
+  display: inline-block;
+  width: 10px;
+  height: 12px;
+  border-top: 2px solid var(--encre);
+  background: repeating-linear-gradient(-45deg, var(--encre) 0 1px, transparent 1px 3px);
+}
+
+.members {
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
+}
+
+.empty {
+  color: var(--encre-faible);
+}

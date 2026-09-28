@@ -13,7 +13,7 @@ describe('MODEL_SPECS', () => {
   it("n'utilise aucun em dash dans les textes", () => {
     for (const spec of Object.values(MODEL_SPECS)) {
       for (const text of [...spec.strengths, ...spec.weaknesses]) {
-        expect(text).not.toContain('—');
+        expect(text).not.toContain(String.fromCharCode(0x2014));
       }
     }
   });

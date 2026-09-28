@@ -17,7 +17,7 @@ const numberFr = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 
 function formatHour(iso: string | null): string {
   if (iso === null) {
-    return '—';
+    return '–';
   }
   const match = /T(\d{2}:\d{2})/.exec(iso);
   return match?.[1] !== undefined ? `${match[1]}` : iso;
@@ -48,7 +48,7 @@ export function ConditionsPanel({ nowPoint, today }: ConditionsPanelProps) {
       <tbody>
         <tr>
           <td>point de rosée</td>
-          <td>{dewPointValue === null ? '—' : `${numberFr.format(dewPointValue)} °C`}</td>
+          <td>{dewPointValue === null ? '–' : `${numberFr.format(dewPointValue)} °C`}</td>
         </tr>
         <tr>
           <td>risque de gel</td>
@@ -56,13 +56,13 @@ export function ConditionsPanel({ nowPoint, today }: ConditionsPanelProps) {
         </tr>
         <tr>
           <td>risque de brouillard</td>
-          <td>{fog === null ? '—' : RISK_LABELS[fog]}</td>
+          <td>{fog === null ? '–' : RISK_LABELS[fog]}</td>
         </tr>
         <tr>
           <td>indice UV</td>
           <td>
             {today === null || today.uvIndexMax.value === null
-              ? '—'
+              ? '–'
               : numberFr.format(today.uvIndexMax.value)}
           </td>
         </tr>

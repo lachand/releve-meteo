@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ForecastBundle, HourlyPoint, Place } from '../domain/types';
+import { computeCascadeView } from './hooks/useCascadeView';
 import type { CascadeView } from './hooks/useCascadeView';
+
+// Minuit local le 17 aout 2026 : l'index 0 de la timeline est l'echeance 0.
+const MIDNIGHT = new Date('2026-08-16T22:00:00Z');
+const NO_SELECTION = { terrain: null, verification: [], preferred: null } as const;
 import { windRoseBuckets } from './windRose';
 
 const place: Place = {
@@ -26,7 +31,15 @@ function hourlyPoint(time: string, windDirection: number | null): HourlyPoint {
     dewPoint: measure(8),
     cloudCover: measure(50),
     radiation: measure(0),
+    humidity: measure(65),
+    apparentTemperature: measure(13),
+    precipitationProbability: measure(null),
+    snowfall: measure(0),
+    cape: measure(0),
+    visibility: measure(20000),
+    freezingLevel: measure(3000),
     weatherCode: 1,
+    isDay: true,
   };
 }
 
@@ -46,14 +59,7 @@ describe('windRoseBuckets', () => {
         },
       },
     };
-    const cascade: CascadeView = {
-      segments: [{ model: 'arome', startIndex: 0, endIndex: timeline.length - 1 }],
-      blended: [],
-      transitions: [],
-      nowIndex: 0,
-      activeModel: 'arome',
-      available: ['arome'],
-    };
+    const cascade: CascadeView = computeCascadeView(bundle, NO_SELECTION, MIDNIGHT);
 
     const buckets = windRoseBuckets(bundle, cascade, 0, timeline.length);
     const byDirection = Object.fromEntries(buckets.map((b) => [b.direction, b.count]));
@@ -79,14 +85,7 @@ describe('windRoseBuckets', () => {
         },
       },
     };
-    const cascade: CascadeView = {
-      segments: [{ model: 'arome', startIndex: 0, endIndex: 1 }],
-      blended: [],
-      transitions: [],
-      nowIndex: 0,
-      activeModel: 'arome',
-      available: ['arome'],
-    };
+    const cascade: CascadeView = computeCascadeView(bundle, NO_SELECTION, MIDNIGHT);
 
     const buckets = windRoseBuckets(bundle, cascade, 0, 1);
     expect(buckets.reduce((sum, b) => sum + b.count, 0)).toBe(1);

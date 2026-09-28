@@ -107,7 +107,7 @@ Les trois écarts à connaître avant de commencer :
 
 ## 5. Détail lot par lot
 
-### Lot 0 — Socle technique
+### Lot 0 : Socle technique
 
 **Objectif** : `npm run verify` vert sur un projet vide, déploiement continu en place, avant toute logique métier.
 
@@ -126,12 +126,12 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 1 — Prévision de base et cascade
+### Lot 1 : Prévision de base et cascade
 
 **Objectif** : une prévision réelle affichée, avec la cascade de modèles visible à l'écran.
 
 **Ordre de construction**
-1. `domain/time.ts` + tests, dont les deux cas de changement d'heure — rien d'autre n'en dépend, tout le reste peut en dépendre.
+1. `domain/time.ts` + tests, dont les deux cas de changement d'heure : rien d'autre n'en dépend, tout le reste peut en dépendre.
 2. `domain/modelCascade.ts` + tests, toutes les bornes de TESTING.md §2.1.
 3. Générer `coastline-fr.json` (D2), puis `domain/terrain.ts` + tests.
 4. Construire les fixtures `nominal-summer`, `arome-truncated`, `dst-spring`, `dst-autumn` **maintenant**, avant le mapper qui les consomme en tests MSW.
@@ -147,7 +147,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 2 — Confiance et comparaison
+### Lot 2 : Confiance et comparaison
 
 **Objectif** : la dispersion inter-modèles devient visible et lisible, sans jamais passer par la couleur.
 
@@ -163,7 +163,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 3 — PWA
+### Lot 3 : PWA
 
 **Objectif** : application installable, fonctionnelle hors ligne, sans jamais remplacer son propre code pendant que l'utilisateur regarde l'écran.
 
@@ -183,7 +183,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 4 — Observé contre estimé
+### Lot 4 : Observé contre estimé
 
 **Objectif** : aucune valeur affichée sans que sa provenance soit visible.
 
@@ -199,7 +199,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 5 — Multi-lieux et enrichissements
+### Lot 5 : Multi-lieux et enrichissements
 
 **Objectif** : l'application gère plusieurs lieux et exploite le reste de la couche domaine déjà écrite.
 
@@ -215,7 +215,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 6 — Radar et vigilance
+### Lot 6 : Radar et vigilance
 
 **Objectif** : une carte utilisable hors ligne sur les tuiles déjà visitées, sans dépendre d'une clé optionnelle.
 
@@ -230,7 +230,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 7 — Fiabilité locale et alertes
+### Lot 7 : Fiabilité locale et alertes
 
 **Objectif** : un score de fiabilité par modèle calculé sur l'appareil, des alertes dont le texte reflète le support réel de la plateforme.
 
@@ -248,7 +248,7 @@ Les trois écarts à connaître avant de commencer :
 
 ---
 
-### Lot 8 — Irradiance et solaire (optionnel)
+### Lot 8 : Irradiance et solaire (optionnel)
 
 **Objectif** : une estimation de production PV présentée comme telle, jamais comme une mesure.
 

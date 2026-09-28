@@ -1,0 +1,92 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: var(--esp-3);
+  padding: var(--esp-3) 0;
+  border-bottom: 1px dotted var(--grille);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+/* Le niveau de risque est porté par l'intensité de l'encre, jamais un feu tricolore. */
+.item[data-level='low'] {
+  --risque: var(--risque-faible);
+}
+
+.item[data-level='moderate'] {
+  --risque: var(--risque-modere);
+}
+
+.item[data-level='high'] {
+  --risque: var(--risque-fort);
+}
+
+.glyph {
+  color: var(--risque);
+  padding-top: 2px;
+}
+
+.body {
+  display: grid;
+  gap: 2px;
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--esp-2);
+  font-family: var(--font-titre);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--encre);
+}
+
+.level {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--risque);
+  border: 1px solid currentColor;
+  padding: 0 var(--esp-1);
+  border-radius: var(--rayon);
+}
+
+.item[data-level='high'] .level {
+  color: var(--papier-haut);
+  background: var(--risque);
+  border-color: var(--risque);
+}
+
+.period {
+  font-size: var(--pas-s);
+  color: var(--encre);
+}
+
+.evidence {
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
+.source {
+  font-style: italic;
+}
+
+.calm {
+  font-family: var(--font-titre);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--encre-faible);
+}

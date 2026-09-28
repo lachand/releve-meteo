@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { hourlyPoint as makePoint } from '../../../tests/factories';
 import type { ForecastBundle, HourlyPoint, Place } from '../../domain/types';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { PrecipitationChart } from './PrecipitationChart';
@@ -15,20 +16,13 @@ const place: Place = {
 };
 
 function hourlyPoint(time: string, precipitation: number): HourlyPoint {
-  const measure = (value: number | null) => ({ value, provenance: 'forecast' as const });
-  return {
-    time,
-    temperature: measure(14),
-    precipitation: measure(precipitation),
-    windSpeed: measure(5),
-    windGust: measure(10),
-    windDirection: measure(180),
-    pressure: measure(1013),
-    dewPoint: measure(8),
-    cloudCover: measure(50),
-    radiation: measure(0),
+  return makePoint(time, {
+    precipitation,
+    windSpeed: 5,
+    windGust: 10,
+    radiation: 0,
     weatherCode: 61,
-  };
+  });
 }
 
 function buildBundle(): ForecastBundle {
@@ -50,7 +44,12 @@ function buildBundle(): ForecastBundle {
 const NOW = new Date('2026-08-16T23:30:00+02:00');
 
 function Harness({ bundle }: { readonly bundle: ForecastBundle }) {
-  const cascade = useCascadeView(bundle, NOW);
+  const cascade = useCascadeView(bundle, {
+    terrain: null,
+    verification: [],
+    preferred: null,
+    now: NOW,
+  });
   if (cascade === null) {
     return null;
   }

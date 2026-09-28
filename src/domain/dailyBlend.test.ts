@@ -112,3 +112,55 @@ describe('blendDaily', () => {
     );
   });
 });
+
+describe('completion des champs quotidiens', () => {
+  it('prend le code de temps et l indice UV absents chez le modele retenu, en le nommant', () => {
+    const b = bundle();
+    const withGaps: ForecastBundle = {
+      ...b,
+      series: {
+        ...b.series,
+        arome: {
+          model: 'arome',
+          hourly: b.series.arome?.hourly ?? [],
+          daily: dates.map((d) =>
+            dailyPoint(d, { tempMax: 25, weatherCode: null, uvIndexMax: null, sunrise: null }),
+          ),
+        },
+      },
+    };
+    const [today] = blendDaily({ bundle: withGaps, context: context(['arome', 'ecmwf']), now });
+    expect(today?.model).toBe('arome');
+    expect(today?.tempMax.value).toBe(25);
+    expect(today?.weatherCode).toBe(1);
+    expect(today?.uvIndexMax.value).toBe(5);
+    expect(today?.sunrise).toBe('2026-08-17T07:30');
+    expect(today?.filledFrom).toEqual({
+      weatherCode: 'ecmwf',
+      uvIndexMax: 'ecmwf',
+      sunrise: 'ecmwf',
+    });
+  });
+
+  it('laisse le champ vide si aucun autre modele ne le fournit', () => {
+    const b = bundle();
+    const alone: ForecastBundle = {
+      ...b,
+      series: {
+        arome: {
+          model: 'arome',
+          hourly: b.series.arome?.hourly ?? [],
+          daily: dates.map((d) => dailyPoint(d, { weatherCode: null })),
+        },
+        ecmwf: {
+          model: 'ecmwf',
+          hourly: b.series.ecmwf?.hourly ?? [],
+          daily: dates.map((d) => dailyPoint(d, { weatherCode: null })),
+        },
+      },
+    };
+    const [today] = blendDaily({ bundle: alone, context: context(['arome', 'ecmwf']), now });
+    expect(today?.weatherCode).toBeNull();
+    expect(today?.filledFrom).toEqual({});
+  });
+});

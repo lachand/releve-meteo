@@ -86,23 +86,25 @@ export function WindRose({ bundle, cascade }: WindRoseProps) {
         role="img"
         aria-label={`Rose des vents sur ${WINDOW_HOURS} heures, nombre d'heures par direction`}
       />
-      <table className={styles.dataTable}>
-        <caption>Repartition de la direction du vent sur {WINDOW_HOURS} heures</caption>
-        <thead>
-          <tr>
-            <th scope="col">Direction</th>
-            <th scope="col">Heures</th>
-          </tr>
-        </thead>
-        <tbody>
-          {buckets.map((bucket) => (
-            <tr key={bucket.direction}>
-              <td>{bucket.direction}</td>
-              <td>{bucket.count}</td>
+      <div className={styles.dataTable}>
+        <table>
+          <caption>Repartition de la direction du vent sur {WINDOW_HOURS} heures</caption>
+          <thead>
+            <tr>
+              <th scope="col">Direction</th>
+              <th scope="col">Heures</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {buckets.map((bucket) => (
+              <tr key={bucket.direction}>
+                <td>{bucket.direction}</td>
+                <td>{bucket.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

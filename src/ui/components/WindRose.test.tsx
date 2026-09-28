@@ -27,7 +27,15 @@ function hourlyPoint(time: string, windDirection: number): HourlyPoint {
     dewPoint: measure(8),
     cloudCover: measure(50),
     radiation: measure(0),
+    humidity: measure(65),
+    apparentTemperature: measure(13),
+    precipitationProbability: measure(null),
+    snowfall: measure(0),
+    cape: measure(0),
+    visibility: measure(20000),
+    freezingLevel: measure(3000),
     weatherCode: 1,
+    isDay: true,
   };
 }
 
@@ -50,7 +58,12 @@ function buildBundle(): ForecastBundle {
 const NOW = new Date('2026-08-16T23:30:00+02:00');
 
 function Harness({ bundle }: { readonly bundle: ForecastBundle }) {
-  const cascade = useCascadeView(bundle, NOW);
+  const cascade = useCascadeView(bundle, {
+    terrain: null,
+    verification: [],
+    preferred: null,
+    now: NOW,
+  });
   if (cascade === null) {
     return null;
   }

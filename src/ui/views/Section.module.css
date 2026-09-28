@@ -1,0 +1,52 @@
+/*
+ * Feuillet : papier plus clair posé sur la page quadrillée, filet d'encre
+ * en tête, ombre de papier à peine perceptible.
+ */
+.sheet {
+  display: grid;
+  gap: var(--esp-4);
+  padding: var(--esp-6) var(--esp-4);
+  background: var(--papier-haut);
+  border: var(--filet);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre-feuillet);
+  min-width: 0;
+}
+
+/* Les graphiques et tableaux se contractent au lieu d'élargir le feuillet. */
+.sheet > * {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .sheet {
+    padding: var(--esp-6);
+  }
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding-bottom: var(--esp-2);
+  border-bottom: var(--filet-encre);
+}
+
+.title {
+  margin-top: 2px;
+  font-size: 1.5rem;
+}
+
+.aside {
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
+@media print {
+  .sheet {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}

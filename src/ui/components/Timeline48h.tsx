@@ -52,15 +52,14 @@ function windowPoints(
     if (time === undefined) {
       continue;
     }
-    const segment = cascade.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
-    const series = segment ? bundle.series[segment.model] : undefined;
-    const hourly = series?.hourly[i];
+    // Point de cascade : modele retenu, champs absents completes et nommes.
+    const hourly = cascade.points[i] ?? undefined;
     const value = hourly?.temperature.value ?? null;
     const weatherCode = hourly?.weatherCode ?? null;
     points.push({
       index: i,
       time,
-      model: segment?.model ?? null,
+      model: hourly?.model ?? null,
       value,
       weatherCode,
       confidence: confidence?.[i] ?? null,
@@ -327,45 +326,47 @@ export function Timeline48h({ bundle, cascade, confidence }: Timeline48hProps) {
           <span className={styles.swatchHachure} /> écart entre modèles
         </li>
       </ul>
-      <table className={styles.dataTable}>
-        <caption>
-          Temperature horaire sur 48 heures, avec le modele actif, la confiance et l'ecart
-          inter-modeles par heure
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Heure</th>
-            <th scope="col">Temperature</th>
-            <th scope="col">Modele</th>
-            <th scope="col">Confiance</th>
-            <th scope="col">Ecart inter-modeles</th>
-            <th scope="col">Condition</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point, i) => {
-            const b = band[i];
-            const spreadText =
-              b?.min === null || b?.min === undefined || b.max === null
-                ? '—'
-                : `${b.min} – ${b.max} °C`;
-            return (
-              <tr key={point.index}>
-                <td>{point.time}</td>
-                <td>{point.value === null ? '—' : `${point.value} °C`}</td>
-                <td>{point.model === null ? '—' : MODEL_LABELS[point.model]}</td>
-                <td>
-                  {point.confidence !== null
-                    ? CONFIDENCE_LEVEL_LABELS[point.confidence.level]
-                    : '—'}
-                </td>
-                <td>{spreadText}</td>
-                <td>{weatherCodeLabel(point.weatherCode) ?? '—'}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className={styles.dataTable}>
+        <table>
+          <caption>
+            Temperature horaire sur 48 heures, avec le modele actif, la confiance et l'ecart
+            inter-modeles par heure
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Heure</th>
+              <th scope="col">Temperature</th>
+              <th scope="col">Modele</th>
+              <th scope="col">Confiance</th>
+              <th scope="col">Ecart inter-modeles</th>
+              <th scope="col">Condition</th>
+            </tr>
+          </thead>
+          <tbody>
+            {points.map((point, i) => {
+              const b = band[i];
+              const spreadText =
+                b?.min === null || b?.min === undefined || b.max === null
+                  ? '–'
+                  : `${b.min} – ${b.max} °C`;
+              return (
+                <tr key={point.index}>
+                  <td>{point.time}</td>
+                  <td>{point.value === null ? '–' : `${point.value} °C`}</td>
+                  <td>{point.model === null ? '–' : MODEL_LABELS[point.model]}</td>
+                  <td>
+                    {point.confidence !== null
+                      ? CONFIDENCE_LEVEL_LABELS[point.confidence.level]
+                      : '–'}
+                  </td>
+                  <td>{spreadText}</td>
+                  <td>{weatherCodeLabel(point.weatherCode) ?? '–'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

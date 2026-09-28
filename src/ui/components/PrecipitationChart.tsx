@@ -39,8 +39,8 @@ export function PrecipitationChart({ bundle, cascade }: PrecipitationChartProps)
     if (time === undefined) {
       continue;
     }
-    const segment = cascade.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
-    const hourly = segment ? bundle.series[segment.model]?.hourly[i] : undefined;
+    // Point de cascade : modele retenu, champs absents completes et nommes.
+    const hourly = cascade.points[i] ?? undefined;
     points.push({
       time,
       value: hourly?.precipitation.value ?? null,
@@ -121,27 +121,29 @@ export function PrecipitationChart({ bundle, cascade }: PrecipitationChartProps)
           <span className={styles.swatch} style={{ background: 'var(--grille)' }} /> prévu
         </li>
       </ul>
-      <table className={styles.dataTable}>
-        <caption>
-          Precipitations horaires sur 48 heures, avec la provenance de chaque mesure
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Heure</th>
-            <th scope="col">Precipitation</th>
-            <th scope="col">Provenance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.time}>
-              <td>{point.time}</td>
-              <td>{point.value === null ? '—' : `${point.value} mm`}</td>
-              <td>{point.provenance ?? '—'}</td>
+      <div className={styles.dataTable}>
+        <table>
+          <caption>
+            Precipitations horaires sur 48 heures, avec la provenance de chaque mesure
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Heure</th>
+              <th scope="col">Precipitation</th>
+              <th scope="col">Provenance</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.time}>
+                <td>{point.time}</td>
+                <td>{point.value === null ? '–' : `${point.value} mm`}</td>
+                <td>{point.provenance ?? '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,71 @@
+.panel {
+  display: grid;
+  gap: var(--esp-2);
+}
+
+.sentence {
+  font-family: var(--font-titre);
+  font-size: 1.2rem;
+  color: var(--encre);
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 56px;
+  padding-bottom: 16px;
+  border-bottom: var(--filet-encre);
+  position: relative;
+}
+
+.step {
+  position: relative;
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.bar,
+.barWet {
+  display: block;
+  width: 100%;
+  background: var(--grille);
+}
+
+.barWet {
+  background: repeating-linear-gradient(-45deg, var(--encre) 0 1.5px, transparent 1.5px 3.5px);
+  border-top: 2px solid var(--encre);
+}
+
+.bar[data-missing] {
+  background: none;
+  border-top: 1px dashed var(--grille);
+}
+
+.tick {
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  font-family: var(--font-donnee);
+  font-size: 0.625rem;
+  color: var(--encre-faible);
+  white-space: nowrap;
+}
+
+.source,
+.muted {
+  font-size: var(--pas-xs);
+  color: var(--encre-faible);
+}
+
+.source {
+  margin-top: var(--esp-2);
+}
+
+.skeleton {
+  height: 5rem;
+  border-radius: var(--rayon);
+  background: var(--papier-creux);
+}

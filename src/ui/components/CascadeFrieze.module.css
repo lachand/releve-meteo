@@ -1,0 +1,59 @@
+.figure {
+  margin: 0;
+}
+
+.bar {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 44px;
+  border: var(--filet-encre);
+}
+
+.segment {
+  position: relative;
+  flex-basis: 0;
+  min-width: 2px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--esp-1) var(--esp-1);
+  background:
+    linear-gradient(var(--model), var(--model)) top / 100% 6px no-repeat,
+    color-mix(in srgb, var(--model) 10%, var(--papier-haut));
+  overflow: hidden;
+}
+
+.segment + .segment {
+  border-left: 2px dashed var(--encre);
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--encre);
+}
+
+.ticks {
+  position: relative;
+  height: 1.5rem;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  padding-left: 3px;
+  border-left: 1px solid var(--encre-faible);
+  font-family: var(--font-donnee);
+  font-size: 0.625rem;
+  color: var(--encre-faible);
+  white-space: nowrap;
+}
+
+.empty {
+  color: var(--encre-faible);
+}

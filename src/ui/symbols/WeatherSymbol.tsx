@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ReactElement } from 'react';
 import { weatherCodeLabel } from '../weatherCodePresentation';
 
@@ -125,20 +126,37 @@ function SnowGrains() {
  * 7 plein ouvert d'un trait, 8 plein.
  */
 export function Octas({ octas, r = 9 }: { readonly octas: number; readonly r?: number }) {
+  // useId() contient des « : », invalides dans une reference url(#...) ; jsdom
+  // n'a pas CSS.escape : on ne garde que les caracteres surs.
+  const hatchId = `octas${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const n = Math.max(0, Math.min(8, Math.round(octas)));
   const c = 16;
-  const quarter = (from: number, to: number) => {
+  const sector = (from: number, to: number) => {
     const a0 = ((from - 90) * Math.PI) / 180;
     const a1 = ((to - 90) * Math.PI) / 180;
     const large = to - from > 180 ? 1 : 0;
     return `M${c} ${c} L${c + r * Math.cos(a0)} ${c + r * Math.sin(a0)} A${r} ${r} 0 ${large} 1 ${c + r * Math.cos(a1)} ${c + r * Math.sin(a1)} Z`;
   };
-  const filledSweep = n >= 8 ? 360 : n >= 6 ? 270 : n >= 4 ? 180 : n >= 2 ? 90 : 0;
+  const filledSweep = n >= 7 ? 360 : n >= 6 ? 270 : n >= 4 ? 180 : n >= 2 ? 90 : 0;
+  // Ombrage a la plume : hachures fines plutot qu'un aplat, plus leger a
+  // l'oeil sur un ruban de 24 symboles, sans changer la lecture en octas.
+  const fill = `url(#${hatchId})`;
   return (
     <g>
-      {filledSweep === 360 && <circle cx={c} cy={c} r={r} fill="currentColor" />}
+      <defs>
+        <pattern
+          id={hatchId}
+          patternUnits="userSpaceOnUse"
+          width={2.4}
+          height={2.4}
+          patternTransform="rotate(45)"
+        >
+          <line x1={0} y1={0} x2={0} y2={2.4} stroke="currentColor" strokeWidth={1.35} />
+        </pattern>
+      </defs>
+      {filledSweep === 360 && <circle cx={c} cy={c} r={r} fill={fill} stroke="none" />}
       {filledSweep > 0 && filledSweep < 360 && (
-        <path d={quarter(0, filledSweep)} fill="currentColor" stroke="none" />
+        <path d={sector(0, filledSweep)} fill={fill} stroke="none" />
       )}
       <circle cx={c} cy={c} r={r} fill="none" />
       {(n === 1 || n === 3 || n === 5) && <path d={`M${c} ${c - r} V${c + r}`} fill="none" />}
