@@ -14,12 +14,17 @@ import {
   getNowcast,
   getStationReport,
   getVerifications,
+  getVigilance,
+  loadDepartments,
   loadStations,
   PAST_DAYS,
+  resetDepartmentsForTests,
   resetStationsForTests,
   searchPlaces,
 } from './repository';
 import type { ForecastBundle, Place } from '../domain/types';
+import departments from '../../public/data/departements-fr.json';
+import vigilanceRhone from '../../tests/fixtures/live/vigilance-rhone.json';
 
 const place: Place = {
   id: '45.4900:5.4700',
@@ -60,6 +65,7 @@ beforeEach(async () => {
   resetMemoryGeocodingStore();
   resetMemoryDatasetStore();
   resetStationsForTests();
+  resetDepartmentsForTests();
 });
 
 describe('getForecast', () => {
@@ -582,5 +588,68 @@ describe('getForecastGrid', () => {
     await getForecastGrid(place, 'ecmwf');
     expect(requests).toHaveLength(2);
     expect(requests[1]?.searchParams.get('models')).toBe('ecmwf_ifs025');
+  });
+});
+
+describe('getVigilance', () => {
+  const DEPARTMENTS_URL = 'http://localhost:3000/data/departements-fr.json';
+  const VIGILANCE_URL =
+    'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/weatherref-france-vigilance-meteo-departement/records';
+  const lyon: Place = { ...place, id: '45.7485:4.8467', latitude: 45.7485, longitude: 4.8467 };
+
+  it('interroge le departement du lieu, puis sert le cache dans le TTL', async () => {
+    const wheres: (string | null)[] = [];
+    server.use(
+      http.get(DEPARTMENTS_URL, () => HttpResponse.json(departments)),
+      http.get(VIGILANCE_URL, ({ request }) => {
+        wheres.push(new URL(request.url).searchParams.get('where'));
+        return HttpResponse.json(vigilanceRhone);
+      }),
+    );
+    const first = await getVigilance(lyon);
+    const second = await getVigilance(lyon);
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.value.value.department).toEqual({ code: '69', name: 'Rhône' });
+    expect(first.value.value.bulletin?.department).toBe('69');
+    expect(wheres).toEqual(['domain_id in ("69","6910")']);
+  });
+
+  it('ne demande rien pour un lieu hors des departements', async () => {
+    let calls = 0;
+    server.use(
+      http.get(DEPARTMENTS_URL, () => HttpResponse.json(departments)),
+      http.get(VIGILANCE_URL, () => {
+        calls += 1;
+        return HttpResponse.json(vigilanceRhone);
+      }),
+    );
+    const result = await getVigilance({ ...place, id: 'geneve', latitude: 46.2, longitude: 6.15 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value).toEqual({ department: null, bulletin: null });
+    expect(calls).toBe(0);
+  });
+
+  it("remonte l'echec du service de vigilance", async () => {
+    server.use(
+      http.get(DEPARTMENTS_URL, () => HttpResponse.json(departments)),
+      http.get(VIGILANCE_URL, () => new HttpResponse(null, { status: 404 })),
+    );
+    const result = await getVigilance(lyon);
+    expect(result.ok).toBe(false);
+  });
+
+  it('se contente de contours vides quand le fichier manque, et ne le charge qu une fois', async () => {
+    let calls = 0;
+    server.use(
+      http.get(DEPARTMENTS_URL, () => {
+        calls += 1;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    expect(await loadDepartments()).toEqual([]);
+    expect(await loadDepartments()).toEqual([]);
+    expect(calls).toBe(1);
   });
 });

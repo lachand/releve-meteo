@@ -46,6 +46,12 @@ Papier crème et encre de plume en clair, « carnet de nuit » (encre claire sur
   --risque-faible: #6D6455;  /* niveaux de risque : intensité d'encre */
   --risque-modere: #9A4B21;
   --risque-fort:   #A32020;
+
+  /* Vigilance Météo-France : couleurs officielles, toujours avec le mot */
+  --vigilance-verte:  #31AA35;
+  --vigilance-jaune:  #F5D63D;
+  --vigilance-orange: #EC8A19;
+  --vigilance-rouge:  #D21C1C;
 }
 ```
 
@@ -101,7 +107,7 @@ Cette table est normative. Aucun composant ne doit inventer un autre encodage.
 | Nébulosité | Cercle de station rempli par huitièmes, ombrage hachuré | Aplat de couleur |
 | Vent | Barbule synoptique (demi-trait 5 nœuds, trait 10, fanion 50, double cercle si calme) + vitesse chiffrée | Flèche décorative animée |
 | Niveau de risque d'un phénomène | Intensité d'encre (`--risque-*`) + mot « faible », « modéré », « fort » | Feu tricolore |
-| Vigilance | Bandeau pleine largeur, couleur `--alerte` | Icône seule |
+| Vigilance Météo-France | Bandeau pleine largeur, filet `--alerte`, en tête du relevé ; pastille cerclée d'encre à la couleur officielle du niveau (`--vigilance-*`) + mot « jaune », « orange », « rouge » + source et heure du bulletin | Icône seule, couleur sans mot, vigilance présentée comme un calcul de Relevé |
 | Donnée périmée | Bandeau d'horodatage en haut du contenu | Griser le contenu |
 
 Condition météo : le code WMO est traduit en symbole (`src/ui/symbols/WeatherSymbol.tsx`) et en étiquette (`src/ui/weatherCodePresentation.ts`). Le symbole n'est jamais la seule information : il porte l'étiquette comme nom accessible, ou l'étiquette est affichée à côté. Un code absent ou inconnu n'affiche aucun symbole plutôt qu'un symbole par défaut trompeur. Une planche de légende complète est présente dans l'onglet « Heure par heure ».

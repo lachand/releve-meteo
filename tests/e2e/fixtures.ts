@@ -25,6 +25,7 @@ const ALLOWED_EXTERNAL_HOSTNAMES: ReadonlySet<string> = new Set([
   'archive-api.open-meteo.com',
   'air-quality-api.open-meteo.com',
   'data.meteostat.net',
+  'public.opendatasoft.com',
   'tile.openstreetmap.org',
   'tilecache.rainviewer.com',
   'api.rainviewer.com',

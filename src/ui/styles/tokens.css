@@ -90,6 +90,16 @@
   --risque-modere: #9a4b21;
   --risque-fort: #a32020;
 
+  /*
+   * Vigilance Météo-France : couleurs officielles des niveaux, en pastille
+   * cerclée d'encre, toujours accompagnées du mot (jaune, orange, rouge).
+   * C'est le code du produit officiel, pas un feu tricolore maison.
+   */
+  --vigilance-verte: #31aa35;
+  --vigilance-jaune: #f5d63d;
+  --vigilance-orange: #ec8a19;
+  --vigilance-rouge: #d21c1c;
+
   --font-titre: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
   --font-display: 'IBM Plex Sans Condensed', system-ui, sans-serif;
   --font-corps: 'IBM Plex Sans', system-ui, sans-serif;

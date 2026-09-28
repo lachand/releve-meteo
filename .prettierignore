@@ -5,6 +5,7 @@ test-results
 public/fonts
 public/data/coastline-fr.json
 public/data/stations-fr.json
+public/data/departements-fr.json
 tests/fixtures/live
 src/domain/franceBoundary.ts
 node_modules

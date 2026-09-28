@@ -109,12 +109,17 @@ Toutes gratuites et sans clé :
 - [Meteostat](https://meteostat.net/) (CC BY-NC 4.0) : relevés horaires
   des stations, seules les sources d'observation étant retenues ;
 - [RainViewer](https://www.rainviewer.com/) : radar ;
+- [Vigilance Météo-France](https://vigilance.meteofrance.fr/fr) (Licence
+  Ouverte) : vigilance départementale, lue sans clé sur le jeu public
+  d'[Opendatasoft](https://public.opendatasoft.com/explore/dataset/weatherref-france-vigilance-meteo-departement/)
+  qui la republie ;
+- IGN Admin Express (Licence Ouverte) : contours simplifiés des
+  départements, pour situer un lieu hors ligne ;
 - [OpenStreetMap](https://www.openstreetmap.org/) (ODbL) : fond de carte.
 
 Attribution complète dans l'application, page « Sources et licences ».
-Infoclimat et la Vigilance Météo-France demandent une clé ou un compte :
-elles ne sont pas intégrées (voir [BACKLOG.md](BACKLOG.md), Écarts
-constatés).
+Infoclimat demande une clé ou un compte : il n'est pas intégré (voir
+[BACKLOG.md](BACKLOG.md), Écarts constatés).
 
 ## Licence
 

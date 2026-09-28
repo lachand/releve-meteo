@@ -1,4 +1,6 @@
 import { CACHE_TTL_MS } from '../domain/constants';
+import { departmentAt } from '../domain/departments';
+import type { Department } from '../domain/departments';
 import type { EnsembleHourly } from '../domain/ensemble';
 import { FORECAST_GRID, gridPoints } from '../domain/grid';
 import type { ForecastGrid } from '../domain/grid';
@@ -6,6 +8,7 @@ import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
 import type { Station, StationMatch } from '../domain/stations';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
+import type { VigilanceBulletin } from '../domain/vigilance';
 import { fetchAirQuality } from './clients/airQuality';
 import type { AirQualitySeries } from './clients/airQuality';
 import { fetchEnsemble } from './clients/ensemble';
@@ -16,6 +19,7 @@ import type { HttpResult } from './clients/http';
 import { fetchStationYear, parseStationRecords } from './clients/meteostat';
 import { fetchForecast, fetchNowcast, fetchStationPoint } from './clients/openMeteo';
 import { fetchVerifications } from './clients/verification';
+import { fetchVigilance } from './clients/vigilance';
 import type { VerificationReport } from './clients/verification';
 import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
@@ -363,5 +367,51 @@ export function getForecastGrid(
     placeId: `${place.id}|${model}`,
     ttlMs: CACHE_TTL_MS.forecast,
     fetcher: () => fetchForecastGrid({ points, model, stepKm: FORECAST_GRID.stepKm }),
+  });
+}
+
+let departmentsPromise: Promise<readonly Department[]> | null = null;
+
+/**
+ * Contours simplifies des departements, generes par
+ * `scripts/generate-departments.py` et servis avec l'application. Liste
+ * vide si le fichier manque : la vigilance est alors indisponible.
+ */
+export function loadDepartments(): Promise<readonly Department[]> {
+  departmentsPromise ??= request<readonly Department[]>('/data/departements-fr.json', {
+    retries: 0,
+  }).then((result) => (result.ok && Array.isArray(result.value) ? result.value : []));
+  return departmentsPromise;
+}
+
+/** Reinitialise les contours memorises. Utilise par les tests. */
+export function resetDepartmentsForTests(): void {
+  departmentsPromise = null;
+}
+
+/** Vigilance Meteo-France du departement du lieu. */
+export interface VigilanceReport {
+  /** null : lieu hors de France metropolitaine (ou contours indisponibles). */
+  readonly department: { readonly code: string; readonly name: string } | null;
+  readonly bulletin: VigilanceBulletin | null;
+}
+
+export async function getVigilance(
+  place: Place,
+): Promise<HttpResult<DatasetResult<VigilanceReport>>> {
+  const found = departmentAt(place.latitude, place.longitude, await loadDepartments());
+  if (found === null) {
+    const report: VigilanceReport = { department: null, bulletin: null };
+    return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
+  }
+  const department = { code: found.code, name: found.name };
+  return throughCache({
+    kind: 'vigilance',
+    placeId: department.code,
+    ttlMs: CACHE_TTL_MS.vigilance,
+    fetcher: async (): Promise<HttpResult<VigilanceReport>> => {
+      const result = await fetchVigilance(department.code);
+      return result.ok ? { ok: true, value: { department, bulletin: result.value } } : result;
+    },
   });
 }

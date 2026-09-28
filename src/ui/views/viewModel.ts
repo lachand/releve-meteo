@@ -1,13 +1,14 @@
 import type { AirQualitySeries } from '../../data/clients/airQuality';
 import type { VerificationReport } from '../../data/clients/verification';
 import type { Nowcast } from '../../data/mappers/nowcastMapper';
-import type { StationReport } from '../../data/repository';
+import type { StationReport, VigilanceReport } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
 import type { EnsembleDay } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
 import type { StationCheck } from '../../domain/stationCheck';
+import type { VigilanceSummary } from '../../domain/vigilance';
 import type {
   AlertRule,
   ForecastBundle,
@@ -49,6 +50,9 @@ export interface ForecastViewModel {
   readonly station: DatasetState<StationReport>;
   /** Dernier releve face aux modeles, null tant qu'il n'existe pas. */
   readonly stationCheck: StationCheck | null;
+  /** Vigilance Meteo-France du departement, et sa synthese a l'instant. */
+  readonly vigilance: DatasetState<VigilanceReport>;
+  readonly vigilanceSummary: VigilanceSummary | null;
   readonly episodes: readonly PhenomenonEpisode[];
   readonly explanation: SelectionExplanation;
   readonly windUnit: Preferences['units']['wind'];

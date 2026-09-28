@@ -47,9 +47,16 @@ const PRECACHE_SHELL: readonly string[] = [
   '/fonts/plex-sans-600.woff2',
   '/fonts/plex-sans-condensed-600.woff2',
   '/fonts/plex-mono-400.woff2',
+  '/fonts/garamond-400-normal.woff2',
+  '/fonts/garamond-400-italic.woff2',
+  '/fonts/garamond-600-normal.woff2',
   '/data/coastline-fr.json',
+  '/data/stations-fr.json',
+  '/data/departements-fr.json',
 ];
 ```
+
+Les trois fichiers de `/data/` servent hors ligne : trait de côte (classification du terrain), stations d'observation (vérification), contours simplifiés des départements (vigilance Météo-France, publiée par département).
 
 Les bundles JS et CSS hashés sont ajoutés au manifeste de précache par un plugin Vite au build, pas listés à la main.
 
@@ -197,6 +204,8 @@ Le cache des prévisions vit dans IndexedDB, géré par `data/cache/`, pas dans 
 - Le TTL des prévisions dépend de la logique métier (heure de mise à jour des modèles, `forceRefresh` demandé par l'utilisateur). Cette logique ne doit pas être dupliquée dans le SW.
 - L'UI a besoin de savoir si une donnée vient du cache et si elle est périmée, pour afficher l'horodatage. Un cache dans le SW rend cette information invisible depuis la page.
 - La déduplication de requêtes concurrentes est déjà faite par `data/queue.ts`.
+
+Hôtes laissés passer (`API_HOSTS` dans `sw.ts`) : les API Open-Meteo, `data.meteostat.net` (relevés de stations) et `public.opendatasoft.com` (vigilance Météo-France republiée). Tout nouvel hôte de données s'y ajoute.
 
 Conséquence à assumer : hors ligne, ce n'est pas le SW qui sert la prévision, c'est le repository depuis IndexedDB. Le SW ne garantit que le chargement de l'application elle-même. Cette séparation doit rester nette, et l'agent ne doit pas « améliorer » le SW en y ajoutant un cache d'API.
 

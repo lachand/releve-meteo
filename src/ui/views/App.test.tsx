@@ -9,7 +9,8 @@ import { resetMemoryForecastStore } from '../../data/cache/forecastStore';
 import { resetMemoryGeocodingStore } from '../../data/cache/geocodingStore';
 import { clearModelChoices } from '../../data/cache/modelChoice';
 import { resetMemoryPreferencesForTests } from '../../data/cache/preferences';
-import { resetStationsForTests } from '../../data/repository';
+import { resetDepartmentsForTests, resetStationsForTests } from '../../data/repository';
+import departments from '../../../public/data/departements-fr.json';
 import airQualityRaw from '../../../tests/fixtures/live/air-quality-lyon.json?raw';
 import archiveRaw from '../../../tests/fixtures/live/archive-lyon.json?raw';
 import ensembleRaw from '../../../tests/fixtures/live/ensemble-lyon.json?raw';
@@ -19,6 +20,7 @@ import gridRaw from '../../../tests/fixtures/live/grid-lyon-arome.json?raw';
 import meteostatDataUrl from '../../../tests/fixtures/live/meteostat-07480-2026.csv.gz?inline';
 import nowcastRaw from '../../../tests/fixtures/live/nowcast-lyon.json?raw';
 import previousRunsRaw from '../../../tests/fixtures/live/previous-runs-bron.json?raw';
+import vigilanceRaw from '../../../tests/fixtures/live/vigilance-rhone.json?raw';
 import { stationPointPayload } from '../../../tests/fixtures/stationPoint';
 import { App } from './App';
 
@@ -40,6 +42,9 @@ function meteostatBytes(): ArrayBuffer {
   const base64 = meteostatDataUrl.slice(meteostatDataUrl.indexOf(',') + 1);
   return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)).buffer;
 }
+
+const VIGILANCE_URL =
+  'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/weatherref-france-vigilance-meteo-departement/records';
 
 function liveHandlers(options: { failForecast?: boolean; failVerification?: boolean } = {}) {
   return [
@@ -81,6 +86,8 @@ function liveHandlers(options: { failForecast?: boolean; failVerification?: bool
         headers: { 'Content-Type': 'application/gzip' },
       }),
     ),
+    http.get(VIGILANCE_URL, () => HttpResponse.json(live(vigilanceRaw))),
+    http.get('*/data/departements-fr.json', () => HttpResponse.json(departments)),
     http.get('*/data/stations-fr.json', () =>
       HttpResponse.json([
         { id: '07480', name: 'Lyon / Bron', latitude: 45.7167, longitude: 4.95, elevation: 200 },
@@ -105,6 +112,7 @@ beforeEach(async () => {
   resetMemoryGeocodingStore();
   resetMemoryDatasetStore();
   resetStationsForTests();
+  resetDepartmentsForTests();
   clearModelChoices();
   localStorage.clear();
   resetMemoryPreferencesForTests();
@@ -234,6 +242,41 @@ describe('App', { timeout: 30000 }, () => {
     ).toBeChecked();
   });
 
+  it('dit la vigilance verte du departement, sans bandeau', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    expect(
+      await screen.findByText(
+        /Vigilance Météo-France : verte pour Rhône \(69\)/,
+        {},
+        { timeout: 4000 },
+      ),
+    ).toHaveTextContent('aujourd’hui et demain (bulletin de 16h)');
+    expect(screen.queryByRole('region', { name: /^Vigilance/ })).not.toBeInTheDocument();
+  });
+
+  it('place une vigilance orange en tete du releve', async () => {
+    const orange = live(vigilanceRaw) as { results: Record<string, unknown>[] };
+    orange.results = orange.results.map((record) =>
+      record.phenomenon_id === 3 && record.begin_time === '2026-09-28T14:00:00+00:00'
+        ? { ...record, color_id: 3 }
+        : record,
+    );
+    // Le premier gestionnaire qui correspond l'emporte.
+    server.use(
+      http.get(VIGILANCE_URL, () => HttpResponse.json(orange)),
+      ...liveHandlers(),
+    );
+    await openLyon();
+    const banner = await screen.findByRole(
+      'region',
+      { name: 'Vigilance orange · Rhône (69)' },
+      { timeout: 4000 },
+    );
+    expect(banner).toHaveTextContent('Orange orages : aujourd’hui, de 16h à minuit');
+    expect(banner).toHaveTextContent('Vigilance officielle de Météo-France');
+  });
+
   it('laisse choisir un modele manuellement, puis revenir a la selection automatique', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();
@@ -272,7 +315,8 @@ describe('App', { timeout: 30000 }, () => {
     ).toBeInTheDocument();
 
     // Controle au dernier releve : METAR de 10 h UTC (12 h locale), 26 °C.
-    const gaps = screen.getByRole('table', { name: /face à la mesure/ });
+    // Jeu de donnees distinct de la verification : il peut arriver apres.
+    const gaps = await screen.findByRole('table', { name: /face à la mesure/ }, { timeout: 8000 });
     expect(within(gaps).getAllByRole('row').length).toBeGreaterThan(2);
     expect(screen.getByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
   }, 20000);
@@ -300,8 +344,8 @@ describe('App', { timeout: 30000 }, () => {
     await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
 
     await user.click(screen.getByRole('tab', { name: 'Fiabilité' }));
-    expect(await screen.findByRole('alert', {}, { timeout: 4000 })).toHaveTextContent(
+    expect(await screen.findByRole('alert', {}, { timeout: 12000 })).toHaveTextContent(
       'Vérification indisponible',
     );
-  });
+  }, 20000);
 });

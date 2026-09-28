@@ -4,6 +4,7 @@ import {
   getEnsemble,
   getNowcast,
   getStationReport,
+  getVigilance,
   getVerifications,
 } from '../../data/repository';
 import { evaluateAlerts } from '../../domain/alerts';
@@ -14,6 +15,7 @@ import { detectPhenomena } from '../../domain/phenomena';
 import { stationCheck } from '../../domain/stationCheck';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
 import type { ForecastBundle, Place } from '../../domain/types';
+import { summarizeVigilance } from '../../domain/vigilance';
 import { InstallPrompt } from '../components/InstallPrompt';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { PlaceSwitcher } from '../components/PlaceSwitcher';
@@ -156,6 +158,9 @@ export function App() {
   const station = useDataset(bundle === null ? null : `station|${bundle.place.id}`, () =>
     getStationReport((bundle as ForecastBundle).place, MODEL_ORDER),
   );
+  const vigilance = useDataset(place === null ? null : `vigilance|${place.id}`, () =>
+    getVigilance(place as Place),
+  );
 
   const verifications = useMemo(
     () => (verification.status === 'ready' ? verification.value.verifications : []),
@@ -233,6 +238,11 @@ export function App() {
         station.status === 'ready'
           ? stationCheck({ records: station.value.records, models: station.value.models, now })
           : null,
+      vigilance,
+      vigilanceSummary:
+        vigilance.status === 'ready' && vigilance.value.bulletin !== null
+          ? summarizeVigilance(vigilance.value.bulletin, now)
+          : null,
       episodes: detectPhenomena(horizon.filter((p) => p !== null)),
       explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),
       windUnit: preferences.preferences.units.wind,
@@ -267,6 +277,7 @@ export function App() {
     airQuality,
     nowcast,
     station,
+    vigilance,
     preferences.preferences.units.wind,
     preferred,
     setPreferred,

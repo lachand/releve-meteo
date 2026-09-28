@@ -7,6 +7,7 @@ import { NowcastPanel } from '../components/NowcastPanel';
 import { NowPanel } from '../components/NowPanel';
 import { PhenomenaPanel } from '../components/PhenomenaPanel';
 import { StationLine } from '../components/StationCheck';
+import { VigilanceBanner, VigilanceLine } from '../components/Vigilance';
 import { Section } from './Section';
 import styles from './Views.module.css';
 import type { ForecastViewModel } from './viewModel';
@@ -21,6 +22,7 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
 
   return (
     <div className={styles.stack}>
+      <VigilanceBanner state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
       <AlertBanner hits={vm.alertHits} windUnit={vm.windUnit} />
       <Section eyebrow="Maintenant" className={styles.nowSheet}>
         <NowPanel
@@ -46,6 +48,7 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
         </Section>
         <Section eyebrow={`${PHENOMENA_HORIZON_HOURS} heures`} title="Phénomènes à surveiller">
           <PhenomenaPanel episodes={vm.episodes} horizonHours={PHENOMENA_HORIZON_HOURS} />
+          <VigilanceLine state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
         </Section>
       </div>
 

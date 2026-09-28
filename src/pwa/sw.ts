@@ -34,6 +34,7 @@ const PRECACHE_SHELL: readonly string[] = [
   '/fonts/garamond-600-normal.woff2',
   '/data/coastline-fr.json',
   '/data/stations-fr.json',
+  '/data/departements-fr.json',
 ];
 
 const STATIC_PREFIXES = ['/fonts/', '/icons/', '/data/'];
@@ -48,6 +49,8 @@ const API_HOSTS = new Set([
   'archive-api.open-meteo.com',
   'air-quality-api.open-meteo.com',
   'data.meteostat.net',
+  // Vigilance Meteo-France republiee par Opendatasoft.
+  'public.opendatasoft.com',
 ]);
 
 // Vide au lot 3, peuple au lot 6 : fond de carte OpenStreetMap et overlay

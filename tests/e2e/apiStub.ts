@@ -11,7 +11,8 @@ import { stubTileRequests } from './tileStub';
  * a 13h27 UTC pour Lyon (tests/fixtures/live/). L'horloge du navigateur est
  * figee au meme instant : les echeances, la cascade et la verification
  * sont ainsi celles d'un vrai releve, mais deterministes. Aucune requete
- * ne part vers Open-Meteo, Meteostat ou les serveurs de tuiles.
+ * ne part vers Open-Meteo, Meteostat, Opendatasoft ou les serveurs de
+ * tuiles.
  */
 
 const LIVE = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'live');
@@ -85,6 +86,9 @@ export async function stubApis(page: Page, options: StubOptions = {}): Promise<v
       headers: { 'access-control-allow-origin': '*' },
       body: fixture('meteostat-07480-2026.csv.gz'),
     }),
+  );
+  await page.route('https://public.opendatasoft.com/**', (route) =>
+    route.fulfill(json(fixture('vigilance-rhone.json'))),
   );
 }
 
