@@ -33,10 +33,15 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
   critères), ruban horaire sur 72 h puis toutes les 3 h jusqu'à 10 jours,
   10 jours avec le modèle retenu chaque jour, éventail de l'ensemble ECMWF
   sur 15 jours, pression, rose des vents, qualité de l'air et pollens.
-- **Cartographie** : radar observé sur deux heures puis extrapolé, et carte
+- **Cartographie** : radar observé sur les deux dernières heures, carte
   de prévision sur 48 h (pluie et température du modèle retenu, une case
   tous les 12,5 km sur 100 km autour du lieu, valeurs écrites dans les
-  cases), sur un fond de carte sépia.
+  cases) et carte des favoris en étiquettes de station, sur un fond de
+  carte sépia.
+- **Alertes personnelles** : un seuil par lieu (gel, chaleur, pluie,
+  rafales), vérifié à chaque ouverture sur 72 h, avec le modèle qui le
+  franchit. Sans serveur, pas de notification quand l'application est
+  fermée : l'interface le dit.
 - **Reste transparent** : chaque valeur dit quel modèle la produit ; une
   donnée empruntée à un autre modèle est nommée ; les changements de modèle
   sont marqués, jamais lissés ; l'incertitude est une bande hachurée.

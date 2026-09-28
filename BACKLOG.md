@@ -136,10 +136,10 @@ Lire `SERVICE_WORKER.md` en entier avant de commencer.
 - [x] Appariement avec le réalisé : station Meteostat ou réanalyse ERA5, 30 jours glissants
 - [x] Écran de fiabilité, `DESIGN.md` 6.4, avec l'état « en collecte »
 - [x] Mention explicite que le calcul reste sur l'appareil
-- [ ] Règles d'alerte : création, édition, activation
+- [x] Règles d'alerte : création, activation, suppression, par lieu (température, pluie horaire, rafales ; au-dessus ou en dessous d'un seuil)
 - [ ] `detectPushSupport` et adaptation du texte d'interface
-- [ ] Évaluation des règles à l'ouverture, mode `foreground-only`
-- [ ] Web Push en amélioration progressive, mode `full` uniquement
+- [x] Évaluation des règles à l'ouverture, sur 72 h, avec le modèle retenu heure par heure : bandeau en tête de la vue Aujourd'hui (`domain/alerts.ts`)
+- [ ] ~~Web Push~~ : impossible sans serveur d'envoi ; l'interface le dit (voir Écarts constatés)
 - [ ] Test de migration IndexedDB préservant l'archive
 
 **Sortie** : sur un appareil iOS, l'interface annonce « alertes à l'ouverture » et ne promet aucune notification en arrière-plan.
@@ -182,7 +182,7 @@ Plan détaillé dans `ROADMAP.md`. Démarré le 2026-09-28.
 - [x] Favoris sur la carte, en étiquettes de station (symbole, température, modèle), sans chevauchement ; barre des favoris sur une seule ligne, mode « Organiser »
 - [x] Fond de carte sépia commun au radar et à la prévision
 - [x] Accessibilité : les onglets gardent leur nom sous 640 px (régression couverte en e2e)
-- [ ] Alertes (Lot 7) : règles, évaluation à l'ouverture, Web Push
+- [x] Alertes (Lot 7) : règles par lieu, évaluation à l'ouverture sur 72 h, bandeau nommant le modèle ; pas de notification en arrière-plan (pas de serveur)
 
 **Sortie** : le modèle retenu est justifié par des critères chiffrés, vérifiés contre des mesures réelles quand une station représentative existe ; `npm run verify` vert.
 
@@ -235,6 +235,8 @@ Consigner ici toute divergence entre la spécification et la réalité, avec la 
 | 2026-09-28 | Open-Meteo, requêtes multi-points | Une requête de grille (81 points pour la carte de prévision) compte comme autant d'appels dans le quota d'usage libre. | La carte n'est chargée qu'à l'ouverture de l'onglet Cartes, en une seule requête, mise en cache une heure. |
 | 2026-09-28 | Fixture du point de station | Le quota Open-Meteo de l'environnement de développement était de nouveau épuisé au moment d'enregistrer la réponse au point de la station Lyon-Bron. | `tests/fixtures/stationPoint.ts` est synthétique, et le dit : valeurs constantes par modèle, distinctes de celles du lieu, pour prouver en test que l'écart est bien calculé au point de la station. |
 | 2026-09-28 | Leaflet et horloge figée | Le fondu d'apparition des tuiles se calcule avec la date courante : sous horloge figée (tests e2e, captures), les tuiles restent invisibles. | Fondu désactivé (`fadeAnimation: false`) : c'est aussi une animation décorative, que `DESIGN.md` exclut. |
+| 2026-09-28 | Radar, alternative à RainViewer | Recherche d'une source radar gratuite, sans clé et lisible depuis un navigateur, sur toute la France : EUMETNET OPERA (meilleures données, 1 km, 5 min, CC BY 4.0) n'envoie aucun en-tête CORS ; DWD et KNMI ne couvrent qu'une frange du nord-est ; les produits satellite d'EUMETSAT et IMERG de la NASA sont trop grossiers ou trop tardifs ; Météo-France exige une clé. | RainViewer conservé, en tuiles de 512 px au zoom 7 (densité du zoom 8 sans agrandissement). Si EUMETNET ouvre le CORS de son stockage, OPERA deviendrait lisible directement ; sinon il faudrait un serveur, contraire au principe sans backend. |
+| 2026-09-28 | Alertes, Web Push | Une notification quand l'application est fermée exige un serveur d'envoi (Web Push), exclu par le principe sans backend. | Alertes évaluées à chaque ouverture, sur 72 h ; la section des alertes le dit en toutes lettres. |
 
 ---
 
