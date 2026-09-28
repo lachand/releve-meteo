@@ -1,14 +1,23 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { server } from '../../../tests/msw';
-import { buildForecastUrl, fetchForecast, OPEN_METEO_MODEL_IDS } from './openMeteo';
+import {
+  buildForecastUrl,
+  buildNowcastUrl,
+  fetchForecast,
+  fetchNowcast,
+  OPEN_METEO_MODEL_IDS,
+} from './openMeteo';
 
 describe('OPEN_METEO_MODEL_IDS', () => {
   it("correspond aux identifiants verifies contre l'API reelle", () => {
     expect(OPEN_METEO_MODEL_IDS).toEqual({
       arome: 'meteofrance_arome_france_hd',
+      arome_france: 'meteofrance_arome_france',
+      icon_d2: 'icon_d2',
       arpege: 'meteofrance_arpege_europe',
       icon_eu: 'icon_eu',
+      ecmwf: 'ecmwf_ifs025',
       gfs: 'gfs_seamless',
     });
   });
@@ -86,6 +95,56 @@ describe('fetchForecast', () => {
       ),
     );
     const result = await fetchForecast({ latitude: 45.4936, longitude: 5.4708, models: ['arome'] });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('buildNowcastUrl', () => {
+  it('construit une URL AROME minutely_15 avec la fenetre passee/future', () => {
+    const url = new URL(buildNowcastUrl(45.4936, 5.4708));
+    expect(url.origin + url.pathname).toBe('https://api.open-meteo.com/v1/forecast');
+    expect(url.searchParams.get('latitude')).toBe('45.4936');
+    expect(url.searchParams.get('longitude')).toBe('5.4708');
+    expect(url.searchParams.get('models')).toBe('meteofrance_arome_france_hd');
+    expect(url.searchParams.get('minutely_15')).toBe('precipitation');
+    expect(url.searchParams.get('forecast_minutely_15')).toBe('12');
+    expect(url.searchParams.get('past_minutely_15')).toBe('4');
+    expect(url.searchParams.get('timezone')).toBe('Europe/Paris');
+  });
+});
+
+describe('fetchNowcast', () => {
+  it('retourne ok:true avec le bloc minutely_15 sur succes', async () => {
+    server.use(
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({
+          latitude: 45.49,
+          longitude: 5.47,
+          elevation: 468,
+          timezone: 'Europe/Paris',
+          utc_offset_seconds: 7200,
+          minutely_15: {
+            time: ['2026-09-28T14:15', '2026-09-28T14:30'],
+            precipitation: [0, 0.1],
+          },
+        }),
+      ),
+    );
+    const result = await fetchNowcast(45.4936, 5.4708);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.minutely_15?.precipitation).toEqual([0, 0.1]);
+    }
+  });
+
+  it("propage un HttpResult d'echec sans exception", async () => {
+    server.use(
+      http.get(
+        'https://api.open-meteo.com/v1/forecast',
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    const result = await fetchNowcast(45.4936, 5.4708);
     expect(result.ok).toBe(false);
   });
 });
