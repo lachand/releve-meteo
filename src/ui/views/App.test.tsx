@@ -160,6 +160,10 @@ describe('App', { timeout: 30000 }, () => {
     // AROME 1,3 km ne fournit ni nebulosite ni pression : completees et nommees.
     expect(screen.getByText(/Complété, faute de donnée chez AROME/)).toBeInTheDocument();
     expect(window.location.search).toContain('nom=Lyon');
+    // Meilleur creneau : les heures, et le modele qui les fournit.
+    expect(
+      screen.getByRole('heading', { name: 'Sortir sans pluie' }).closest('section'),
+    ).toHaveTextContent(/Sec jusqu’à la nuit, de \d+h à 20h, selon AROME\./);
     // Bulletin : le modele, sa valeur, l'ecart chiffre des autres et la confiance.
     expect(
       screen.getByText(

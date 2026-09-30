@@ -1,0 +1,26 @@
+/* Une phrase en serif, les criteres en marge : comme une note de carnet. */
+.panel {
+  display: grid;
+  gap: var(--esp-2);
+}
+
+.sentence {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-size: var(--pas-l);
+  line-height: 1.3;
+  color: var(--encre);
+}
+
+.panel[data-status='none'] .sentence {
+  font-style: italic;
+  color: var(--encre-faible);
+}
+
+.criteria {
+  margin: 0;
+  max-width: 48rem;
+  font-size: var(--pas-xs);
+  font-style: italic;
+  color: var(--encre-faible);
+}

@@ -1,9 +1,11 @@
 import { briefingAt } from '../../domain/briefing';
+import { bestDryWindow } from '../../domain/dryWindow';
 import { briefingSentence } from '../briefingPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
 import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
 import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
+import { DryWindowPanel } from '../components/DryWindowPanel';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
 import { NowPanel } from '../components/NowPanel';
@@ -31,6 +33,11 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           active: { model: nowPoint.model, temperature: nowPoint.temperature.value },
           verdict: confidenceNow,
         });
+
+  const dryWindow = bestDryWindow({
+    points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+  });
 
   return (
     <div className={styles.stack}>
@@ -64,6 +71,12 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           <VigilanceLine state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
         </Section>
       </div>
+
+      {!(dryWindow.status === 'none' && dryWindow.reason === 'night') && (
+        <Section eyebrow="Aujourd’hui" title="Sortir sans pluie">
+          <DryWindowPanel window={dryWindow} windUnit={vm.windUnit} />
+        </Section>
+      )}
 
       <Section
         eyebrow="Heure par heure"
