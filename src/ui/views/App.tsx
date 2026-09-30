@@ -30,6 +30,7 @@ import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
 import { useBackgroundWatch } from '../hooks/useBackgroundWatch';
+import { DaysIcon, HoursIcon, MapIcon, ModelsIcon, ReliabilityIcon, TodayIcon } from '../tabIcons';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -61,12 +62,12 @@ const ReliabilityView = lazy(() =>
 const NO_HITS: readonly AlertHit[] = [];
 
 const TABS: readonly TabItem<ViewKey>[] = [
-  { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
-  { key: 'heures', label: 'Heure par heure', short: 'Heures' },
-  { key: 'jours', label: '15 jours', short: '15 j' },
-  { key: 'carte', label: 'Cartes', short: 'Cartes' },
-  { key: 'modeles', label: 'Modèles', short: 'Modèles' },
-  { key: 'fiabilite', label: 'Fiabilité', short: 'Fiabilité' },
+  { key: 'jour', label: 'Aujourd’hui', short: 'Auj.', icon: <TodayIcon /> },
+  { key: 'heures', label: 'Heure par heure', short: 'Heures', icon: <HoursIcon /> },
+  { key: 'jours', label: '15 jours', short: '15 j', icon: <DaysIcon /> },
+  { key: 'carte', label: 'Cartes', short: 'Cartes', icon: <MapIcon /> },
+  { key: 'modeles', label: 'Modèles', short: 'Modèles', icon: <ModelsIcon /> },
+  { key: 'fiabilite', label: 'Fiabilité', short: 'Fiab.', icon: <ReliabilityIcon /> },
 ];
 
 function examplePlace(

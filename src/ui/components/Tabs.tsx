@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import styles from './Tabs.module.css';
 
 export interface TabItem<K extends string> {
@@ -7,6 +7,8 @@ export interface TabItem<K extends string> {
   readonly label: string;
   /** Libelle court pour les petits ecrans. */
   readonly short?: string;
+  /** Pictogramme de la barre basse des petits ecrans ; jamais porteur du nom. */
+  readonly icon?: ReactNode;
 }
 
 interface TabsProps<K extends string> {
@@ -80,6 +82,11 @@ export function Tabs<K extends string>({ items, active, onChange, label, idPrefi
               onClick={() => onChange(item.key)}
               onKeyDown={(event) => onKeyDown(event, index)}
             >
+              {item.icon !== undefined && (
+                <span className={styles.icon} aria-hidden="true">
+                  {item.icon}
+                </span>
+              )}
               <span className={styles.full}>{item.label}</span>
               <span className={styles.short} aria-hidden="true">
                 {item.short ?? item.label}
