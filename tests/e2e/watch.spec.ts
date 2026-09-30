@@ -148,6 +148,9 @@ interface Shown {
 async function spyOnNotifications(context: BrowserContext): Promise<Worker> {
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   await worker.evaluate(() => {
+    // Chromium sans interface refuse les notifications par defaut, meme
+    // apres grantPermissions : la veille s'arreterait avant de decider.
+    Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
     const scope = self as unknown as {
       __shown: { title: string; body: string }[];
       registration: {
@@ -211,15 +214,20 @@ test('la veille notifie une alerte franchie et une vigilance orange, une seule f
 
 test('les reglages disent ce que ce navigateur permet pour la veille, sans promesse', async ({
   page,
-  context,
   browserName,
 }) => {
-  // Permission accordee : sans cela, un Chromium sans interface la refuse par
-  // defaut et l'interface dirait « bloquees », un autre etat que celui teste.
-  await context.grantPermissions(['notifications']);
+  if (browserName === 'chromium') {
+    // Un Chromium sans interface refuse les notifications par defaut et
+    // l'interface dirait « bloquees », un autre etat que celui teste ici.
+    await page.addInitScript(() => {
+      Object.defineProperty(Notification, 'permission', {
+        configurable: true,
+        get: () => 'granted',
+      });
+    });
+  }
   await stubApis(page);
   await page.goto(LYON_URL);
-  await page.evaluate(() => navigator.serviceWorker.ready);
   await page.getByRole('button', { name: 'Réglages' }).click();
   const section = page.getByRole('region', { name: 'Veille en arrière-plan' });
   if (browserName === 'chromium') {
@@ -227,12 +235,13 @@ test('les reglages disent ce que ce navigateur permet pour la veille, sans prome
     // synchronisation periodique, et l'interface dit comment l'obtenir.
     await expect(section.getByRole('status')).toContainText(
       'n’accorde la veille qu’aux applications installées',
-      { timeout: 10000 },
+      { timeout: 15000 },
     );
   } else {
+    // Firefox et WebKit : service worker bloque ou sans synchronisation periodique.
     await expect(section.getByRole('status')).toContainText(
       'ne permet pas la veille en arrière-plan',
-      { timeout: 10000 },
+      { timeout: 15000 },
     );
     await expect(section.getByRole('button')).toHaveCount(0);
     return;

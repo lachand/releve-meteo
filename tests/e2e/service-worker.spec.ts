@@ -149,7 +149,8 @@ test.describe('Regression du service worker (TESTING.md 6.5)', () => {
       const cache = await caches.open('meteo-fr-tiles-v1');
       return (await cache.match('/synthetic-tile.png')) !== undefined;
     });
-    expect(tileSurvived).toBe(true);
+    const cacheNames = await page.evaluate(() => caches.keys());
+    expect(tileSurvived, `caches presents : ${cacheNames.join(', ')}`).toBe(true);
   });
 
   test('repli sur offline.html quand le shell precache est incomplet (SERVICE_WORKER.md 13)', async ({
