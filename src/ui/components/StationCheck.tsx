@@ -241,7 +241,8 @@ export function StationCheckPanel({ state, check, activeModel, windUnit }: Stati
             Température de chaque modèle au point et à l’altitude de la station, en °C, face à la
             mesure, du plus proche au plus éloigné. L’écart est la valeur du modèle moins la mesure.
           </p>
-          <div className={styles.scroller}>
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+          <div className={styles.scroller} role="region" aria-labelledby={captionId} tabIndex={0}>
             <table className={styles.table} aria-labelledby={captionId}>
               <thead>
                 <tr>

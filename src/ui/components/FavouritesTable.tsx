@@ -131,7 +131,13 @@ export function FavouritesTable({
   const rows = sorted(snapshots, sort?.key ?? null, sort?.direction ?? 'ascending');
 
   return (
-    <div className={styles.scroller}>
+    <div
+      className={styles.scroller}
+      role="region"
+      aria-label="Comparaison des lieux favoris"
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+    >
       <table className={styles.table}>
         <caption className="visually-hidden">
           Comparaison des lieux favoris sur les 24 prochaines heures, valeurs du modèle retenu pour

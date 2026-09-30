@@ -136,7 +136,13 @@ function VariableTable({
   );
   const worst = Math.max(...errors, 0.1);
   return (
-    <div className={styles.scroller}>
+    <div
+      className={styles.scroller}
+      role="region"
+      aria-label={`Erreur absolue par modèle et par échéance, ${VARIABLE_LABELS[variable]}`}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+    >
       <table className={styles.table}>
         <caption className="visually-hidden">
           Erreur absolue moyenne ({unit}) par modèle et par échéance, {VARIABLE_LABELS[variable]}

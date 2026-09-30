@@ -370,7 +370,7 @@ describe('App', { timeout: 30000 }, () => {
     // Jeu de donnees distinct de la verification : il peut arriver apres.
     const gaps = await screen.findByRole('table', { name: /face à la mesure/ }, { timeout: 8000 });
     expect(within(gaps).getAllByRole('row').length).toBeGreaterThan(2);
-    expect(screen.getByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
+    expect(await screen.findByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
   }, 20000);
 
   it('confronte la valeur du modele retenu au dernier releve de la station', async () => {
