@@ -430,6 +430,27 @@ describe('App', { timeout: 30000 }, () => {
     print.mockRestore();
   }, 20000);
 
+  it('met l essentiel en tete d Aujourd hui et replie les sections secondaires', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    const order = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent);
+    const tendance = order.indexOf('Tendance');
+    expect(order.indexOf('Sortir sans pluie')).toBeLessThan(
+      order.indexOf('Les 24 prochaines heures'),
+    );
+    expect(order.indexOf('Les 24 prochaines heures')).toBeLessThan(tendance);
+    for (const secondary of ['Qualité de l’air et pollens', 'Soleil, rosée, gel']) {
+      expect(order.indexOf(secondary)).toBeGreaterThan(tendance);
+      expect(
+        screen.getByRole('heading', { name: secondary }).closest('details'),
+      ).not.toHaveAttribute('open');
+    }
+  }, 20000);
+
   it('annonce la collecte des echeances courtes, avec les previsions deja enregistrees', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();
