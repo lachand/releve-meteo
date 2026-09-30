@@ -28,6 +28,7 @@ import { Tabs } from '../components/Tabs';
 import type { TabItem } from '../components/Tabs';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { formatCompact, formatLongDate } from '../format';
+import { PrintIcon } from '../tabIcons';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
@@ -387,6 +388,17 @@ export function App() {
                 {isFavourite ? '★' : '☆'}
               </button>
             )}
+            {place !== null && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={() => window.print()}
+                aria-label="Imprimer le relevé"
+                title="Imprimer le relevé"
+              >
+                <PrintIcon />
+              </button>
+            )}
             <button
               type="button"
               className={styles.iconButton}
@@ -412,6 +424,13 @@ export function App() {
                 .filter((value): value is string => value !== null)
                 .join(' · ')}
             </p>
+            {vm !== null && (
+              <p className={styles.printOnly}>
+                Feuille de registre, imprimée le {formatLongDate(vm.today)}. Les valeurs sont des
+                prévisions ou des estimations, jamais des mesures, sauf celles attribuées à une
+                station.
+              </p>
+            )}
             {bundle !== null && (
               <p className={styles.dateline}>
                 Relevé du {formatLongDate(localIsoFromUtc(bundle.fetchedAt))}

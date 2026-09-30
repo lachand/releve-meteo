@@ -414,6 +414,22 @@ describe('App', { timeout: 30000 }, () => {
     expect(await within(section).findByText(/Estimation, pas une mesure/)).toBeInTheDocument();
   }, 20000);
 
+  it('imprime le releve en feuille de registre, avec sa date et ce que les valeurs sont', async () => {
+    server.use(...liveHandlers());
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    // La mention n'existe qu'une fois un lieu ouvert, et ne se voit qu'a l'impression.
+    const sheet = screen.getByText(/Feuille de registre, imprimée le lundi 28 septembre 2026/);
+    expect(sheet).toHaveTextContent('prévisions');
+    expect(sheet).toHaveTextContent('jamais des mesures');
+
+    await user.click(screen.getByRole('button', { name: 'Imprimer le relevé' }));
+    expect(print).toHaveBeenCalledOnce();
+    print.mockRestore();
+  }, 20000);
+
   it('annonce la collecte des echeances courtes, avec les previsions deja enregistrees', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();

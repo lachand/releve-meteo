@@ -329,9 +329,36 @@
   color: var(--encre-faible);
 }
 
+/* Feuille de registre : reservee a l'impression. */
+.printOnly {
+  display: none;
+}
+
+.iconButton svg {
+  display: block;
+  margin: 0 auto;
+}
+
 @media print {
+  @page {
+    margin: 14mm;
+  }
+
   .actions,
-  .footer {
+  .skip {
     display: none;
+  }
+
+  .printOnly {
+    display: block;
+    margin: var(--esp-2) 0 0;
+    font-family: var(--font-titre);
+    font-style: italic;
+  }
+
+  /* Les sources et licences restent : une feuille sans provenance ne vaut rien. */
+  .footer {
+    margin-top: var(--esp-6);
+    break-inside: avoid;
   }
 }
