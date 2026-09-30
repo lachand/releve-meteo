@@ -1,3 +1,5 @@
+import { briefingAt } from '../../domain/briefing';
+import { briefingSentence } from '../briefingPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
 import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
 import { ConditionsPanel } from '../components/ConditionsPanel';
@@ -20,11 +22,22 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
   const confidenceNow =
     cascade.nowIndex === -1 ? null : (vm.confidence?.[cascade.nowIndex] ?? null);
 
+  const briefing =
+    nowPoint === null
+      ? null
+      : briefingAt({
+          bundle: vm.bundle,
+          index: cascade.nowIndex,
+          active: { model: nowPoint.model, temperature: nowPoint.temperature.value },
+          verdict: confidenceNow,
+        });
+
   return (
     <div className={styles.stack}>
       <VigilanceBanner state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
       <AlertBanner hits={vm.alertHits} windUnit={vm.windUnit} />
       <Section eyebrow="Maintenant" className={styles.nowSheet}>
+        {briefing !== null && <p className={styles.briefing}>{briefingSentence(briefing)}</p>}
         <NowPanel
           point={nowPoint}
           confidence={confidenceNow}

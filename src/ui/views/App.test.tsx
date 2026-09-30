@@ -160,6 +160,12 @@ describe('App', { timeout: 30000 }, () => {
     // AROME 1,3 km ne fournit ni nebulosite ni pression : completees et nommees.
     expect(screen.getByText(/Complété, faute de donnée chez AROME/)).toBeInTheDocument();
     expect(window.location.search).toContain('nom=Lyon');
+    // Bulletin : le modele, sa valeur, l'ecart chiffre des autres et la confiance.
+    expect(
+      screen.getByText(
+        /^AROME prévoit \d+\s°C\. Les \d autres modèles s’en écartent de .*\s: confiance /,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("affiche un etat d'erreur avec une action de reprise quand la prevision echoue", async () => {
