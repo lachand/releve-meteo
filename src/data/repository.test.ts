@@ -461,6 +461,7 @@ describe('getStationReport', () => {
       records: [],
       models: null,
       previousDay: null,
+      snapshots: [],
     });
     expect(meteostatCalls).toBe(0);
   });
@@ -517,6 +518,47 @@ describe('getStationReport', () => {
     expect(previousRequests[0]?.searchParams.get('latitude')).toBe('45.5');
     expect(previousRequests[0]?.searchParams.get('elevation')).toBe('450');
     expect(report.previousDay?.temperature.arome).toEqual([21.5]);
+  });
+
+  it('enregistre un instantane des 12 heures a venir a chaque lecture, sans en empiler deux pour une meme heure', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    const time = Array.from(
+      { length: 15 },
+      (_, i) => `2026-09-28T${String(10 + i).padStart(2, '0')}:00`,
+    );
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time, temperature_2m: time.map((_, i) => 20 + i) } }),
+      ),
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        return new HttpResponse(
+          await gzip([HEADER, '2026,9,28,10,26.0,metar,37,metar'].join('\n')),
+        );
+      }),
+    );
+    const first = await getStationReport(place, ['arome']);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const snapshots = first.value.value.snapshots;
+    expect(snapshots).toHaveLength(1);
+    // 15 h 27 locales : relevee a 15 h, puis 16 h a 24 h (la serie s'arrete a minuit).
+    expect(snapshots[0]?.issuedAt).toBe('2026-09-28T15:00');
+    expect(snapshots[0]?.timeline[0]).toBe('2026-09-28T16:00');
+    expect(snapshots[0]?.temperature.arome?.[0]).toBe(26);
+
+    expect(snapshots[0]?.timeline).toHaveLength(9);
+
+    // Deux heures plus tard, la station est relue : un second instantane s'ajoute au premier.
+    vi.setSystemTime(new Date('2026-09-28T15:27:00Z'));
+    const second = await getStationReport(place, ['arome']);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.value.value.snapshots.map((s) => s.issuedAt)).toEqual([
+      '2026-09-28T15:00',
+      '2026-09-28T17:00',
+    ]);
   });
 
   it('rend les releves sans modeles quand le point de station ne repond pas', async () => {

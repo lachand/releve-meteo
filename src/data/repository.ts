@@ -4,6 +4,8 @@ import type { Department } from '../domain/departments';
 import type { EnsembleHourly } from '../domain/ensemble';
 import { FORECAST_GRID, gridPoints } from '../domain/grid';
 import type { ForecastGrid } from '../domain/grid';
+import { takeSnapshot } from '../domain/leadScores';
+import type { ForecastSnapshot } from '../domain/leadScores';
 import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
 import type { Station, StationMatch } from '../domain/stations';
@@ -30,6 +32,7 @@ import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
 import { getCachedPlaces, normalizeQuery, setCachedPlaces } from './cache/geocodingStore';
 import { getCachedForecast, setCachedForecast } from './cache/forecastStore';
+import { loadSnapshots, recordSnapshot } from './cache/snapshotStore';
 import { mapNowcast } from './mappers/nowcastMapper';
 import type { Nowcast } from './mappers/nowcastMapper';
 import { mapOpenMeteoResponse } from './mappers/openMeteoMapper';
@@ -300,6 +303,12 @@ export interface StationReport {
    * et hier, pour « hier, prevu contre reel » ; null si indisponibles.
    */
   readonly previousDay: StationModelSeries | null;
+  /**
+   * Instantanes horaires enregistres par l'application pour cette station
+   * (echeances de 1 a 12 h), du plus ancien au plus recent. Vide tant que
+   * rien n'a ete collecte.
+   */
+  readonly snapshots: readonly ForecastSnapshot[];
 }
 
 /**
@@ -318,7 +327,13 @@ export async function getStationReport(
 ): Promise<HttpResult<DatasetResult<StationReport>>> {
   const match = await stationFor(place);
   if (match === null) {
-    const report: StationReport = { match: null, records: [], models: null, previousDay: null };
+    const report: StationReport = {
+      match: null,
+      records: [],
+      models: null,
+      previousDay: null,
+      snapshots: [],
+    };
     return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
   }
   return throughCache({
@@ -356,6 +371,13 @@ export async function getStationReport(
       // Sans valeurs de modele, le releve reste utile : rendu sans ecart.
       const atStation = await modelsAtStation;
       const ofYesterday = await forecastsOfYesterday;
+      // Chaque lecture de la station enregistre les 12 heures a venir de chaque
+      // modele : une fois la mesure publiee, elles servent a noter les echeances courtes.
+      const snapshot = atStation.ok ? takeSnapshot(atStation.value, new Date(now)) : null;
+      const snapshots =
+        snapshot === null
+          ? await loadSnapshots(match.station.id)
+          : await recordSnapshot(match.station.id, snapshot, new Date(now));
       if (failure !== null && records.length === 0) {
         return failure;
       }
@@ -366,6 +388,7 @@ export async function getStationReport(
           records,
           models: atStation.ok ? atStation.value : null,
           previousDay: ofYesterday.ok ? ofYesterday.value : null,
+          snapshots,
         },
       };
     },

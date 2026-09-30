@@ -36,7 +36,7 @@ function ready(
 ): DatasetState<StationReport> {
   return {
     status: 'ready',
-    value: { match, records: [], models, previousDay: null },
+    value: { match, records: [], models, previousDay: null, snapshots: [] },
     fetchedAt: 0,
     stale: false,
   };

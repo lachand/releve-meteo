@@ -26,7 +26,7 @@ const REVIEW: YesterdayReview = {
 function ready(match: StationMatch | null = MATCH): DatasetState<StationReport> {
   return {
     status: 'ready',
-    value: { match, records: [], models: null, previousDay: null },
+    value: { match, records: [], models: null, previousDay: null, snapshots: [] },
     fetchedAt: 0,
     stale: false,
   };

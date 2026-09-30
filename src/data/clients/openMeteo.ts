@@ -1,3 +1,4 @@
+import { SHORT_LEADS } from '../../domain/leadScores';
 import type { StationModelSeries } from '../../domain/stationCheck';
 import type { LocalIsoHour, ModelId } from '../../domain/types';
 import { request } from './http';
@@ -132,6 +133,12 @@ export async function fetchNowcast(
 export const STATION_POINT_PAST_HOURS = 36;
 
 /**
+ * Heures a venir demandees au point de la station : l'heure courante et les
+ * 12 suivantes, de quoi enregistrer un instantane (domain/leadScores.ts).
+ */
+export const STATION_POINT_FORECAST_HOURS = SHORT_LEADS.horizonHours + 1;
+
+/**
  * Temperature de chaque modele au point exact d'une station, a son
  * altitude (le reechantillonnage d'Open-Meteo corrige alors la
  * temperature du relief) : la comparaison au releve se fait station a
@@ -155,7 +162,7 @@ export function buildStationPointUrl(input: {
   );
   url.searchParams.set('hourly', 'temperature_2m');
   url.searchParams.set('past_hours', String(STATION_POINT_PAST_HOURS));
-  url.searchParams.set('forecast_hours', '1');
+  url.searchParams.set('forecast_hours', String(STATION_POINT_FORECAST_HOURS));
   url.searchParams.set('timezone', 'Europe/Paris');
   return url.toString();
 }

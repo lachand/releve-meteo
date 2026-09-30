@@ -1,3 +1,4 @@
+import { LeadScoresPanel } from '../components/LeadScoresPanel';
 import { ReliabilityPanel } from '../components/ReliabilityPanel';
 import { StationCheckPanel } from '../components/StationCheck';
 import { StationTraceChart } from '../components/StationTraceChart';
@@ -30,6 +31,13 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
         <YesterdayPanel
           state={vm.station}
           review={vm.yesterday}
+          activeModel={vm.cascade.activeModel}
+        />
+      </Section>
+      <Section eyebrow="Échéances courtes" title="De 1 à 12 heures avant">
+        <LeadScoresPanel
+          state={vm.station}
+          scores={vm.leadScores}
           activeModel={vm.cascade.activeModel}
         />
       </Section>

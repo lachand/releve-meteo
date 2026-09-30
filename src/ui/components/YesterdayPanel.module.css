@@ -72,3 +72,8 @@
   color: var(--encre-faible);
   font-size: var(--pas-s);
 }
+
+.detail {
+  color: var(--encre-faible);
+  font-size: var(--pas-xs);
+}

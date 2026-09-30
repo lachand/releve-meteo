@@ -13,6 +13,7 @@ import {
   mapStationPoint,
   mapStationPreviousDay,
   OPEN_METEO_MODEL_IDS,
+  STATION_POINT_FORECAST_HOURS,
   STATION_POINT_PAST_HOURS,
 } from './openMeteo';
 
@@ -172,7 +173,9 @@ describe('buildStationPointUrl', () => {
     expect(url.searchParams.get('models')).toBe('meteofrance_arome_france_hd,ecmwf_ifs025');
     expect(url.searchParams.get('hourly')).toBe('temperature_2m');
     expect(url.searchParams.get('past_hours')).toBe(String(STATION_POINT_PAST_HOURS));
-    expect(url.searchParams.get('forecast_hours')).toBe('1');
+    // L'heure courante et les 12 suivantes : de quoi enregistrer un instantane.
+    expect(url.searchParams.get('forecast_hours')).toBe(String(STATION_POINT_FORECAST_HOURS));
+    expect(STATION_POINT_FORECAST_HOURS).toBe(13);
   });
 
   it("laisse Open-Meteo choisir l'altitude quand celle de la station est inconnue", () => {
