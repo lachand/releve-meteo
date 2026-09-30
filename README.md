@@ -61,8 +61,10 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 Plan de la refonte : [ROADMAP.md](ROADMAP.md). Avancement par lot et écarts
 constatés : [BACKLOG.md](BACKLOG.md).
 
-Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
-GitHub (build `npm run build`, dossier de sortie `dist`).
+Le déploiement continu se fait via Cloudflare Workers Builds, connecté au
+dépôt GitHub : build `npm run build`, puis `npx wrangler versions upload`
+(ou `deploy` sur la branche de production), configuré par `wrangler.jsonc`
+(assets de `dist`, repli sur `index.html`).
 
 ## Développement
 
