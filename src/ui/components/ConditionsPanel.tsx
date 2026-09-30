@@ -1,5 +1,6 @@
-import { fogRisk, frostRisk } from '../../domain/derived';
+import { dayLightSpan, fogRisk, frostRisk } from '../../domain/derived';
 import type { DailyPoint, HourlyPoint } from '../../domain/types';
+import { formatDuration } from '../format';
 import styles from './ConditionsPanel.module.css';
 
 interface ConditionsPanelProps {
@@ -41,6 +42,7 @@ export function ConditionsPanel({ nowPoint, today }: ConditionsPanelProps) {
   const dewPointValue = nowPoint?.dewPoint.value ?? null;
   const frost = frostRisk(today?.tempMin.value ?? null);
   const fog = fogRiskFor(nowPoint);
+  const light = dayLightSpan(today?.sunrise ?? null, today?.sunset ?? null);
 
   return (
     <table className={styles.table}>
@@ -73,6 +75,18 @@ export function ConditionsPanel({ nowPoint, today }: ConditionsPanelProps) {
         <tr>
           <td>coucher du soleil</td>
           <td>{formatHour(today?.sunset ?? null)}</td>
+        </tr>
+        <tr>
+          <td>durée du jour</td>
+          <td>{light === null ? '–' : formatDuration(light.minutes)}</td>
+        </tr>
+        <tr>
+          <td>heures dorées</td>
+          <td>
+            {light === null
+              ? '–'
+              : `${formatHour(light.morningGolden.from)} à ${formatHour(light.morningGolden.to)}, puis ${formatHour(light.eveningGolden.from)} à ${formatHour(light.eveningGolden.to)}`}
+          </td>
         </tr>
       </tbody>
     </table>

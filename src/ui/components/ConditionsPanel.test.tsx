@@ -58,6 +58,22 @@ describe('ConditionsPanel', () => {
     expect(screen.getByText('21:05')).toBeInTheDocument();
   });
 
+  it('donne la duree du jour et les deux heures dorees', () => {
+    render(<ConditionsPanel nowPoint={nowPoint} today={today} />);
+    // 6 h 30 a 21 h 05 : 14 h 35.
+    expect(screen.getByText('durée du jour').closest('tr')).toHaveTextContent('14 h 35');
+    expect(screen.getByText('heures dorées').closest('tr')).toHaveTextContent(
+      '06:30 à 07:30, puis 20:05 à 21:05',
+    );
+  });
+
+  it('ne donne ni duree ni heures dorees sans lever ou coucher', () => {
+    const partial: DailyPoint = { ...today, sunrise: null };
+    render(<ConditionsPanel nowPoint={nowPoint} today={partial} />);
+    expect(screen.getByText('durée du jour').closest('tr')).toHaveTextContent('–');
+    expect(screen.getByText('heures dorées').closest('tr')).toHaveTextContent('–');
+  });
+
   it("affiche un tiret plutot qu'un zero quand une donnee manque", () => {
     const partial: DailyPoint = { ...today, uvIndexMax: measure(null), sunrise: null };
     render(<ConditionsPanel nowPoint={null} today={partial} />);

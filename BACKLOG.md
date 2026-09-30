@@ -192,6 +192,7 @@ Plan détaillé dans `ROADMAP.md`. Démarré le 2026-09-28.
 - [x] Bulletin en une phrase en tête de « Maintenant » (proposition A1) : « AROME prévoit 29 °C. Les 6 autres modèles s'en écartent de 1,1 °C en moyenne, au plus 1,9 °C : confiance moyenne, surtout sur la température. » (`domain/briefing.ts`, `ui/briefingPresentation.ts`) ; jamais de température inventée si le modèle retenu n'en a pas, « aucun autre modèle ne couvre cette heure » plutôt qu'un écart de zéro
 - [x] Probabilités de l'ensemble ECMWF dans la liste des jours (proposition A2) : part des membres dont le minimum du jour est à 0 °C ou moins (gel) et dont la rafale maximale atteint 60 km/h, écrites dès 10 % (`ensemble.ts`) ; `null` quand l'ensemble ne fournit pas de rafales, jamais 0 %
 - [x] Meilleur créneau sec, section « Sortir sans pluie » (proposition B1) : plus longue suite d'heures de jour d'ici ce soir avec au plus 0,2 mm par heure et des rafales sous 50 km/h, d'au moins 2 heures ; critères écrits sous la phrase, modèle nommé ; une heure sans valeur coupe la fenêtre au lieu d'être comptée sèche (`domain/dryWindow.ts`) ; section masquée une fois la nuit venue
+- [x] Soleil et lumière (proposition B3) : lever, coucher et indice UV étaient déjà là ; s'ajoutent la durée du jour et les deux heures dorées (`dayLightSpan`, sans durée inventée si lever ou coucher manque)
 
 **Sortie** : le modèle retenu est justifié par des critères chiffrés, vérifiés contre des mesures réelles quand une station représentative existe ; `npm run verify` vert.
 
