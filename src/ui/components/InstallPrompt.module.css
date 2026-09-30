@@ -1,21 +1,49 @@
+/*
+ * Posee au-dessus de la barre d'onglets basse (56 px sous 640 px) : hors du
+ * flux, elle ne decale rien (CLS) quand le navigateur l'autorise tard.
+ */
 .banner {
+  position: fixed;
+  right: var(--esp-4);
+  bottom: calc(56px + env(safe-area-inset-bottom) + var(--esp-2));
+  left: var(--esp-4);
+  z-index: 30;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--esp-4);
-  margin-bottom: var(--esp-4);
+  gap: var(--esp-3) var(--esp-4);
+  max-width: 40rem;
+  margin: 0 auto;
   padding: var(--esp-3) var(--esp-4);
-  border: var(--filet);
+  border: var(--filet-encre);
   border-radius: var(--rayon);
   background: var(--papier-haut);
   color: var(--encre);
   font-size: var(--pas-s);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--encre) 18%, transparent);
+}
+
+@media (min-width: 640px) {
+  .banner {
+    bottom: var(--esp-4);
+  }
+}
+
+@media print {
+  .banner {
+    display: none;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: var(--esp-2);
 }
 
 .banner button {
   min-height: 44px;
-  padding: 0 var(--esp-6);
+  padding: 0 var(--esp-4);
   border: var(--filet);
   border-radius: var(--rayon);
   background: var(--papier);
@@ -29,4 +57,9 @@
 
 .banner button:hover {
   background: var(--grille-faible);
+}
+
+.banner .primary {
+  border-color: var(--encre);
+  font-weight: 600;
 }

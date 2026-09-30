@@ -8,6 +8,7 @@ import type { BlendedDay } from '../../domain/dailyBlend';
 import type { EnsembleDay } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
 import type { StationCheck } from '../../domain/stationCheck';
+import type { StationTrace } from '../../domain/stationTrace';
 import type { VigilanceSummary } from '../../domain/vigilance';
 import type {
   AlertRule,
@@ -50,6 +51,8 @@ export interface ForecastViewModel {
   readonly station: DatasetState<StationReport>;
   /** Dernier releve face aux modeles, null tant qu'il n'existe pas. */
   readonly stationCheck: StationCheck | null;
+  /** Mesure et modeles heure par heure sur les dernieres heures. */
+  readonly stationTrace: StationTrace | null;
   /** Vigilance Meteo-France du departement, et sa synthese a l'instant. */
   readonly vigilance: DatasetState<VigilanceReport>;
   readonly vigilanceSummary: VigilanceSummary | null;

@@ -57,41 +57,49 @@ export function registerServiceWorker(onUpdateAvailable: () => void): void {
   // apres coup ne se declenche jamais. `readyState === 'complete'` est
   // l'equivalent synchrone d'un `load` deja survenu.
   const onWindowLoaded = () => {
-    void navigator.serviceWorker.register('/sw.js').then((registration) => {
-      const notifyIfWaiting = () => {
-        if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
-          waitingWorker = registration.waiting;
-          onUpdateAvailable();
-        }
-      };
-      notifyIfWaiting();
-
-      registration.addEventListener('updatefound', () => {
-        const installing = registration.installing;
-        if (installing === null) {
+    void navigator.serviceWorker.register('/sw.js').then(
+      (registration: ServiceWorkerRegistration | undefined) => {
+        // Inscription refusee ou sans resultat (navigation privee, blocage) :
+        // l'application fonctionne sans service worker, sans bruit.
+        if (registration === undefined) {
           return;
         }
-        installing.addEventListener('statechange', () => {
-          if (installing.state === 'installed' && navigator.serviceWorker.controller !== null) {
-            waitingWorker = installing;
+        const notifyIfWaiting = () => {
+          if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
+            waitingWorker = registration.waiting;
             onUpdateAvailable();
           }
-        });
-      });
+        };
+        notifyIfWaiting();
 
-      let lastCheck = Date.now();
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') {
-          return;
-        }
-        const now = Date.now();
-        if (now - lastCheck < UPDATE_CHECK_INTERVAL_MS) {
-          return;
-        }
-        lastCheck = now;
-        void registration.update();
-      });
-    });
+        registration.addEventListener('updatefound', () => {
+          const installing = registration.installing;
+          if (installing === null) {
+            return;
+          }
+          installing.addEventListener('statechange', () => {
+            if (installing.state === 'installed' && navigator.serviceWorker.controller !== null) {
+              waitingWorker = installing;
+              onUpdateAvailable();
+            }
+          });
+        });
+
+        let lastCheck = Date.now();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState !== 'visible') {
+            return;
+          }
+          const now = Date.now();
+          if (now - lastCheck < UPDATE_CHECK_INTERVAL_MS) {
+            return;
+          }
+          lastCheck = now;
+          void registration.update();
+        });
+      },
+      () => undefined,
+    );
   };
 
   if (document.readyState === 'complete') {

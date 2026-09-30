@@ -30,6 +30,20 @@ describe('snapshotOf', () => {
     expect(snapshot.manual).toBe(false);
   });
 
+  it('joint le resume des 24 heures a venir, calcule sur le meme modele retenu', () => {
+    const snapshot = snapshotOf({
+      place: TEST_PLACE,
+      bundle,
+      verification: [],
+      preferred: null,
+      now: NOW,
+    });
+    expect(snapshot.status === 'ready' && snapshot.digest).toMatchObject({
+      tempMin: 21.4,
+      tempMax: 21.4,
+    });
+  });
+
   it('respecte le choix manuel enregistre pour ce lieu, et le signale', () => {
     const snapshot = snapshotOf({
       place: TEST_PLACE,
@@ -54,6 +68,6 @@ describe('snapshotOf', () => {
       preferred: null,
       now: NOW,
     });
-    expect(snapshot).toMatchObject({ status: 'ready', model: null, point: null });
+    expect(snapshot).toMatchObject({ status: 'ready', model: null, point: null, digest: null });
   });
 });

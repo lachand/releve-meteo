@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildHourlyTimeline } from '../../tests/factories';
 import {
+  ENSEMBLE_GUST_KMH,
   dailyEnsemble,
   exceedanceProbability,
   hourlyQuantiles,
@@ -88,6 +89,56 @@ describe('dailyEnsemble', () => {
       windGust: [],
     });
     expect(days[0]?.tempMax).toBeNull();
+  });
+});
+
+describe('dailyEnsemble, gel et rafales', () => {
+  const timeline = buildHourlyTimeline('2026-08-17T00:00', 24);
+  const flat = (value: number, dip?: number) =>
+    timeline.map((_, i) => (dip !== undefined && i === 5 ? dip : value));
+
+  it('donne la part des membres dont le minimum du jour est a 0 °C ou moins', () => {
+    const days = dailyEnsemble({
+      timeline,
+      // Minimums : -2, 0 (gel : le seuil est inclus), 1,5 et 3.
+      temperature: [flat(4, -2), flat(4, 0), flat(4, 1.5), flat(3)],
+      precipitation: [flat(0), flat(0), flat(0), flat(0)],
+      windGust: [],
+    });
+    expect(days[0]?.frostProbability).toBe(0.5);
+  });
+
+  it('donne la part des membres dont la rafale maximale atteint le seuil', () => {
+    const days = dailyEnsemble({
+      timeline,
+      temperature: [flat(10), flat(10), flat(10), flat(10)],
+      precipitation: [flat(0), flat(0), flat(0), flat(0)],
+      windGust: [flat(30, 70), flat(30, ENSEMBLE_GUST_KMH), flat(30, 59), flat(30)],
+    });
+    expect(days[0]?.gustProbability).toBe(0.5);
+  });
+
+  it('ne dit rien des rafales quand les membres n en donnent pas : null, pas 0 %', () => {
+    const days = dailyEnsemble({
+      timeline,
+      temperature: [flat(10)],
+      precipitation: [flat(0)],
+      windGust: [],
+    });
+    expect(days[0]?.gustProbability).toBeNull();
+    expect(days[0]?.frostProbability).toBe(0);
+  });
+
+  it('ignore une rafale lacunaire plutot que de la completer par zero', () => {
+    const holey = timeline.map((_, i) => (i < 12 ? null : 80));
+    const days = dailyEnsemble({
+      timeline,
+      temperature: [flat(10), flat(10)],
+      precipitation: [flat(0), flat(0)],
+      windGust: [holey, flat(10)],
+    });
+    // Seul le membre complet compte, et il reste sous le seuil.
+    expect(days[0]?.gustProbability).toBe(0);
   });
 });
 

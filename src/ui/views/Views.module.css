@@ -99,3 +99,16 @@
   content: '\2212  ';
   color: var(--marge);
 }
+
+/* Bulletin en une phrase, en tete de « Maintenant » : serif italique, comme une note de marge. */
+.briefing {
+  margin: 0 0 var(--esp-4);
+  padding-bottom: var(--esp-3);
+  border-bottom: 1px dotted var(--grille);
+  font-family: var(--font-titre);
+  font-size: var(--pas-l);
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--encre);
+  max-width: 48rem;
+}

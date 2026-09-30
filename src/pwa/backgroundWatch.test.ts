@@ -18,7 +18,8 @@ type Permission = 'default' | 'granted' | 'denied';
 interface FakeBrowser {
   permission: Permission;
   requested: Permission;
-  syncState: 'granted' | 'prompt' | 'denied' | 'throws';
+  syncState: 'granted' | 'prompt' | 'denied' | 'throws' | 'hangs';
+  tagsFail: boolean;
   tags: string[];
   registerFails: boolean;
   withSync: boolean;
@@ -38,6 +39,7 @@ function install(overrides: Partial<FakeBrowser> = {}) {
     registerFails: false,
     withSync: true,
     lateRegistration: false,
+    tagsFail: false,
     ...overrides,
   };
   const periodicSync = {
@@ -53,7 +55,11 @@ function install(overrides: Partial<FakeBrowser> = {}) {
       browser.tags = browser.tags.filter((t) => t !== tag);
       return Promise.resolve();
     }),
-    getTags: vi.fn(() => Promise.resolve([...browser.tags])),
+    getTags: vi.fn(() =>
+      browser.tagsFail
+        ? Promise.reject(new DOMException('etat invalide', 'InvalidStateError'))
+        : Promise.resolve([...browser.tags]),
+    ),
   };
   const registration = {
     active: { postMessage: (message: unknown) => posted.push(message) },
@@ -78,10 +84,14 @@ function install(overrides: Partial<FakeBrowser> = {}) {
   Object.defineProperty(navigator, 'permissions', {
     configurable: true,
     value: {
-      query: () =>
-        browser.syncState === 'throws'
+      query: () => {
+        if (browser.syncState === 'hangs') {
+          return new Promise<never>(() => undefined);
+        }
+        return browser.syncState === 'throws'
           ? Promise.reject(new TypeError('unknown permission'))
-          : Promise.resolve({ state: browser.syncState }),
+          : Promise.resolve({ state: browser.syncState });
+      },
     },
   });
 }
@@ -106,6 +116,20 @@ describe('readWatchStatus', () => {
   it('attend l enregistrement du service worker a la premiere visite', async () => {
     install({ lateRegistration: true });
     expect(await readWatchStatus()).toBe('off');
+  });
+
+  it('dit « non pris en charge » plutot que de rester en attente quand la lecture des etiquettes echoue', async () => {
+    install({ tagsFail: true });
+    expect(await readWatchStatus()).toBe('unsupported');
+  });
+
+  it('ne reste pas suspendu a une requete de permission qui ne repond jamais', async () => {
+    vi.useFakeTimers();
+    install({ syncState: 'hangs' });
+    const status = readWatchStatus();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await status).toBe('needs-install');
+    vi.useRealTimers();
   });
 
   it('distingue bloque, a installer, eteinte et active', async () => {

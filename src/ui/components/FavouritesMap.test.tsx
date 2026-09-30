@@ -28,6 +28,7 @@ const SNAPSHOTS: readonly FavouriteSnapshot[] = [
     status: 'ready',
     model: 'arome',
     manual: false,
+    digest: { tempMin: 12, tempMax: 22, rainMm: 4.2, gustMax: 48 },
     point: {
       ...hourlyPoint('2026-09-28T16:00', { temperature: 21.4, weatherCode: 61, cloudCover: 100 }),
       model: 'arome',
@@ -39,6 +40,7 @@ const SNAPSHOTS: readonly FavouriteSnapshot[] = [
     status: 'ready',
     model: 'ecmwf',
     manual: true,
+    digest: { tempMin: 11, tempMax: 16, rainMm: 0, gustMax: 71 },
     point: {
       ...hourlyPoint('2026-09-28T16:00', { temperature: 15.6, weatherCode: 3 }),
       model: 'ecmwf',

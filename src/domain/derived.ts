@@ -1,3 +1,6 @@
+import { localIsoFromUtc, utcMsFromLocalIso } from './time';
+import type { LocalIsoHour } from './types';
+
 // Constantes de Magnus-Tetens usuelles en meteorologie.
 const MAGNUS_B = 17.62;
 const MAGNUS_C = 243.12;
@@ -102,4 +105,36 @@ export function solarYieldKwh(
   const totalIrradianceWhM2 = knownValues.reduce((sum, value) => sum + value, 0);
   const peakSunHours = totalIrradianceWhM2 / STANDARD_TEST_CONDITION_WM2;
   return peakSunHours * peakKwp * (1 - systemLoss);
+}
+
+/** Duree du jour et heures dorees (la premiere heure apres le lever, la derniere avant le coucher). */
+export interface DayLightSpan {
+  /** Du lever au coucher, minutes. */
+  readonly minutes: number;
+  readonly morningGolden: { readonly from: LocalIsoHour; readonly to: LocalIsoHour };
+  readonly eveningGolden: { readonly from: LocalIsoHour; readonly to: LocalIsoHour };
+}
+
+const LOCAL_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Duree du jour a partir des heures locales de lever et de coucher, ou
+ * null si l'une manque, est illisible, ou si le coucher ne suit pas le
+ * lever : jamais une duree inventee.
+ */
+export function dayLightSpan(sunrise: string | null, sunset: string | null): DayLightSpan | null {
+  if (sunrise === null || sunset === null || !LOCAL_ISO.test(sunrise) || !LOCAL_ISO.test(sunset)) {
+    return null;
+  }
+  const rise = utcMsFromLocalIso(sunrise);
+  const set = utcMsFromLocalIso(sunset);
+  if (set <= rise) {
+    return null;
+  }
+  return {
+    minutes: Math.round((set - rise) / 60000),
+    morningGolden: { from: sunrise, to: localIsoFromUtc(rise + HOUR_MS) },
+    eveningGolden: { from: localIsoFromUtc(set - HOUR_MS), to: sunset },
+  };
 }

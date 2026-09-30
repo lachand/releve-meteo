@@ -19,6 +19,24 @@ function Harness({ initial = 'now' as Key }: { readonly initial?: Key }) {
 }
 
 describe('Tabs', () => {
+  it('affiche l icone de chaque intercalaire, masquee aux lecteurs d ecran', () => {
+    const items: readonly TabItem<Key>[] = ITEMS.map((item) => ({
+      ...item,
+      icon: <svg data-testid={`icone-${item.key}`} />,
+    }));
+    render(<Tabs items={items} active="now" onChange={vi.fn()} label="Vues" idPrefix="t" />);
+    const tab = screen.getByRole('tab', { name: 'Maintenant' });
+    const icon = screen.getByTestId('icone-now');
+    expect(tab).toContainElement(icon);
+    expect(icon.parentElement).toHaveAttribute('aria-hidden', 'true');
+    // Le nom accessible reste le libelle complet, sans rien de l'icone.
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'MaintenantMaintenant',
+      'HeuresHeures',
+      'JoursJours',
+    ]);
+  });
+
   it('expose les roles ARIA tablist et tab', () => {
     render(<Harness />);
     expect(screen.getByRole('tablist', { name: 'Vues' })).toBeInTheDocument();

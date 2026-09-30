@@ -1,7 +1,14 @@
+import { briefingAt } from '../../domain/briefing';
+import { bestDryWindow } from '../../domain/dryWindow';
+import { mountainOutlook } from '../../domain/mountainOutlook';
+import { briefingSentence } from '../briefingPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
 import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
 import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
+import { DryWindowPanel } from '../components/DryWindowPanel';
+import { MountainPanel } from '../components/MountainPanel';
+import { shouldShowMountain } from '../mountainPresentation';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
 import { NowPanel } from '../components/NowPanel';
@@ -20,11 +27,33 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
   const confidenceNow =
     cascade.nowIndex === -1 ? null : (vm.confidence?.[cascade.nowIndex] ?? null);
 
+  const briefing =
+    nowPoint === null
+      ? null
+      : briefingAt({
+          bundle: vm.bundle,
+          index: cascade.nowIndex,
+          active: { model: nowPoint.model, temperature: nowPoint.temperature.value },
+          verdict: confidenceNow,
+        });
+
+  const dryWindow = bestDryWindow({
+    points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+  });
+
+  const mountain = mountainOutlook({
+    points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+    elevation: vm.place.elevation,
+  });
+
   return (
     <div className={styles.stack}>
       <VigilanceBanner state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
       <AlertBanner hits={vm.alertHits} windUnit={vm.windUnit} />
       <Section eyebrow="Maintenant" className={styles.nowSheet}>
+        {briefing !== null && <p className={styles.briefing}>{briefingSentence(briefing)}</p>}
         <NowPanel
           point={nowPoint}
           confidence={confidenceNow}
@@ -51,6 +80,23 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           <VigilanceLine state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
         </Section>
       </div>
+
+      {!(dryWindow.status === 'none' && dryWindow.reason === 'night') && (
+        <Section eyebrow="Aujourd’hui" title="Sortir sans pluie">
+          <DryWindowPanel window={dryWindow} windUnit={vm.windUnit} />
+        </Section>
+      )}
+
+      {mountain !== null &&
+        shouldShowMountain({
+          kind: vm.terrain?.kind ?? null,
+          elevation: vm.place.elevation,
+          outlook: mountain,
+        }) && (
+          <Section eyebrow="72 heures" title="Neige et isotherme 0 °C">
+            <MountainPanel outlook={mountain} />
+          </Section>
+        )}
 
       <Section
         eyebrow="Heure par heure"

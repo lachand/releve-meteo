@@ -5,8 +5,17 @@ import type { ModelVerification } from '../../domain/reliability';
 import type { DatasetState } from '../hooks/useDataset';
 import { ReliabilityPanel } from './ReliabilityPanel';
 
-function readyState(report: VerificationReport): DatasetState<VerificationReport> {
-  return { status: 'ready', value: report, fetchedAt: 0, stale: false };
+function readyState(
+  report: Omit<VerificationReport, 'observedUntil'> & {
+    readonly observedUntil?: VerificationReport['observedUntil'];
+  },
+): DatasetState<VerificationReport> {
+  return {
+    status: 'ready',
+    value: { observedUntil: null, ...report },
+    fetchedAt: 0,
+    stale: false,
+  };
 }
 
 const OBSERVED_TEMPERATURE_REFERENCE: VerificationReference = {
@@ -122,6 +131,32 @@ describe('ReliabilityPanel', () => {
     expect(item?.textContent).toBe(
       'Température : mesures de la station Lyon / Bron (12,3 km, −15 m), du 1 juillet au 30 juillet.',
     );
+  });
+
+  it('dit jusqu a quelle heure la station a mesure, et que les scores suivent les heures', () => {
+    render(
+      <ReliabilityPanel
+        state={readyState({
+          verifications: VERIFICATIONS,
+          references: [OBSERVED_TEMPERATURE_REFERENCE],
+          observedUntil: '2026-09-28T12:00',
+        })}
+      />,
+    );
+    expect(screen.getByText(/Dernière mesure de la station : lundi 12h/)).toBeInTheDocument();
+    expect(screen.getByText(/Les scores se mettent à jour toutes les heures/)).toBeInTheDocument();
+  });
+
+  it('ne parle pas de derniere mesure quand la reference est la reanalyse', () => {
+    render(
+      <ReliabilityPanel
+        state={readyState({
+          verifications: VERIFICATIONS,
+          references: [ESTIMATED_PRECIPITATION_REFERENCE],
+        })}
+      />,
+    );
+    expect(screen.queryByText(/Dernière mesure de la station/)).not.toBeInTheDocument();
   });
 
   it('redige la phrase de reference pour une reanalyse ERA5 et affiche la mise en garde', () => {

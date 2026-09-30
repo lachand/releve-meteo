@@ -120,20 +120,25 @@ async function runWatch(): Promise<void> {
   }
   const now = new Date();
   const notifications = await collectWatchNotifications(state, now);
+  // Seules les notifications effectivement remises sont notees : si le
+  // navigateur en refuse une (permission retiree entre-temps), elle sera
+  // retentee a la prochaine veille.
+  const shown: string[] = [];
   for (const notification of notifications) {
-    await self.registration.showNotification(notification.title, {
-      body: notification.body,
-      tag: notification.key,
-      lang: 'fr',
-      icon: '/icons/icon-192.png',
-      data: { url: notification.url },
-    });
+    try {
+      await self.registration.showNotification(notification.title, {
+        body: notification.body,
+        tag: notification.key,
+        lang: 'fr',
+        icon: '/icons/icon-192.png',
+        data: { url: notification.url },
+      });
+      shown.push(notification.key);
+    } catch {
+      // Non remise : reessayee a la prochaine veille.
+    }
   }
-  await markNotified(
-    notifications.map((notification) => notification.key),
-    now,
-    now.getTime(),
-  );
+  await markNotified(shown, now, now.getTime());
   const windows = await self.clients.matchAll({ type: 'window' });
   for (const client of windows) {
     client.postMessage({ type: WATCH_DONE_MESSAGE });

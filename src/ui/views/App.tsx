@@ -14,6 +14,7 @@ import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
 import { stationCheck } from '../../domain/stationCheck';
+import { stationTrace } from '../../domain/stationTrace';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
 import type { ForecastBundle, Place } from '../../domain/types';
 import { summarizeVigilance } from '../../domain/vigilance';
@@ -29,6 +30,7 @@ import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
 import { useBackgroundWatch } from '../hooks/useBackgroundWatch';
+import { DaysIcon, HoursIcon, MapIcon, ModelsIcon, ReliabilityIcon, TodayIcon } from '../tabIcons';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
 import { useGeolocation } from '../hooks/useGeolocation';
@@ -60,12 +62,12 @@ const ReliabilityView = lazy(() =>
 const NO_HITS: readonly AlertHit[] = [];
 
 const TABS: readonly TabItem<ViewKey>[] = [
-  { key: 'jour', label: 'Aujourd’hui', short: 'Auj.' },
-  { key: 'heures', label: 'Heure par heure', short: 'Heures' },
-  { key: 'jours', label: '15 jours', short: '15 j' },
-  { key: 'carte', label: 'Cartes', short: 'Cartes' },
-  { key: 'modeles', label: 'Modèles', short: 'Modèles' },
-  { key: 'fiabilite', label: 'Fiabilité', short: 'Fiabilité' },
+  { key: 'jour', label: 'Aujourd’hui', short: 'Auj.', icon: <TodayIcon /> },
+  { key: 'heures', label: 'Heure par heure', short: 'Heures', icon: <HoursIcon /> },
+  { key: 'jours', label: '15 jours', short: '15 j', icon: <DaysIcon /> },
+  { key: 'carte', label: 'Cartes', short: 'Cartes', icon: <MapIcon /> },
+  { key: 'modeles', label: 'Modèles', short: 'Modèles', icon: <ModelsIcon /> },
+  { key: 'fiabilite', label: 'Fiabilité', short: 'Fiab.', icon: <ReliabilityIcon /> },
 ];
 
 function examplePlace(
@@ -133,6 +135,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
   const { available: installAvailable, promptInstall } = useInstallPrompt();
+  const [installDismissed, setInstallDismissed] = useState(false);
   const preferences = usePreferences();
   const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
@@ -243,6 +246,10 @@ export function App() {
         station.status === 'ready'
           ? stationCheck({ records: station.value.records, models: station.value.models, now })
           : null,
+      stationTrace:
+        station.status === 'ready'
+          ? stationTrace({ records: station.value.records, models: station.value.models, now })
+          : null,
       vigilance,
       vigilanceSummary:
         vigilance.status === 'ready' && vigilance.value.bulletin !== null
@@ -323,11 +330,12 @@ export function App() {
         Aller au relevé
       </a>
       {updateAvailable && <UpdateBanner onRefresh={applyUpdate} />}
-      {!updateAvailable && installAvailable && (
+      {!updateAvailable && installAvailable && !installDismissed && (
         <InstallPrompt
           onInstall={() => {
             void promptInstall();
           }}
+          onDismiss={() => setInstallDismissed(true)}
         />
       )}
 

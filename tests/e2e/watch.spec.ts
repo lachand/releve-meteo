@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect } from '@playwright/test';
-import type { BrowserContext, Page } from '@playwright/test';
+import type { BrowserContext, Page, Worker } from '@playwright/test';
 import { test } from './fixtures';
 import { LYON_URL, stubApis } from './apiStub';
 
@@ -134,11 +134,48 @@ async function dispatchPeriodicSync(page: Page, tag: string): Promise<void> {
   });
 }
 
-function notificationTitles(page: Page): Promise<string[]> {
-  return page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.ready;
-    return (await registration.getNotifications()).map((n) => n.title).sort();
+/** Notification que le service worker a demande d'afficher. */
+interface Shown {
+  readonly title: string;
+  readonly body: string;
+}
+
+/**
+ * Espionne `showNotification` dans le service worker : le test verifie ce
+ * que la veille decide de notifier, pas la couche de notifications du
+ * systeme, absente ou reduite dans les Chromium sans interface des CI.
+ */
+async function spyOnNotifications(context: BrowserContext): Promise<Worker> {
+  const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  await worker.evaluate(() => {
+    // Chromium sans interface refuse les notifications par defaut, meme
+    // apres grantPermissions : la veille s'arreterait avant de decider.
+    Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
+    const scope = self as unknown as {
+      __shown: { title: string; body: string }[];
+      registration: {
+        showNotification(title: string, options?: { body?: string }): Promise<void>;
+      };
+    };
+    scope.__shown = [];
+    const registration = scope.registration;
+    const original = registration.showNotification.bind(registration);
+    registration.showNotification = async (title, options) => {
+      scope.__shown.push({ title, body: options?.body ?? '' });
+      try {
+        await original(title, options);
+      } catch {
+        // Pas de notifications dans ce navigateur de test : sans importance ici.
+      }
+    };
   });
+  return worker;
+}
+
+async function shownNotifications(worker: Worker): Promise<Shown[]> {
+  return worker.evaluate(
+    () => (self as unknown as { __shown: { title: string; body: string }[] }).__shown,
+  );
 }
 
 test('la veille notifie une alerte franchie et une vigilance orange, une seule fois', async ({
@@ -155,39 +192,42 @@ test('la veille notifie une alerte franchie et une vigilance orange, une seule f
   await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible({ timeout: 15000 });
   await page.evaluate(() => navigator.serviceWorker.ready);
   await seedWatch(page);
+  const worker = await spyOnNotifications(context);
 
   await dispatchPeriodicSync(page, 'releve-veille');
   await expect
-    .poll(() => notificationTitles(page), { timeout: 15000 })
+    .poll(async () => (await shownNotifications(worker)).map((n) => n.title).sort(), {
+      timeout: 15000,
+    })
     .toEqual(['Lyon · Température au-dessus de 5\u00a0°C', 'Vigilance orange orages · Rhône (69)']);
 
   // Provenance : le modele de la valeur, et la source de la vigilance.
-  const bodies = await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.ready;
-    return (await registration.getNotifications()).map((n) => n.body).sort();
-  });
+  const bodies = (await shownNotifications(worker)).map((n) => n.body).sort();
   expect(bodies[0]).toMatch(/^Dès .+ selon [A-Z][\w -]+, .+\.$/);
   expect(bodies[1]).toMatch(/Bulletin Météo-France de \d\dh, pour Lyon\.$/);
 
   // Une seconde veille ne renotifie rien : les cles sont notees.
-  await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.ready;
-    for (const notification of await registration.getNotifications()) {
-      notification.close();
-    }
-  });
   await dispatchPeriodicSync(page, 'releve-veille');
   await page.waitForTimeout(1500);
-  expect(await notificationTitles(page)).toEqual([]);
+  expect(await shownNotifications(worker)).toHaveLength(2);
 });
 
 test('les reglages disent ce que ce navigateur permet pour la veille, sans promesse', async ({
   page,
   browserName,
 }) => {
+  if (browserName === 'chromium') {
+    // Un Chromium sans interface refuse les notifications par defaut et
+    // l'interface dirait « bloquees », un autre etat que celui teste ici.
+    await page.addInitScript(() => {
+      Object.defineProperty(Notification, 'permission', {
+        configurable: true,
+        get: () => 'granted',
+      });
+    });
+  }
   await stubApis(page);
   await page.goto(LYON_URL);
-  await page.evaluate(() => navigator.serviceWorker.ready);
   await page.getByRole('button', { name: 'Réglages' }).click();
   const section = page.getByRole('region', { name: 'Veille en arrière-plan' });
   if (browserName === 'chromium') {
@@ -195,12 +235,13 @@ test('les reglages disent ce que ce navigateur permet pour la veille, sans prome
     // synchronisation periodique, et l'interface dit comment l'obtenir.
     await expect(section.getByRole('status')).toContainText(
       'n’accorde la veille qu’aux applications installées',
-      { timeout: 10000 },
+      { timeout: 15000 },
     );
   } else {
+    // Firefox et WebKit : service worker bloque ou sans synchronisation periodique.
     await expect(section.getByRole('status')).toContainText(
       'ne permet pas la veille en arrière-plan',
-      { timeout: 10000 },
+      { timeout: 15000 },
     );
     await expect(section.getByRole('button')).toHaveCount(0);
     return;

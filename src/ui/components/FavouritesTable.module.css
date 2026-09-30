@@ -1,0 +1,126 @@
+.scroller {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pas-s);
+}
+
+.table th,
+.table td {
+  padding: var(--esp-2) var(--esp-3);
+  text-align: right;
+  border-bottom: 1px dotted var(--grille);
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child,
+.table th:last-child,
+.table td:last-child {
+  text-align: left;
+}
+
+.table th {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+  border-bottom: var(--filet-encre);
+}
+
+.table th[aria-sort] {
+  color: var(--encre);
+}
+
+.sort {
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.table th[aria-sort='ascending'] .sort::after {
+  content: ' \25B2';
+  font-size: 0.6em;
+}
+
+.table th[aria-sort='descending'] .sort::after {
+  content: ' \25BC';
+  font-size: 0.6em;
+}
+
+.unit {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.name {
+  font-family: var(--font-titre);
+  font-size: var(--pas-m);
+}
+
+.open {
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--encre);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted var(--grille);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.open[aria-current='true'] {
+  font-weight: 600;
+  text-decoration-style: solid;
+  text-decoration-color: var(--marge);
+}
+
+.model {
+  color: var(--encre-faible);
+}
+
+.muted {
+  text-align: left;
+  color: var(--encre-faible);
+  font-style: italic;
+}
+
+/* Petit ecran : en-tetes sur deux lignes et marges serrees, pour que les six colonnes tiennent. */
+@media (max-width: 559px) {
+  .table {
+    font-size: var(--pas-xs);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--esp-2) 3px;
+  }
+
+  .table th {
+    letter-spacing: 0.04em;
+    white-space: normal;
+    vertical-align: bottom;
+  }
+
+  .sort {
+    text-align: inherit;
+  }
+
+  .name {
+    font-size: var(--pas-s);
+    white-space: normal;
+  }
+}

@@ -27,7 +27,8 @@ const MAX_SCORE =
 
 export function ModelRankingTable({ ranking, verification, activeModel }: ModelRankingProps) {
   return (
-    <div className={styles.scroller}>
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+    <div className={styles.scroller} role="region" aria-label="Classement des modèles" tabIndex={0}>
       <table className={styles.table}>
         <caption className="visually-hidden">
           Classement des modèles à l’instant présent, avec la contribution de chaque critère

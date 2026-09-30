@@ -34,5 +34,7 @@ describe('constants', () => {
   it('exprime les TTL de cache en millisecondes', () => {
     expect(CACHE_TTL_MS.forecast).toBe(60 * 60 * 1000);
     expect(CACHE_TTL_MS.vigilance).toBe(15 * 60 * 1000);
+    expect(CACHE_TTL_MS.verification).toBe(60 * 60 * 1000);
+    expect(CACHE_TTL_MS.station).toBe(30 * 60 * 1000);
   });
 });

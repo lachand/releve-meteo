@@ -23,6 +23,9 @@ type SyncRegistration = ServiceWorkerRegistration & {
 /** Attente maximale de l'enregistrement du service worker, ms. */
 const READY_WAIT_MS = 5000;
 
+/** Attente maximale d'une reponse du navigateur sur ses permissions, ms. */
+const PERMISSION_WAIT_MS = 3000;
+
 /** Rythme demande ; le navigateur l'allonge a sa guise, souvent a 12 h ou plus. */
 export const WATCH_MIN_INTERVAL_MS = 3 * 60 * 60 * 1000;
 
@@ -52,29 +55,42 @@ async function syncManager(): Promise<{
 /** Le navigateur accorde-t-il la synchronisation periodique (application installee) ? */
 async function syncGranted(): Promise<boolean> {
   try {
-    const status = await navigator.permissions.query({
-      // Absent des types DOM : permission propre a Chromium.
-      name: 'periodic-background-sync' as Parameters<typeof navigator.permissions.query>[0]['name'],
-    });
-    return status.state === 'granted';
+    const status = await Promise.race([
+      navigator.permissions.query({
+        // Absent des types DOM : permission propre a Chromium.
+        name: 'periodic-background-sync' as Parameters<
+          typeof navigator.permissions.query
+        >[0]['name'],
+      }),
+      // Une requete de permission qui ne repond pas ne doit pas laisser
+      // l'interface a « verification en cours ».
+      new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), PERMISSION_WAIT_MS)),
+    ]);
+    return status?.state === 'granted';
   } catch {
     return false;
   }
 }
 
 export async function readWatchStatus(): Promise<WatchStatus> {
-  const manager = await syncManager();
-  if (manager === null) {
+  try {
+    const manager = await syncManager();
+    if (manager === null) {
+      return 'unsupported';
+    }
+    if (Notification.permission === 'denied') {
+      return 'blocked';
+    }
+    const tags = await manager.sync.getTags();
+    if (tags.includes(WATCH_TAG) && Notification.permission === 'granted') {
+      return 'on';
+    }
+    return (await syncGranted()) ? 'off' : 'needs-install';
+  } catch {
+    // Etat du navigateur illisible (InvalidStateError...) : la veille n'est
+    // pas utilisable, et l'interface le dit au lieu d'attendre sans fin.
     return 'unsupported';
   }
-  if (Notification.permission === 'denied') {
-    return 'blocked';
-  }
-  const tags = await manager.sync.getTags();
-  if (tags.includes(WATCH_TAG) && Notification.permission === 'granted') {
-    return 'on';
-  }
-  return (await syncGranted()) ? 'off' : 'needs-install';
 }
 
 /** Demande la permission de notifier et inscrit la veille. */

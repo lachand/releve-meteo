@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { BlendedDay } from '../../domain/dailyBlend';
+import { ENSEMBLE_GUST_KMH } from '../../domain/ensemble';
 import type { EnsembleDay } from '../../domain/ensemble';
 import type { Preferences } from '../../domain/types';
 import {
@@ -41,11 +42,19 @@ function range(days: readonly BlendedDay[]): { min: number; max: number } | null
   return { min: Math.min(...values), max: Math.max(...values) };
 }
 
+/** En deca, une probabilite d'ensemble n'est que du bruit : on ne l'ecrit pas. */
+const NOTABLE_PROBABILITY = 0.1;
+
+function notable(probability: number | null | undefined): boolean {
+  return probability !== null && probability !== undefined && probability >= NOTABLE_PROBABILITY;
+}
+
 /**
  * Journées à venir : symbole, fourchette de température sur une échelle
  * commune (lecture d'un coup d'œil des tendances), cumul et durée de
  * pluie, rafale maximale, modèle retenu, et, quand l'ensemble ECMWF est
- * disponible, la probabilité de pluie qu'il donne.
+ * disponible, les probabilités de pluie, de gel et de rafales fortes qu'il
+ * donne.
  */
 export function DailyList({ days, ensemble, windUnit, today }: DailyListProps) {
   if (days.length === 0) {
@@ -105,6 +114,9 @@ export function DailyList({ days, ensemble, windUnit, today }: DailyListProps) {
                   {ens?.rainProbability !== undefined && ens.rainProbability !== null && (
                     <> · ens. {formatPercent(ens.rainProbability)}</>
                   )}
+                  {notable(ens?.frostProbability) && (
+                    <> · gel ens. {formatPercent(ens?.frostProbability ?? null)}</>
+                  )}
                 </span>
               </div>
               <div className={styles.wind}>
@@ -116,6 +128,14 @@ export function DailyList({ days, ensemble, windUnit, today }: DailyListProps) {
                   raf. max
                   {day.windDirectionDominant.value !== null &&
                     ` · vent du ${compassPoint(day.windDirectionDominant.value)}`}
+                  {notable(ens?.gustProbability) && (
+                    <>
+                      {' '}
+                      · {formatInteger(convertWindSpeed(ENSEMBLE_GUST_KMH, windUnit))}
+                      {'\u00a0'}
+                      {unit} et plus ens. {formatPercent(ens?.gustProbability ?? null)}
+                    </>
+                  )}
                 </span>
               </div>
               <div

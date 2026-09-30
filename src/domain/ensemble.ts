@@ -37,12 +37,18 @@ export interface EnsembleDay {
   readonly rainProbability: number | null;
   /** Part des membres annoncant au moins 10 mm sur la journee, [0, 1]. */
   readonly heavyRainProbability: number | null;
+  /** Part des membres dont le minimum du jour est a 0 °C ou moins, [0, 1]. */
+  readonly frostProbability: number | null;
+  /** Part des membres dont la rafale maximale atteint ENSEMBLE_GUST_KMH ; null sans rafale d'ensemble. */
+  readonly gustProbability: number | null;
   /** Nombre de membres ayant une journee complete. */
   readonly memberCount: number;
 }
 
 export const ENSEMBLE_RAIN_DAY_MM = 1;
 export const ENSEMBLE_HEAVY_RAIN_DAY_MM = 10;
+/** Rafale au-dela de laquelle le vent est fort (meme seuil que la fleche de vent), km/h. */
+export const ENSEMBLE_GUST_KMH = 60;
 /** Heures valides minimales pour qu'une journee de membre compte. */
 const MIN_HOURS_PER_DAY = 20;
 
@@ -124,6 +130,7 @@ export function dailyEnsemble(hourly: EnsembleHourly): readonly EnsembleDay[] {
     const maxima: number[] = [];
     const minima: number[] = [];
     const sums: number[] = [];
+    const gusts: number[] = [];
     for (const member of hourly.temperature) {
       const values = indices.map((i) => member[i] ?? null).filter((v): v is number => v !== null);
       if (values.length >= Math.min(MIN_HOURS_PER_DAY, indices.length)) {
@@ -135,6 +142,12 @@ export function dailyEnsemble(hourly: EnsembleHourly): readonly EnsembleDay[] {
       const values = indices.map((i) => member[i] ?? null).filter((v): v is number => v !== null);
       if (values.length >= Math.min(MIN_HOURS_PER_DAY, indices.length)) {
         sums.push(values.reduce((sum, v) => sum + v, 0));
+      }
+    }
+    for (const member of hourly.windGust) {
+      const values = indices.map((i) => member[i] ?? null).filter((v): v is number => v !== null);
+      if (values.length >= Math.min(MIN_HOURS_PER_DAY, indices.length)) {
+        gusts.push(Math.max(...values));
       }
     }
     // Journee tronquee en bout d'horizon (moins de MIN_HOURS_PER_DAY
@@ -149,6 +162,12 @@ export function dailyEnsemble(hourly: EnsembleHourly): readonly EnsembleDay[] {
       precipitation: quantiles(sums),
       rainProbability: exceedanceProbability(sums, ENSEMBLE_RAIN_DAY_MM),
       heavyRainProbability: exceedanceProbability(sums, ENSEMBLE_HEAVY_RAIN_DAY_MM),
+      // Gel : minimum <= 0 °C, soit -minimum >= 0.
+      frostProbability: exceedanceProbability(
+        minima.map((minimum) => -minimum),
+        0,
+      ),
+      gustProbability: exceedanceProbability(gusts, ENSEMBLE_GUST_KMH),
       memberCount: Math.max(maxima.length, sums.length),
     });
   }

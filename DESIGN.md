@@ -117,7 +117,7 @@ Condition météo : le code WMO est traduit en pictogramme (`src/ui/symbols/Weat
 
 ### 6.0 Structure
 
-Un carnet à intercalaires. En-tête « page de registre » (marque, recherche, favori, réglages ; puis nom du lieu en serif, fil département · altitude · terrain · coordonnées, date du relevé en italique), puis six onglets collants, puis la vue active. L'onglet ouvert est dans l'URL (`?vue=`), avec le lieu (`?lat=&lon=&nom=&alt=&dep=`).
+Un carnet à intercalaires. En-tête « page de registre » (marque, recherche, favori, réglages ; puis nom du lieu en serif, fil département · altitude · terrain · coordonnées, date du relevé en italique), puis six onglets collants (sous 640 px, une barre fixe en bas de l'écran, à portée du pouce, avec un pictogramme au trait et un libellé court par section), puis la vue active. L'onglet ouvert est dans l'URL (`?vue=`), avec le lieu (`?lat=&lon=&nom=&alt=&dep=`).
 
 | Onglet | Contenu |
 |---|---|

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { dewPoint, fogRisk, frostRisk, rollingSum, solarYieldKwh, windowTotal } from './derived';
+import {
+  dayLightSpan,
+  dewPoint,
+  fogRisk,
+  frostRisk,
+  rollingSum,
+  solarYieldKwh,
+  windowTotal,
+} from './derived';
 
 describe('dewPoint', () => {
   it('calcule 9,3 °C a 20 °C et 50 % HR, tolerance 0,1', () => {
@@ -97,5 +105,25 @@ describe('windowTotal', () => {
   it('rend null, jamais 0, sans aucune valeur connue', () => {
     expect(windowTotal([null, null])).toEqual({ total: null, missing: 2 });
     expect(windowTotal([])).toEqual({ total: null, missing: 0 });
+  });
+});
+
+describe('dayLightSpan', () => {
+  it('donne la duree du jour et les deux heures dorees, en heures locales', () => {
+    expect(dayLightSpan('2026-09-28T07:32', '2026-09-28T19:41')).toEqual({
+      minutes: 729,
+      morningGolden: { from: '2026-09-28T07:32', to: '2026-09-28T08:32' },
+      eveningGolden: { from: '2026-09-28T18:41', to: '2026-09-28T19:41' },
+    });
+  });
+
+  it('ne dit rien quand une des deux heures manque ou est illisible : jamais une duree inventee', () => {
+    expect(dayLightSpan(null, '2026-09-28T19:41')).toBeNull();
+    expect(dayLightSpan('2026-09-28T07:32', null)).toBeNull();
+    expect(dayLightSpan('nuit', '2026-09-28T19:41')).toBeNull();
+  });
+
+  it('refuse un coucher qui precede le lever', () => {
+    expect(dayLightSpan('2026-09-28T19:41', '2026-09-28T07:32')).toBeNull();
   });
 });
