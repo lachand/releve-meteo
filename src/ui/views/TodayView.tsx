@@ -1,11 +1,14 @@
 import { briefingAt } from '../../domain/briefing';
 import { bestDryWindow } from '../../domain/dryWindow';
+import { mountainOutlook } from '../../domain/mountainOutlook';
 import { briefingSentence } from '../briefingPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
 import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
 import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
 import { DryWindowPanel } from '../components/DryWindowPanel';
+import { MountainPanel } from '../components/MountainPanel';
+import { shouldShowMountain } from '../mountainPresentation';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
 import { NowPanel } from '../components/NowPanel';
@@ -37,6 +40,12 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
   const dryWindow = bestDryWindow({
     points: cascade.points.filter((point) => point !== null),
     now: vm.now,
+  });
+
+  const mountain = mountainOutlook({
+    points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+    elevation: vm.place.elevation,
   });
 
   return (
@@ -77,6 +86,17 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           <DryWindowPanel window={dryWindow} windUnit={vm.windUnit} />
         </Section>
       )}
+
+      {mountain !== null &&
+        shouldShowMountain({
+          kind: vm.terrain?.kind ?? null,
+          elevation: vm.place.elevation,
+          outlook: mountain,
+        }) && (
+          <Section eyebrow="72 heures" title="Neige et isotherme 0 °C">
+            <MountainPanel outlook={mountain} />
+          </Section>
+        )}
 
       <Section
         eyebrow="Heure par heure"

@@ -164,6 +164,10 @@ describe('App', { timeout: 30000 }, () => {
     expect(
       screen.getByRole('heading', { name: 'Sortir sans pluie' }).closest('section'),
     ).toHaveTextContent(/Sec jusqu’à la nuit, de \d+h à 20h, selon AROME\./);
+    // Lyon est en plaine et sans neige annoncee : pas de vue montagne.
+    expect(
+      screen.queryByRole('heading', { name: 'Neige et isotherme 0 °C' }),
+    ).not.toBeInTheDocument();
     // Bulletin : le modele, sa valeur, l'ecart chiffre des autres et la confiance.
     expect(
       screen.getByText(
