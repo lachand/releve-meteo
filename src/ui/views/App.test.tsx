@@ -377,6 +377,21 @@ describe('App', { timeout: 30000 }, () => {
     expect(await screen.findByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
   }, 20000);
 
+  it('juge velo, randonnee, linge et jardinage avec leurs criteres, sur le modele retenu', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    const heading = await screen.findByRole('heading', { name: 'Vélo, randonnée, linge, jardin' });
+    const section = heading.closest('section') as HTMLElement;
+    for (const name of ['Vélo', 'Randonnée', 'Linge qui sèche', 'Jardinage']) {
+      expect(within(section).getByText(name)).toBeInTheDocument();
+    }
+    expect(
+      within(section).getByText(/Jugé sur les heures de jour d’aujourd’hui/),
+    ).toBeInTheDocument();
+    await user.click(within(section).getByText('Vélo'));
+    expect(within(section).getAllByText(/Rafale maximale : /).length).toBeGreaterThan(0);
+  }, 20000);
+
   it('annonce la collecte des echeances courtes, avec les previsions deja enregistrees', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();
