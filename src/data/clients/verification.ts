@@ -265,7 +265,11 @@ export function buildVerifications(input: {
           if (!isInWindow(time, reference.window)) {
             continue;
           }
-          pairs.push({ predicted: predicted[index] ?? null, observed: truth.get(time) ?? null });
+          pairs.push({
+            predicted: predicted[index] ?? null,
+            observed: truth.get(time) ?? null,
+            time: time as LocalIsoHour,
+          });
         }
         verifications.push(
           verifyModel({

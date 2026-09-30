@@ -17,6 +17,7 @@ import {
 import type { DatasetState } from '../hooks/useDataset';
 import { MODEL_LABELS, modelColor, modelColorVar } from '../modelPresentation';
 import { VARIABLE_LABELS, VARIABLE_UNITS } from '../selectionExplanation';
+import { PeriodBiasTable } from './PeriodBiasTable';
 import styles from './ReliabilityPanel.module.css';
 
 const LEADS = [1, 2, 3, 5, 7] as const;
@@ -212,9 +213,11 @@ function VariableTable({
 
 interface ReliabilityPanelProps {
   readonly state: DatasetState<VerificationReport>;
+  /** Modele retenu : son biais par moment de la journee est dit en premier. */
+  readonly activeModel?: ModelId | null;
 }
 
-export function ReliabilityPanel({ state }: ReliabilityPanelProps) {
+export function ReliabilityPanel({ state, activeModel = null }: ReliabilityPanelProps) {
   if (state.status === 'idle') {
     return null;
   }
@@ -283,6 +286,9 @@ export function ReliabilityPanel({ state }: ReliabilityPanelProps) {
           </h3>
           <VariableTable variable={variable} verification={verifications} />
           {variable === 'temperature' && <ErrorByLeadChart verification={verifications} />}
+          {variable === 'temperature' && (
+            <PeriodBiasTable verification={verifications} activeModel={activeModel} />
+          )}
         </section>
       ))}
 

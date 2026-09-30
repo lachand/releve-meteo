@@ -365,6 +365,10 @@ describe('App', { timeout: 30000 }, () => {
     expect(
       screen.getByRole('table', { name: /Erreur absolue moyenne.*Température/ }),
     ).toBeInTheDocument();
+    // Biais de la prevision de la veille selon le moment de la journee.
+    expect(
+      await screen.findByRole('heading', { name: 'Biais selon le moment de la journée' }),
+    ).toBeInTheDocument();
 
     // Controle au dernier releve : METAR de 10 h UTC (12 h locale), 26 °C.
     // Jeu de donnees distinct de la verification : il peut arriver apres.

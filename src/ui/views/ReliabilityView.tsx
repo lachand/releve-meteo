@@ -45,7 +45,7 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
         eyebrow="Fiabilité locale"
         title={`Qui a vu juste à ${vm.place.alias ?? vm.place.name}`}
       >
-        <ReliabilityPanel state={vm.verification} />
+        <ReliabilityPanel state={vm.verification} activeModel={vm.cascade.activeModel} />
       </Section>
     </div>
   );
