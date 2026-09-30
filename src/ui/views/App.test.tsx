@@ -373,6 +373,23 @@ describe('App', { timeout: 30000 }, () => {
     expect(await screen.findByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
   }, 20000);
 
+  it('compare hier, prevu la veille et mesure, station a station', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    await user.click(screen.getByRole('tab', { name: 'Fiabilité' }));
+    const heading = await screen.findByRole('heading', { name: 'Hier, prévu contre réel' });
+    const section = heading.closest('section') as HTMLElement;
+    const table = await within(section).findByRole(
+      'table',
+      { name: /telle qu’il la prévoyait la veille/ },
+      { timeout: 8000 },
+    );
+    expect(within(table).getAllByRole('row').length).toBeGreaterThan(1);
+    expect(within(section).getByText(/la station Lyon \/ Bron a mesuré de/)).toBeInTheDocument();
+  }, 20000);
+
   it('confronte la valeur du modele retenu au dernier releve de la station', async () => {
     server.use(...liveHandlers());
     await openLyon();

@@ -5,10 +5,13 @@ import {
   buildForecastUrl,
   buildNowcastUrl,
   buildStationPointUrl,
+  buildStationPreviousDayUrl,
   fetchForecast,
   fetchNowcast,
   fetchStationPoint,
+  fetchStationPreviousDay,
   mapStationPoint,
+  mapStationPreviousDay,
   OPEN_METEO_MODEL_IDS,
   STATION_POINT_PAST_HOURS,
 } from './openMeteo';
@@ -257,5 +260,97 @@ describe('fetchStationPoint', () => {
       models: ['arome'],
     });
     expect(failed.ok).toBe(false);
+  });
+});
+
+describe('buildStationPreviousDayUrl', () => {
+  it('demande la temperature prevue la veille au point de la station, sur deux jours passes', () => {
+    const url = new URL(
+      buildStationPreviousDayUrl({
+        latitude: 45.7167,
+        longitude: 4.95,
+        elevation: 200,
+        models: ['arome', 'ecmwf'],
+      }),
+    );
+    expect(url.origin).toBe('https://previous-runs-api.open-meteo.com');
+    expect(url.searchParams.get('elevation')).toBe('200');
+    expect(url.searchParams.get('models')).toBe('meteofrance_arome_france_hd,ecmwf_ifs025');
+    expect(url.searchParams.get('hourly')).toBe('temperature_2m_previous_day1');
+    expect(url.searchParams.get('past_days')).toBe('2');
+    expect(url.searchParams.get('forecast_days')).toBe('1');
+    expect(url.searchParams.get('timezone')).toBe('Europe/Paris');
+  });
+
+  it("laisse Open-Meteo choisir l'altitude quand celle de la station est inconnue", () => {
+    const url = new URL(
+      buildStationPreviousDayUrl({
+        latitude: 45,
+        longitude: 5,
+        elevation: null,
+        models: ['arome'],
+      }),
+    );
+    expect(url.searchParams.has('elevation')).toBe(false);
+  });
+});
+
+describe('mapStationPreviousDay', () => {
+  const time = ['2026-09-27T11:00', '2026-09-27T12:00'];
+  const base = {
+    latitude: 45.7,
+    longitude: 4.9,
+    elevation: 200,
+    timezone: 'Europe/Paris',
+    utc_offset_seconds: 7200,
+  };
+
+  it('lit les cles suffixees par modele et omet un modele vide', () => {
+    const result = mapStationPreviousDay(
+      {
+        ...base,
+        hourly: {
+          time,
+          temperature_2m_previous_day1_meteofrance_arome_france_hd: [24.1, null],
+          temperature_2m_previous_day1_ecmwf_ifs025: [null, null],
+        },
+      },
+      ['arome', 'ecmwf'],
+    );
+    expect(result).toEqual({
+      ok: true,
+      value: { timeline: time, temperature: { arome: [24.1, null] } },
+    });
+  });
+
+  it('lit la cle nue pour un seul modele', () => {
+    const result = mapStationPreviousDay(
+      { ...base, hourly: { time, temperature_2m_previous_day1: [23, 24] } },
+      ['arome'],
+    );
+    expect(result.ok && result.value.temperature.arome).toEqual([23, 24]);
+  });
+});
+
+describe('fetchStationPreviousDay', () => {
+  it('rend les series par modele, ou propage un echec', async () => {
+    server.use(
+      http.get('https://previous-runs-api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({
+          hourly: { time: ['2026-09-27T12:00'], temperature_2m_previous_day1: [25] },
+        }),
+      ),
+    );
+    const input = { latitude: 45, longitude: 5, elevation: 300, models: ['arome' as const] };
+    const ok = await fetchStationPreviousDay(input);
+    expect(ok.ok && ok.value.temperature.arome).toEqual([25]);
+
+    server.use(
+      http.get(
+        'https://previous-runs-api.open-meteo.com/v1/forecast',
+        () => new HttpResponse(null, { status: 400 }),
+      ),
+    );
+    expect((await fetchStationPreviousDay(input)).ok).toBe(false);
   });
 });

@@ -15,6 +15,7 @@ import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
 import { stationCheck } from '../../domain/stationCheck';
 import { stationTrace } from '../../domain/stationTrace';
+import { yesterdayReview } from '../../domain/yesterdayReview';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
 import type { ForecastBundle, Place } from '../../domain/types';
 import { summarizeVigilance } from '../../domain/vigilance';
@@ -249,6 +250,14 @@ export function App() {
       stationTrace:
         station.status === 'ready'
           ? stationTrace({ records: station.value.records, models: station.value.models, now })
+          : null,
+      yesterday:
+        station.status === 'ready'
+          ? yesterdayReview({
+              records: station.value.records,
+              forecasts: station.value.previousDay,
+              now,
+            })
           : null,
       vigilance,
       vigilanceSummary:

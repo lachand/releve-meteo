@@ -1,6 +1,7 @@
 import { ReliabilityPanel } from '../components/ReliabilityPanel';
 import { StationCheckPanel } from '../components/StationCheck';
 import { StationTraceChart } from '../components/StationTraceChart';
+import { YesterdayPanel } from '../components/YesterdayPanel';
 import { Section } from './Section';
 import styles from './Views.module.css';
 import type { ForecastViewModel } from './viewModel';
@@ -25,6 +26,13 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
           />
         </Section>
       )}
+      <Section eyebrow="Carnet d’hier" title="Hier, prévu contre réel">
+        <YesterdayPanel
+          state={vm.station}
+          review={vm.yesterday}
+          activeModel={vm.cascade.activeModel}
+        />
+      </Section>
       <Section
         eyebrow="Fiabilité locale"
         title={`Qui a vu juste à ${vm.place.alias ?? vm.place.name}`}

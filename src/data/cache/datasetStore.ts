@@ -32,7 +32,8 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   airQuality: 1,
   nowcast: 1,
   // v2 : temperatures des modeles au point de la station.
-  station: 2,
+  // v3 : releve sur 60 h et previsions de la veille (hier, prevu contre reel).
+  station: 3,
   grid: 1,
   vigilance: 1,
   watch: 1,

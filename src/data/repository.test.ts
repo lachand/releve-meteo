@@ -456,14 +456,20 @@ describe('getStationReport', () => {
     const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.value).toEqual({ match: null, records: [], models: null });
+    expect(result.value.value).toEqual({
+      match: null,
+      records: [],
+      models: null,
+      previousDay: null,
+    });
     expect(meteostatCalls).toBe(0);
   });
 
-  it('garde les releves des 36 dernieres heures et lit les modeles au point de la station', async () => {
+  it('garde les releves des 60 dernieres heures et lit les modeles au point de la station', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
     const pointRequests: URL[] = [];
+    const previousRequests: URL[] = [];
     server.use(
       http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
       http.get('https://api.open-meteo.com/v1/forecast', ({ request }) => {
@@ -472,10 +478,17 @@ describe('getStationReport', () => {
           hourly: { time: ['2026-09-28T11:00', '2026-09-28T12:00'], temperature_2m: [24.1, 25.2] },
         });
       }),
+      http.get('https://previous-runs-api.open-meteo.com/v1/forecast', ({ request }) => {
+        previousRequests.push(new URL(request.url));
+        return HttpResponse.json({
+          hourly: { time: ['2026-09-27T12:00'], temperature_2m_previous_day1: [21.5] },
+        });
+      }),
       http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
         const body = [
           HEADER,
-          '2026,9,26,10,12.0,metar,80,metar', // plus de 36 h : ignore
+          '2026,9,25,10,9.0,metar,80,metar', // plus de 60 h : ignore
+          '2026,9,26,10,12.0,metar,80,metar', // hier n'est pas encore sorti de la fenetre
           '2026,9,28,9,25.0,metar,41,metar',
           '2026,9,28,10,26.0,metar,37,metar',
         ].join('\n');
@@ -488,16 +501,22 @@ describe('getStationReport', () => {
     const report = result.value.value;
     expect(report.match?.station.id).toBe('07480');
     expect(report.records.map((record) => record.time)).toEqual([
+      '2026-09-26T12:00',
       '2026-09-28T11:00',
       '2026-09-28T12:00',
     ]);
-    expect(report.records[1]?.temperature).toEqual({ value: 26, provenance: 'observed' });
+    expect(report.records[2]?.temperature).toEqual({ value: 26, provenance: 'observed' });
     // Station a station : coordonnees et altitude de la station, pas du lieu.
     expect(pointRequests).toHaveLength(1);
     expect(pointRequests[0]?.searchParams.get('latitude')).toBe('45.5');
     expect(pointRequests[0]?.searchParams.get('longitude')).toBe('5.5');
     expect(pointRequests[0]?.searchParams.get('elevation')).toBe('450');
     expect(report.models?.temperature.arome).toEqual([24.1, 25.2]);
+    // Hier, prevu la veille : meme point et meme altitude que la station.
+    expect(previousRequests).toHaveLength(1);
+    expect(previousRequests[0]?.searchParams.get('latitude')).toBe('45.5');
+    expect(previousRequests[0]?.searchParams.get('elevation')).toBe('450');
+    expect(report.previousDay?.temperature.arome).toEqual([21.5]);
   });
 
   it('rend les releves sans modeles quand le point de station ne repond pas', async () => {
@@ -520,6 +539,8 @@ describe('getStationReport', () => {
     if (!result.ok) return;
     expect(result.value.value.records).toHaveLength(1);
     expect(result.value.value.models).toBeNull();
+    // Les previsions de la veille ne sont pas simulees ici : refusees, donc absentes.
+    expect(result.value.value.previousDay).toBeNull();
   });
 
   it("garde l'annee precedente quand le fichier de la nouvelle annee manque", async () => {

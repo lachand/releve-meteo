@@ -165,28 +165,33 @@ export function buildStationPointUrl(input: {
  * cles suffixees par l'identifiant Open-Meteo ; un seul : cle nue. Un
  * modele entierement vide est omis ; une valeur absente reste null.
  */
-export function mapStationPoint(
+function mapStationSeries(
   raw: RawForecastResponse,
   models: readonly ModelId[],
+  variable: string,
+  context: string,
 ): HttpResult<StationModelSeries> {
   const hourly = raw.hourly;
   const time = hourly?.time as readonly LocalIsoHour[] | undefined;
   if (hourly === undefined || time === undefined) {
-    return {
-      ok: false,
-      failure: { kind: 'malformed', detail: 'point de station sans bloc horaire' },
-    };
+    return { ok: false, failure: { kind: 'malformed', detail: `${context} sans bloc horaire` } };
   }
   const temperature: Partial<Record<ModelId, readonly (number | null)[]>> = {};
   for (const model of models) {
-    const key =
-      models.length === 1 ? 'temperature_2m' : `temperature_2m_${OPEN_METEO_MODEL_IDS[model]}`;
+    const key = models.length === 1 ? variable : `${variable}_${OPEN_METEO_MODEL_IDS[model]}`;
     const values = hourly[key] as readonly (number | null)[] | undefined;
     if (values !== undefined && values.some((value) => value !== null)) {
       temperature[model] = time.map((_, index) => values[index] ?? null);
     }
   }
   return { ok: true, value: { timeline: time, temperature } };
+}
+
+export function mapStationPoint(
+  raw: RawForecastResponse,
+  models: readonly ModelId[],
+): HttpResult<StationModelSeries> {
+  return mapStationSeries(raw, models, 'temperature_2m', 'point de station');
 }
 
 export async function fetchStationPoint(input: {
@@ -197,4 +202,49 @@ export async function fetchStationPoint(input: {
 }): Promise<HttpResult<StationModelSeries>> {
   const result = await request<RawForecastResponse>(buildStationPointUrl(input));
   return result.ok ? mapStationPoint(result.value, input.models) : result;
+}
+
+/**
+ * Temperature prevue la veille (`previous_day1`) au point et a l'altitude de
+ * la station, avant-hier et hier : ce que chaque modele disait vingt-quatre
+ * heures avant, par opposition a la simulation rejouee apres coup.
+ */
+export function buildStationPreviousDayUrl(input: {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly elevation: number | null;
+  readonly models: readonly ModelId[];
+}): string {
+  const url = new URL('https://previous-runs-api.open-meteo.com/v1/forecast');
+  url.searchParams.set('latitude', String(input.latitude));
+  url.searchParams.set('longitude', String(input.longitude));
+  if (input.elevation !== null) {
+    url.searchParams.set('elevation', String(input.elevation));
+  }
+  url.searchParams.set(
+    'models',
+    input.models.map((model) => OPEN_METEO_MODEL_IDS[model]).join(','),
+  );
+  url.searchParams.set('hourly', 'temperature_2m_previous_day1');
+  url.searchParams.set('past_days', '2');
+  url.searchParams.set('forecast_days', '1');
+  url.searchParams.set('timezone', 'Europe/Paris');
+  return url.toString();
+}
+
+export function mapStationPreviousDay(
+  raw: RawForecastResponse,
+  models: readonly ModelId[],
+): HttpResult<StationModelSeries> {
+  return mapStationSeries(raw, models, 'temperature_2m_previous_day1', 'previsions de la veille');
+}
+
+export async function fetchStationPreviousDay(input: {
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly elevation: number | null;
+  readonly models: readonly ModelId[];
+}): Promise<HttpResult<StationModelSeries>> {
+  const result = await request<RawForecastResponse>(buildStationPreviousDayUrl(input));
+  return result.ok ? mapStationPreviousDay(result.value, input.models) : result;
 }
