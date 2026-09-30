@@ -65,6 +65,8 @@ export interface ForecastViewModel {
   readonly episodes: readonly PhenomenonEpisode[];
   readonly explanation: SelectionExplanation;
   readonly windUnit: Preferences['units']['wind'];
+  /** Puissance crete solaire saisie, kWc ; null : pas d'estimation solaire. */
+  readonly peakKwp: number | null;
   readonly now: Date;
   /** Date locale 'YYYY-MM-DD'. */
   readonly today: string;

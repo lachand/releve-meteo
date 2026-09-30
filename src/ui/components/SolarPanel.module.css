@@ -1,0 +1,27 @@
+.panel {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.days {
+  display: grid;
+  gap: var(--esp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-titre);
+  font-size: var(--pas-m);
+}
+
+.chart {
+  position: relative;
+  height: 180px;
+}
+
+.note {
+  margin: 0;
+  max-width: 48rem;
+  font-size: var(--pas-xs);
+  font-style: italic;
+  color: var(--encre-faible);
+}

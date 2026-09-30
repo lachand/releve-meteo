@@ -276,6 +276,7 @@ export function App() {
       episodes: detectPhenomena(horizon.filter((p) => p !== null)),
       explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),
       windUnit: preferences.preferences.units.wind,
+      peakKwp: preferences.preferences.solar.peakKwp,
       now,
       today,
       currentHour: `${nowIso.slice(0, 13)}:00`,
@@ -309,6 +310,7 @@ export function App() {
     station,
     vigilance,
     preferences.preferences.units.wind,
+    preferences.preferences.solar.peakKwp,
     preferred,
     setPreferred,
     navigate,
@@ -424,6 +426,7 @@ export function App() {
           preferences={preferences.preferences}
           onSetWindUnit={preferences.setWindUnit}
           onSetTheme={preferences.setTheme}
+          onSetPeakKwp={preferences.setPeakKwp}
           onPurge={preferences.purgeLocalData}
           onClose={() => setSettingsOpen(false)}
           watch={watch}

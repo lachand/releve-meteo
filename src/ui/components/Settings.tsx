@@ -8,6 +8,8 @@ interface SettingsProps {
   readonly preferences: Preferences;
   readonly onSetWindUnit: (wind: Preferences['units']['wind']) => void;
   readonly onSetTheme: (theme: Preferences['theme']) => void;
+  /** Puissance crete solaire ; absente, la section n'est pas montree. */
+  readonly onSetPeakKwp?: (peakKwp: number | null) => void;
   readonly onPurge: () => Promise<void>;
   readonly onClose: () => void;
   /** Veille en arriere-plan ; absente, la section n'est pas montree. */
@@ -18,11 +20,13 @@ export function Settings({
   preferences,
   onSetWindUnit,
   onSetTheme,
+  onSetPeakKwp,
   onPurge,
   onClose,
   watch,
 }: SettingsProps) {
   const [confirmingPurge, setConfirmingPurge] = useState(false);
+  const [peakText, setPeakText] = useState(() => String(preferences.solar.peakKwp ?? ''));
   const [purged, setPurged] = useState(false);
 
   async function handlePurgeClick(): Promise<void> {
@@ -72,6 +76,31 @@ export function Settings({
           </select>
         </label>
       </section>
+
+      {onSetPeakKwp !== undefined && (
+        <section className={styles.section}>
+          <p className="eyebrow">Solaire (facultatif)</p>
+          <label className={styles.field}>
+            Puissance crête installée (kWc)
+            <input
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={peakText}
+              onChange={(event) => {
+                setPeakText(event.target.value);
+                const text = event.target.value.trim().replace(',', '.');
+                onSetPeakKwp(text === '' ? null : Number(text));
+              }}
+            />
+          </label>
+          <p className={styles.explanation}>
+            Laissez vide pour ne rien afficher. La production est une estimation, pas une mesure :
+            le rayonnement prévu converti par cette puissance, avec 20 % de pertes forfaitaires,
+            sans tenir compte de l’orientation ni des masques. Enregistrée sur cet appareil.
+          </p>
+        </section>
+      )}
 
       {watch !== undefined && <WatchSettings watch={watch} />}
 

@@ -392,6 +392,28 @@ describe('App', { timeout: 30000 }, () => {
     expect(within(section).getAllByText(/Rafale maximale : /).length).toBeGreaterThan(0);
   }, 20000);
 
+  it('estime la production solaire des que la puissance crete est saisie, et jamais avant', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    expect(
+      screen.queryByRole('heading', { name: 'Production solaire sur 48 heures' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.type(screen.getByLabelText('Puissance crête installée (kWc)'), '4,5');
+    await user.click(screen.getByRole('button', { name: 'Fermer' }));
+
+    const heading = await screen.findByRole('heading', {
+      name: 'Production solaire sur 48 heures',
+    });
+    const section = heading.closest('section') as HTMLElement;
+    expect(
+      await within(section).findByText(/Aujourd’hui : environ .* kWh estimés/),
+    ).toBeInTheDocument();
+    expect(await within(section).findByText(/Estimation, pas une mesure/)).toBeInTheDocument();
+  }, 20000);
+
   it('annonce la collecte des echeances courtes, avec les previsions deja enregistrees', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();

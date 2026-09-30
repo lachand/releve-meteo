@@ -1,6 +1,8 @@
+import { Suspense, lazy } from 'react';
 import { briefingAt } from '../../domain/briefing';
 import { bestDryWindow } from '../../domain/dryWindow';
 import { practicalIndices } from '../../domain/practicalIndices';
+import { solarOutlook } from '../../domain/solarOutlook';
 import { mountainOutlook } from '../../domain/mountainOutlook';
 import { briefingSentence } from '../briefingPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
@@ -20,6 +22,11 @@ import { VigilanceBanner, VigilanceLine } from '../components/Vigilance';
 import { Section } from './Section';
 import styles from './Views.module.css';
 import type { ForecastViewModel } from './viewModel';
+
+// Le graphique embarque Chart.js : charge a la demande, seulement avec une puissance saisie.
+const SolarPanel = lazy(() =>
+  import('../components/SolarPanel').then((m) => ({ default: m.SolarPanel })),
+);
 
 export const PHENOMENA_HORIZON_HOURS = 72;
 
@@ -46,6 +53,12 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
 
   const practical = practicalIndices({
     points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+  });
+
+  const solar = solarOutlook({
+    points: cascade.points.filter((point) => point !== null),
+    peakKwp: vm.peakKwp,
     now: vm.now,
   });
 
@@ -97,6 +110,14 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
       {practical !== null && (
         <Section eyebrow="Au quotidien" title="Vélo, randonnée, linge, jardin">
           <PracticalIndicesPanel indices={practical} windUnit={vm.windUnit} />
+        </Section>
+      )}
+
+      {solar !== null && vm.peakKwp !== null && (
+        <Section eyebrow="Estimation" title="Production solaire sur 48 heures">
+          <Suspense fallback={<p className="note">Chargement de l’estimation…</p>}>
+            <SolarPanel outlook={solar} peakKwp={vm.peakKwp} today={vm.today} />
+          </Suspense>
         </Section>
       )}
 

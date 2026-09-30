@@ -149,13 +149,13 @@ Lire `SERVICE_WORKER.md` en entier avant de commencer.
 
 ## Lot 8 : irradiance et solaire, optionnel
 
-- [ ] Saisie de la puissance crête dans les réglages
-- [ ] `solarYieldKwh` branché sur `shortwave_radiation`
-- [ ] Courbe de production estimée sur 48 h
-- [ ] Indicateur « journée favorable au surplus »
-- [ ] Mention claire qu'il s'agit d'une estimation sans tenir compte de l'orientation ni des masques
+- [x] Saisie de la puissance crête dans les réglages (texte, virgule acceptée, vide pour désactiver ; valeurs nulles, négatives ou au-delà de 100 kWc écartées)
+- [x] Production estimée depuis le rayonnement prévu (`domain/solarOutlook.ts`), convertie par la puissance crête avec 20 % de pertes forfaitaires ; `solarYieldKwh` reste dans `derived.ts` mais n'est pas utilisé, l'estimation horaire demandant une valeur par heure, donc un trou reste un trou
+- [x] Courbe de production estimée sur 48 h (aujourd'hui et demain, de minuit à minuit), une barre par heure, une heure sans rayonnement reste un trou
+- [x] Indicateur « journée favorable au surplus » : au moins 4 h où la production estimée dépasse 40 % de la puissance crête ; critère écrit à l'écran, avec la mention que le surplus réel dépend d'une consommation que l'application ignore
+- [x] Mention claire qu'il s'agit d'une estimation, sans orientation ni masques, avec le modèle qui fournit le rayonnement
 
-**Sortie** : l'estimation est présentée comme telle, jamais comme une mesure.
+**Sortie** : l'estimation est présentée comme telle, jamais comme une mesure. Une journée avec une heure sans rayonnement est « inconnue », pas nulle.
 
 ---
 
