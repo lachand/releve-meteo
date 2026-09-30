@@ -34,6 +34,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Weight budget (initial JS and CSS)
+        run: npm run budget
+
+      - name: Lighthouse budgets
+        run: npm run lighthouse
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
 

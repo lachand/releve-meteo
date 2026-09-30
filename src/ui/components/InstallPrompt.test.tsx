@@ -7,9 +7,20 @@ describe('InstallPrompt', () => {
   it('appelle onInstall au clic sur Installer', async () => {
     const onInstall = vi.fn();
     const user = userEvent.setup();
-    render(<InstallPrompt onInstall={onInstall} />);
+    render(<InstallPrompt onInstall={onInstall} onDismiss={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Installer' }));
     expect(onInstall).toHaveBeenCalledOnce();
+  });
+
+  it('se referme au clic sur Plus tard, sans installer', async () => {
+    const onInstall = vi.fn();
+    const onDismiss = vi.fn();
+    const user = userEvent.setup();
+    render(<InstallPrompt onInstall={onInstall} onDismiss={onDismiss} />);
+
+    await user.click(screen.getByRole('button', { name: 'Plus tard' }));
+    expect(onDismiss).toHaveBeenCalledOnce();
+    expect(onInstall).not.toHaveBeenCalled();
   });
 });

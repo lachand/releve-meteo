@@ -135,6 +135,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
   const { available: installAvailable, promptInstall } = useInstallPrompt();
+  const [installDismissed, setInstallDismissed] = useState(false);
   const preferences = usePreferences();
   const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
@@ -329,11 +330,12 @@ export function App() {
         Aller au relevé
       </a>
       {updateAvailable && <UpdateBanner onRefresh={applyUpdate} />}
-      {!updateAvailable && installAvailable && (
+      {!updateAvailable && installAvailable && !installDismissed && (
         <InstallPrompt
           onInstall={() => {
             void promptInstall();
           }}
+          onDismiss={() => setInstallDismissed(true)}
         />
       )}
 
