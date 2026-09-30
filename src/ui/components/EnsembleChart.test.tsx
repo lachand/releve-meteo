@@ -21,6 +21,8 @@ describe('EnsembleChart', () => {
         precipitation: null,
         rainProbability: 0.3,
         heavyRainProbability: 0.05,
+        frostProbability: null,
+        gustProbability: null,
         memberCount: 50,
       },
       {
@@ -30,6 +32,8 @@ describe('EnsembleChart', () => {
         precipitation: null,
         rainProbability: null,
         heavyRainProbability: null,
+        frostProbability: null,
+        gustProbability: null,
         memberCount: 0,
       },
     ];
@@ -51,6 +55,8 @@ describe('EnsembleChart', () => {
         precipitation: null,
         rainProbability: 0.3,
         heavyRainProbability: 0.05,
+        frostProbability: null,
+        gustProbability: null,
         memberCount: 50,
       },
       {
@@ -60,6 +66,8 @@ describe('EnsembleChart', () => {
         precipitation: null,
         rainProbability: null,
         heavyRainProbability: null,
+        frostProbability: null,
+        gustProbability: null,
         memberCount: 0,
       },
     ];

@@ -18,7 +18,11 @@ function blendedDay(
   return { ...dailyPoint(date, values), model, filledFrom };
 }
 
-function ensembleDay(date: string, rainProbability: number | null): EnsembleDay {
+function ensembleDay(
+  date: string,
+  rainProbability: number | null,
+  extra: Partial<Pick<EnsembleDay, 'frostProbability' | 'gustProbability'>> = {},
+): EnsembleDay {
   return {
     date,
     tempMax: null,
@@ -26,6 +30,9 @@ function ensembleDay(date: string, rainProbability: number | null): EnsembleDay 
     precipitation: null,
     rainProbability,
     heavyRainProbability: null,
+    frostProbability: null,
+    gustProbability: null,
+    ...extra,
     memberCount: 20,
   };
 }
@@ -34,6 +41,35 @@ function ensembleDay(date: string, rainProbability: number | null): EnsembleDay 
 function dataCells(row: HTMLElement): readonly string[] {
   return Array.from(row.querySelectorAll('[data-donnee]')).map((el) => el.textContent ?? '');
 }
+
+describe('DailyList, probabilites de gel et de rafales', () => {
+  it('ecrit la part des membres qui annoncent du gel ou des rafales fortes, quand elle compte', () => {
+    const days = [blendedDay('2026-08-17', {})];
+    const ensemble = [
+      ensembleDay('2026-08-17', 0.1, { frostProbability: 0.3, gustProbability: 0.45 }),
+    ];
+    render(<DailyList days={days} ensemble={ensemble} windUnit="kmh" today="2026-08-17" />);
+    expect(screen.getByText(/gel ens\.\s30\s%/)).toBeInTheDocument();
+    expect(screen.getByText(/60\skm\/h et plus ens\.\s45\s%/)).toBeInTheDocument();
+  });
+
+  it('se tait sous 10 % et quand l ensemble ne dit rien : jamais 0 % par defaut', () => {
+    const days = [blendedDay('2026-08-17', {})];
+    const ensemble = [
+      ensembleDay('2026-08-17', 0.1, { frostProbability: 0.05, gustProbability: null }),
+    ];
+    render(<DailyList days={days} ensemble={ensemble} windUnit="kmh" today="2026-08-17" />);
+    expect(screen.queryByText(/gel ens\./)).not.toBeInTheDocument();
+    expect(screen.queryByText(/et plus ens\./)).not.toBeInTheDocument();
+  });
+
+  it('donne le seuil de rafales dans l unite choisie', () => {
+    const days = [blendedDay('2026-08-17', {})];
+    const ensemble = [ensembleDay('2026-08-17', 0.1, { gustProbability: 0.5 })];
+    render(<DailyList days={days} ensemble={ensemble} windUnit="kt" today="2026-08-17" />);
+    expect(screen.getByText(/32\skt et plus ens\.\s50\s%/)).toBeInTheDocument();
+  });
+});
 
 describe('DailyList', () => {
   it("affiche un etat vide quand aucune journee complete n'est couverte", () => {
