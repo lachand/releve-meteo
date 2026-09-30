@@ -131,6 +131,16 @@ describe('App', { timeout: 30000 }, () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
+  it('explique en trois lignes, avant tout lieu, d ou vient chaque valeur', () => {
+    render(<App />);
+    const guide = screen.getByRole('list', { name: 'Comment lire ce carnet' });
+    const items = within(guide).getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent('celui qui convient le mieux au lieu est choisi');
+    expect(items[1]).toHaveTextContent('d’où elle vient');
+    expect(items[2]).toHaveTextContent('veille en arrière-plan');
+  });
+
   it("ouvre directement le releve d'un lieu d'exemple", async () => {
     server.use(...liveHandlers());
     const user = userEvent.setup();

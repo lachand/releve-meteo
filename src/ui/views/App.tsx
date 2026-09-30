@@ -484,6 +484,20 @@ export function App() {
               {geolocation.state.status === 'error' && (
                 <p role="alert">{geolocation.state.message}</p>
               )}
+              <ol className={styles.howto} aria-label="Comment lire ce carnet">
+                <li>
+                  Plusieurs modèles de prévision sont comparés ; celui qui convient le mieux au lieu
+                  est choisi, et le choix est justifié.
+                </li>
+                <li>
+                  Chaque valeur dit d’où elle vient : prévision d’un modèle nommé, estimation, ou
+                  mesure d’une station.
+                </li>
+                <li>
+                  Les modèles sont notés contre les mesures des stations voisines. La veille en
+                  arrière-plan, facultative, se règle dans les réglages.
+                </li>
+              </ol>
               <div className={styles.examples}>
                 <p className="note">
                   Ou ouvrir un lieu d’exemple, chacun sur un terrain différent :
