@@ -46,12 +46,25 @@ function isAlertRule(value: unknown): value is AlertRule {
   );
 }
 
+/** Puissance crete maximale acceptee, kWc : au-dela, c'est une faute de frappe. */
+export const PEAK_KWP_MAX = 100;
+
+/** Puissance crete exploitable (arrondie au dixieme), ou null : jamais 0 ni une valeur absurde. */
+function validPeakKwp(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > PEAK_KWP_MAX) {
+    return null;
+  }
+  return Math.round(value * 10) / 10;
+}
+
 /** Regles lisibles seulement : une regle mal formee est ecartee, jamais evaluee. */
 function normalize(preferences: Preferences): Preferences {
   const alerts: unknown = (preferences as { alerts?: unknown }).alerts;
+  const solar = (preferences as { solar?: { peakKwp?: unknown } }).solar;
   return {
     ...preferences,
     alerts: Array.isArray(alerts) ? alerts.filter(isAlertRule) : [],
+    solar: { peakKwp: validPeakKwp(solar?.peakKwp) },
   };
 }
 
@@ -146,6 +159,10 @@ export function setWindUnit(preferences: Preferences, wind: 'kmh' | 'kt'): Prefe
 
 export function setTheme(preferences: Preferences, theme: Preferences['theme']): Preferences {
   return { ...preferences, theme };
+}
+
+export function setPeakKwp(preferences: Preferences, peakKwp: number | null): Preferences {
+  return { ...preferences, solar: { peakKwp: validPeakKwp(peakKwp) } };
 }
 
 export function setApiKey(

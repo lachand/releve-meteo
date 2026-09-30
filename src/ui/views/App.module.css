@@ -222,6 +222,17 @@
   cursor: pointer;
 }
 
+/* Trois lignes de lecture, sans carrousel ni etape a franchir. */
+.howto {
+  display: grid;
+  gap: var(--esp-2);
+  margin: var(--esp-3) 0 0;
+  padding: 0 0 0 var(--esp-6);
+  text-align: left;
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}
+
 .examples {
   display: grid;
   gap: var(--esp-3);
@@ -329,9 +340,36 @@
   color: var(--encre-faible);
 }
 
+/* Feuille de registre : reservee a l'impression. */
+.printOnly {
+  display: none;
+}
+
+.iconButton svg {
+  display: block;
+  margin: 0 auto;
+}
+
 @media print {
+  @page {
+    margin: 14mm;
+  }
+
   .actions,
-  .footer {
+  .skip {
     display: none;
+  }
+
+  .printOnly {
+    display: block;
+    margin: var(--esp-2) 0 0;
+    font-family: var(--font-titre);
+    font-style: italic;
+  }
+
+  /* Les sources et licences restent : une feuille sans provenance ne vaut rien. */
+  .footer {
+    margin-top: var(--esp-6);
+    break-inside: avoid;
   }
 }

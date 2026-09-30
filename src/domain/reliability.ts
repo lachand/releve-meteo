@@ -44,6 +44,8 @@ export interface ReliabilityScore {
 export interface VerificationPair {
   readonly predicted: number | null;
   readonly observed: number | null;
+  /** Heure locale de la paire, quand elle est connue (biais par moment de la journee). */
+  readonly time?: LocalIsoHour;
 }
 
 export interface ErrorStats {
@@ -51,6 +53,64 @@ export interface ErrorStats {
   readonly bias: number;
   readonly rmse: number;
   readonly count: number;
+}
+
+export interface DayPeriod {
+  readonly key: 'night' | 'morning' | 'afternoon' | 'evening';
+  /** Complete « ... trop chaud » : « la nuit », « l'apres-midi ». */
+  readonly label: string;
+  /** Premiere et derniere heures locales incluses. */
+  readonly from: number;
+  readonly to: number;
+}
+
+export const DAY_PERIODS: readonly DayPeriod[] = [
+  { key: 'night', label: 'la nuit', from: 0, to: 5 },
+  { key: 'morning', label: 'le matin', from: 6, to: 11 },
+  { key: 'afternoon', label: 'l’après-midi', from: 12, to: 17 },
+  { key: 'evening', label: 'le soir', from: 18, to: 23 },
+];
+
+export const PERIOD_BIAS = {
+  /** Paires minimales par moment de la journee : en deca, pas de biais annonce. */
+  minPairs: 8,
+} as const;
+
+export interface PeriodBias {
+  readonly period: DayPeriod;
+  readonly count: number;
+  /** Ecart moyen signe (prevu moins reel) sur ce moment de la journee. */
+  readonly bias: number;
+}
+
+/**
+ * Ecart moyen par moment de la journee (nuit, matin, apres-midi, soir). Les
+ * paires sans heure ou dont un terme manque sont ignorees, jamais comptees
+ * comme zero ; un moment sous le minimum de paires est omis ; null s'il n'en
+ * reste aucun.
+ */
+export function biasByPeriod(pairs: readonly VerificationPair[]): readonly PeriodBias[] | null {
+  const result: PeriodBias[] = [];
+  for (const period of DAY_PERIODS) {
+    const gaps: number[] = [];
+    for (const pair of pairs) {
+      if (pair.time === undefined || pair.predicted === null || pair.observed === null) {
+        continue;
+      }
+      const hour = Number(pair.time.slice(11, 13));
+      if (hour >= period.from && hour <= period.to) {
+        gaps.push(pair.predicted - pair.observed);
+      }
+    }
+    if (gaps.length >= PERIOD_BIAS.minPairs) {
+      result.push({
+        period,
+        count: gaps.length,
+        bias: gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length,
+      });
+    }
+  }
+  return result.length === 0 ? null : result;
 }
 
 /** Table de contingence pluie / sec, seuil en mm/h. */
@@ -138,6 +198,8 @@ export interface ModelVerification {
   readonly stats: ErrorStats | null;
   /** Renseigne pour la seule variable precipitation. */
   readonly rain: RainContingency | null;
+  /** Biais par moment de la journee ; temperature seulement, une fois la verification prete. */
+  readonly periods?: readonly PeriodBias[] | null;
   readonly sampleCount: number;
   readonly status: 'ready' | 'collecting';
   /** Provenance de la reference comparee. */
@@ -161,6 +223,7 @@ export function verifyModel(input: {
     leadDays: input.leadDays,
     stats: ready ? stats : null,
     rain: ready && input.variable === 'precipitation' ? rainContingency(input.pairs) : null,
+    periods: ready && input.variable === 'temperature' ? biasByPeriod(input.pairs) : null,
     sampleCount,
     status: ready ? 'ready' : 'collecting',
     reference: input.reference,

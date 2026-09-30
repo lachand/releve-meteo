@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DAY_PERIODS,
+  PERIOD_BIAS,
+  biasByPeriod,
   errorStats,
   matchSamples,
   pruneArchive,
@@ -9,6 +12,7 @@ import {
   verifyModel,
 } from './reliability';
 import type { ArchivedForecast, VerificationPair } from './reliability';
+import type { LocalIsoHour } from './types';
 
 function pairs(values: readonly [number | null, number | null][]): VerificationPair[] {
   return values.map(([predicted, observed]) => ({ predicted, observed }));
@@ -218,5 +222,73 @@ describe('pruneArchive', () => {
       90,
     );
     expect(kept.map((e) => e.targetTime)).toEqual(['b']);
+  });
+});
+
+describe('biasByPeriod', () => {
+  /** Une paire par heure d'une journee : le modele est trop chaud de `gap(h)` a l'heure h. */
+  function day(date: string, gap: (hour: number) => number | null): VerificationPair[] {
+    return Array.from({ length: 24 }, (_, hour) => {
+      const offset = gap(hour);
+      return {
+        predicted: offset === null ? null : 10 + offset,
+        observed: 10,
+        time: `${date}T${String(hour).padStart(2, '0')}:00` as LocalIsoHour,
+      };
+    });
+  }
+
+  it('moyenne l ecart de chaque moment de la journee, sur plusieurs jours', () => {
+    const all = [
+      ...day('2026-09-25', (h) => (h < 6 ? -2 : 1)),
+      ...day('2026-09-26', (h) => (h < 6 ? -1 : 1)),
+    ];
+    const periods = biasByPeriod(all);
+    expect(periods?.map((p) => p.period.key)).toEqual(['night', 'morning', 'afternoon', 'evening']);
+    expect(periods?.[0]).toMatchObject({ count: 12, bias: -1.5 });
+    expect(periods?.[1]).toMatchObject({ count: 12, bias: 1 });
+    expect(DAY_PERIODS.map((p) => p.label)).toEqual([
+      'la nuit',
+      'le matin',
+      'l’après-midi',
+      'le soir',
+    ]);
+  });
+
+  it('ignore les paires sans heure ou sans valeur, jamais comptees comme zero', () => {
+    const all = [
+      ...day('2026-09-25', (h) => (h >= 12 && h < 18 ? null : 0)),
+      ...day('2026-09-26', (h) => (h >= 12 && h < 18 ? null : 0)),
+      { predicted: 30, observed: 10 },
+    ];
+    const periods = biasByPeriod(all);
+    expect(periods?.map((p) => p.period.key)).toEqual(['night', 'morning', 'evening']);
+  });
+
+  it('omet un moment sous le minimum de paires, et rend null s il n en reste aucun', () => {
+    const one = day('2026-09-25', () => 1);
+    expect(biasByPeriod(one)).toBeNull();
+    expect(PERIOD_BIAS.minPairs).toBeGreaterThan(6);
+    const two = [...one, ...day('2026-09-26', () => 1)];
+    expect(biasByPeriod(two)).toHaveLength(4);
+    expect(biasByPeriod([])).toBeNull();
+  });
+});
+
+describe('verifyModel, biais par moment de la journee', () => {
+  const hourly = (n: number): VerificationPair[] =>
+    Array.from({ length: n }, (_, i) => ({
+      predicted: 11,
+      observed: 10,
+      time: `2026-09-${String(10 + Math.floor(i / 24)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}:00` as LocalIsoHour,
+    }));
+
+  it('ne le calcule que pour la temperature, une fois la verification prete', () => {
+    const base = { model: 'arome', leadDays: 1, reference: 'observed', minSamples: 10 } as const;
+    expect(
+      verifyModel({ ...base, variable: 'temperature', pairs: hourly(72) }).periods,
+    ).toHaveLength(4);
+    expect(verifyModel({ ...base, variable: 'wind', pairs: hourly(72) }).periods).toBeNull();
+    expect(verifyModel({ ...base, variable: 'temperature', pairs: hourly(5) }).periods).toBeNull();
   });
 });

@@ -4,6 +4,8 @@ import type { Department } from '../domain/departments';
 import type { EnsembleHourly } from '../domain/ensemble';
 import { FORECAST_GRID, gridPoints } from '../domain/grid';
 import type { ForecastGrid } from '../domain/grid';
+import { takeSnapshot } from '../domain/leadScores';
+import type { ForecastSnapshot } from '../domain/leadScores';
 import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import { nearestStation } from '../domain/stations';
 import type { Station, StationMatch } from '../domain/stations';
@@ -17,7 +19,12 @@ import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
 import { fetchStationYear, parseStationRecords } from './clients/meteostat';
-import { fetchForecast, fetchNowcast, fetchStationPoint } from './clients/openMeteo';
+import {
+  fetchForecast,
+  fetchNowcast,
+  fetchStationPoint,
+  fetchStationPreviousDay,
+} from './clients/openMeteo';
 import { fetchVerifications } from './clients/verification';
 import { fetchVigilance } from './clients/vigilance';
 import type { VerificationReport } from './clients/verification';
@@ -25,6 +32,7 @@ import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
 import { getCachedPlaces, normalizeQuery, setCachedPlaces } from './cache/geocodingStore';
 import { getCachedForecast, setCachedForecast } from './cache/forecastStore';
+import { loadSnapshots, recordSnapshot } from './cache/snapshotStore';
 import { mapNowcast } from './mappers/nowcastMapper';
 import type { Nowcast } from './mappers/nowcastMapper';
 import { mapOpenMeteoResponse } from './mappers/openMeteoMapper';
@@ -290,13 +298,26 @@ export interface StationReport {
    * une comparaison station a station ; null si indisponibles.
    */
   readonly models: StationModelSeries | null;
+  /**
+   * Temperatures prevues la veille (`previous_day1`) au meme point, avant-hier
+   * et hier, pour « hier, prevu contre reel » ; null si indisponibles.
+   */
+  readonly previousDay: StationModelSeries | null;
+  /**
+   * Instantanes horaires enregistres par l'application pour cette station
+   * (echeances de 1 a 12 h), du plus ancien au plus recent. Vide tant que
+   * rien n'a ete collecte.
+   */
+  readonly snapshots: readonly ForecastSnapshot[];
 }
 
 /**
  * Profondeur du releve, heures : de quoi calculer l'ecart recent meme
- * quand la station publie avec retard ou se tait la nuit.
+ * quand la station publie avec retard ou se tait la nuit, et couvrir
+ * la journee d'hier entiere (jusqu'a 49 h en arriere un jour de changement
+ * d'heure) pour la comparer a ce qui etait prevu.
  */
-export const STATION_REPORT_HOURS = 36;
+export const STATION_REPORT_HOURS = 60;
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -306,7 +327,13 @@ export async function getStationReport(
 ): Promise<HttpResult<DatasetResult<StationReport>>> {
   const match = await stationFor(place);
   if (match === null) {
-    const report: StationReport = { match: null, records: [], models: null };
+    const report: StationReport = {
+      match: null,
+      records: [],
+      models: null,
+      previousDay: null,
+      snapshots: [],
+    };
     return { ok: true, value: { value: report, fetchedAt: Date.now(), stale: false } };
   }
   return throughCache({
@@ -318,12 +345,14 @@ export async function getStationReport(
       const since = now - STATION_REPORT_HOURS * HOUR_MS;
       // Modeles lus au point et a l'altitude de la station, en parallele des
       // releves : la comparaison se fait station a station.
-      const modelsAtStation = fetchStationPoint({
+      const stationPoint = {
         latitude: match.station.latitude,
         longitude: match.station.longitude,
         elevation: match.station.elevation,
         models,
-      });
+      };
+      const modelsAtStation = fetchStationPoint(stationPoint);
+      const forecastsOfYesterday = fetchStationPreviousDay(stationPoint);
       // Deux fichiers annuels les premieres heures de janvier. Le fichier
       // de l'annee qui commence peut manquer : on garde ce qui repond.
       const years = [
@@ -341,12 +370,26 @@ export async function getStationReport(
       }
       // Sans valeurs de modele, le releve reste utile : rendu sans ecart.
       const atStation = await modelsAtStation;
+      const ofYesterday = await forecastsOfYesterday;
+      // Chaque lecture de la station enregistre les 12 heures a venir de chaque
+      // modele : une fois la mesure publiee, elles servent a noter les echeances courtes.
+      const snapshot = atStation.ok ? takeSnapshot(atStation.value, new Date(now)) : null;
+      const snapshots =
+        snapshot === null
+          ? await loadSnapshots(match.station.id)
+          : await recordSnapshot(match.station.id, snapshot, new Date(now));
       if (failure !== null && records.length === 0) {
         return failure;
       }
       return {
         ok: true,
-        value: { match, records, models: atStation.ok ? atStation.value : null },
+        value: {
+          match,
+          records,
+          models: atStation.ok ? atStation.value : null,
+          previousDay: ofYesterday.ok ? ofYesterday.value : null,
+          snapshots,
+        },
       };
     },
   });

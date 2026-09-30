@@ -50,3 +50,58 @@
     break-inside: avoid;
   }
 }
+
+/* Feuillet repliable : le sommaire reprend l'en-tete d'un feuillet ordinaire. */
+.collapsible {
+  display: grid;
+  gap: var(--esp-4);
+}
+
+.summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  min-height: 44px;
+  padding-bottom: var(--esp-2);
+  border-bottom: var(--filet-encre);
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summaryText {
+  display: grid;
+}
+
+.chevron {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-bottom: 0.5rem;
+  border-right: 2px solid var(--encre);
+  border-bottom: 2px solid var(--encre);
+  transform: rotate(45deg);
+  transition: transform var(--duree-courte) ease-out;
+}
+
+.collapsible[open] .chevron {
+  margin-bottom: 0.2rem;
+  transform: rotate(-135deg);
+}
+
+.body {
+  display: grid;
+  gap: var(--esp-4);
+  margin-top: var(--esp-4);
+  min-width: 0;
+}
+
+@media print {
+  .chevron {
+    display: none;
+  }
+}

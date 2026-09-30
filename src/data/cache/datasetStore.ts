@@ -15,7 +15,8 @@ export type DatasetKind =
   | 'station'
   | 'grid'
   | 'vigilance'
-  | 'watch';
+  | 'watch'
+  | 'snapshots';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -28,14 +29,19 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   ensemble: 1,
   // v2 : verification a l'altitude de la station.
   // v3 : fenetre jusqu'a aujourd'hui, avec l'heure de la derniere mesure.
-  verification: 3,
+  // v4 : biais par moment de la journee.
+  verification: 4,
   airQuality: 1,
   nowcast: 1,
   // v2 : temperatures des modeles au point de la station.
-  station: 2,
+  // v3 : releve sur 60 h et previsions de la veille (hier, prevu contre reel).
+  // v4 : instantanes horaires enregistres (echeances courtes).
+  station: 4,
   grid: 1,
   vigilance: 1,
   watch: 1,
+  // Instantanes horaires de prevision au point d'une station (echeances courtes).
+  snapshots: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

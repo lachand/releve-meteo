@@ -41,6 +41,16 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 - **Vigilance Météo-France officielle** du département, sans clé : bandeau
   en tête du relevé dès le jaune, avec période, heure du bulletin et lien
   vers la carte officielle ; distincte des phénomènes calculés par Relevé.
+- **Hier, prévu contre réel, et échéances courtes.** Pour hier, ce que
+  chaque modèle prévoyait la veille face aux mesures de la station ; de 1 à
+  12 h, des notes établies sur les prévisions que l'application enregistre
+  elle-même (« en collecte » tant qu'il manque des heures comparables, donc
+  seulement quand elle est ouverte) ; et le biais de chaque modèle la nuit,
+  le matin, l'après-midi et le soir, dit sans jamais corriger les valeurs.
+- **Au quotidien** : meilleur créneau sans pluie, verdicts vélo, randonnée,
+  linge et jardinage avec leurs critères et seuils, production solaire
+  estimée si vous saisissez la puissance crête (une estimation, sans
+  orientation ni masques), feuille de registre imprimable.
 - **Alertes personnelles** : un seuil par lieu (gel, chaleur, pluie,
   rafales), vérifié à chaque ouverture sur 72 h, avec le modèle qui le
   franchit.
@@ -61,8 +71,10 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
 Plan de la refonte : [ROADMAP.md](ROADMAP.md). Avancement par lot et écarts
 constatés : [BACKLOG.md](BACKLOG.md).
 
-Le déploiement continu se fait via Cloudflare Pages, connecté au dépôt
-GitHub (build `npm run build`, dossier de sortie `dist`).
+Le déploiement continu se fait via Cloudflare Workers Builds, connecté au
+dépôt GitHub : build `npm run build`, puis `npx wrangler versions upload`
+(ou `deploy` sur la branche de production), configuré par `wrangler.jsonc`
+(assets de `dist`, repli sur `index.html`).
 
 ## Développement
 
@@ -127,6 +139,14 @@ Toutes gratuites et sans clé :
 - [OpenStreetMap](https://www.openstreetmap.org/) (ODbL) : fond de carte.
 
 Attribution complète dans l'application, page « Sources et licences ».
+
+**Usage non commercial.** L'API gratuite d'Open-Meteo est réservée à un usage
+non commercial (au-delà, un abonnement est requis) et les relevés Meteostat
+sont sous CC BY-NC. Relevé convient donc à un usage personnel, associatif ou
+pédagogique ; le proposer comme service payant, avec publicité ou à une
+entreprise exigerait d'abord un accès commercial à ces deux sources, ou une
+autre source d'observations sans clause non commerciale (à étudier).
+
 Infoclimat demande une clé ou un compte : il n'est pas intégré (voir
 [BACKLOG.md](BACKLOG.md), Écarts constatés).
 

@@ -15,6 +15,8 @@ import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
 import { stationCheck } from '../../domain/stationCheck';
 import { stationTrace } from '../../domain/stationTrace';
+import { leadScores } from '../../domain/leadScores';
+import { yesterdayReview } from '../../domain/yesterdayReview';
 import { leadHoursFrom, localIsoFromUtc } from '../../domain/time';
 import type { ForecastBundle, Place } from '../../domain/types';
 import { summarizeVigilance } from '../../domain/vigilance';
@@ -26,6 +28,7 @@ import { Tabs } from '../components/Tabs';
 import type { TabItem } from '../components/Tabs';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { formatCompact, formatLongDate } from '../format';
+import { PrintIcon } from '../tabIcons';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
@@ -250,6 +253,22 @@ export function App() {
         station.status === 'ready'
           ? stationTrace({ records: station.value.records, models: station.value.models, now })
           : null,
+      leadScores:
+        station.status === 'ready'
+          ? leadScores({
+              snapshots: station.value.snapshots,
+              records: station.value.records,
+              now,
+            })
+          : null,
+      yesterday:
+        station.status === 'ready'
+          ? yesterdayReview({
+              records: station.value.records,
+              forecasts: station.value.previousDay,
+              now,
+            })
+          : null,
       vigilance,
       vigilanceSummary:
         vigilance.status === 'ready' && vigilance.value.bulletin !== null
@@ -258,6 +277,7 @@ export function App() {
       episodes: detectPhenomena(horizon.filter((p) => p !== null)),
       explanation: explainSelection(cascade.rankingNow, cascade.activeModel, preferred),
       windUnit: preferences.preferences.units.wind,
+      peakKwp: preferences.preferences.solar.peakKwp,
       now,
       today,
       currentHour: `${nowIso.slice(0, 13)}:00`,
@@ -291,6 +311,7 @@ export function App() {
     station,
     vigilance,
     preferences.preferences.units.wind,
+    preferences.preferences.solar.peakKwp,
     preferred,
     setPreferred,
     navigate,
@@ -367,6 +388,17 @@ export function App() {
                 {isFavourite ? '★' : '☆'}
               </button>
             )}
+            {place !== null && (
+              <button
+                type="button"
+                className={styles.iconButton}
+                onClick={() => window.print()}
+                aria-label="Imprimer le relevé"
+                title="Imprimer le relevé"
+              >
+                <PrintIcon />
+              </button>
+            )}
             <button
               type="button"
               className={styles.iconButton}
@@ -392,6 +424,13 @@ export function App() {
                 .filter((value): value is string => value !== null)
                 .join(' · ')}
             </p>
+            {vm !== null && (
+              <p className={styles.printOnly}>
+                Feuille de registre, imprimée le {formatLongDate(vm.today)}. Les valeurs sont des
+                prévisions ou des estimations, jamais des mesures, sauf celles attribuées à une
+                station.
+              </p>
+            )}
             {bundle !== null && (
               <p className={styles.dateline}>
                 Relevé du {formatLongDate(localIsoFromUtc(bundle.fetchedAt))}
@@ -406,6 +445,7 @@ export function App() {
           preferences={preferences.preferences}
           onSetWindUnit={preferences.setWindUnit}
           onSetTheme={preferences.setTheme}
+          onSetPeakKwp={preferences.setPeakKwp}
           onPurge={preferences.purgeLocalData}
           onClose={() => setSettingsOpen(false)}
           watch={watch}
@@ -444,6 +484,20 @@ export function App() {
               {geolocation.state.status === 'error' && (
                 <p role="alert">{geolocation.state.message}</p>
               )}
+              <ol className={styles.howto} aria-label="Comment lire ce carnet">
+                <li>
+                  Plusieurs modèles de prévision sont comparés ; celui qui convient le mieux au lieu
+                  est choisi, et le choix est justifié.
+                </li>
+                <li>
+                  Chaque valeur dit d’où elle vient : prévision d’un modèle nommé, estimation, ou
+                  mesure d’une station.
+                </li>
+                <li>
+                  Les modèles sont notés contre les mesures des stations voisines. La veille en
+                  arrière-plan, facultative, se règle dans les réglages.
+                </li>
+              </ol>
               <div className={styles.examples}>
                 <p className="note">
                   Ou ouvrir un lieu d’exemple, chacun sur un terrain différent :

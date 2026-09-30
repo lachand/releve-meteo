@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { CSSProperties } from 'react';
+import { STATION_REPORT_HOURS } from '../../data/repository';
 import type { StationReport } from '../../data/repository';
 import { STATION_CHECK } from '../../domain/stationCheck';
 import type { ModelGap, StationCheck } from '../../domain/stationCheck';
@@ -71,7 +72,7 @@ function unavailableSentence(state: StationState, check: StationCheck | null): s
         return `Aucune station de mesure représentative (moins de ${STATION_MATCH.maxDistanceKm} km et ${STATION_MATCH.maxElevationDeltaM} m de dénivelé) : pas de contrôle au réel pour ce lieu.`;
       }
       if (check === null) {
-        return `La station ${state.value.match.station.name} n’a publié aucun relevé de température ces 36 dernières heures.`;
+        return `La station ${state.value.match.station.name} n’a publié aucun relevé de température ces ${STATION_REPORT_HOURS} dernières heures.`;
       }
       return null;
   }

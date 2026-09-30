@@ -1,5 +1,8 @@
+import { Suspense, lazy } from 'react';
 import { briefingAt } from '../../domain/briefing';
 import { bestDryWindow } from '../../domain/dryWindow';
+import { practicalIndices } from '../../domain/practicalIndices';
+import { solarOutlook } from '../../domain/solarOutlook';
 import { mountainOutlook } from '../../domain/mountainOutlook';
 import { briefingSentence } from '../briefingPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
@@ -8,6 +11,7 @@ import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
 import { DryWindowPanel } from '../components/DryWindowPanel';
 import { MountainPanel } from '../components/MountainPanel';
+import { PracticalIndicesPanel } from '../components/PracticalIndicesPanel';
 import { shouldShowMountain } from '../mountainPresentation';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
@@ -15,9 +19,15 @@ import { NowPanel } from '../components/NowPanel';
 import { PhenomenaPanel } from '../components/PhenomenaPanel';
 import { StationLine } from '../components/StationCheck';
 import { VigilanceBanner, VigilanceLine } from '../components/Vigilance';
+import { Collapsible } from './Collapsible';
 import { Section } from './Section';
 import styles from './Views.module.css';
 import type { ForecastViewModel } from './viewModel';
+
+// Le graphique embarque Chart.js : charge a la demande, seulement avec une puissance saisie.
+const SolarPanel = lazy(() =>
+  import('../components/SolarPanel').then((m) => ({ default: m.SolarPanel })),
+);
 
 export const PHENOMENA_HORIZON_HOURS = 72;
 
@@ -39,6 +49,17 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
 
   const dryWindow = bestDryWindow({
     points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+  });
+
+  const practical = practicalIndices({
+    points: cascade.points.filter((point) => point !== null),
+    now: vm.now,
+  });
+
+  const solar = solarOutlook({
+    points: cascade.points.filter((point) => point !== null),
+    peakKwp: vm.peakKwp,
     now: vm.now,
   });
 
@@ -87,17 +108,6 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
         </Section>
       )}
 
-      {mountain !== null &&
-        shouldShowMountain({
-          kind: vm.terrain?.kind ?? null,
-          elevation: vm.place.elevation,
-          outlook: mountain,
-        }) && (
-          <Section eyebrow="72 heures" title="Neige et isotherme 0 °C">
-            <MountainPanel outlook={mountain} />
-          </Section>
-        )}
-
       <Section
         eyebrow="Heure par heure"
         title="Les 24 prochaines heures"
@@ -133,16 +143,50 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
         />
       </Section>
 
-      <div className={styles.twoColumns}>
-        <Section eyebrow="Repères du jour" title="Soleil, rosée, gel">
-          <ConditionsPanel nowPoint={nowPoint} today={vm.days[0] ?? null} />
-        </Section>
-        <Section eyebrow="Air" title="Qualité de l’air et pollens">
-          <AirQualityPanel state={vm.airQuality} hour={vm.currentHour} />
-        </Section>
-      </div>
+      {practical !== null && (
+        <Collapsible id="practical" eyebrow="Au quotidien" title="Vélo, randonnée, linge, jardin">
+          <PracticalIndicesPanel indices={practical} windUnit={vm.windUnit} />
+        </Collapsible>
+      )}
 
-      <Section eyebrow="Alertes personnelles" title="Me signaler, pour ce lieu">
+      {solar !== null && vm.peakKwp !== null && (
+        <Collapsible
+          id="solar"
+          eyebrow="Estimation"
+          title="Production solaire sur 48 heures"
+          defaultOpen
+        >
+          <Suspense fallback={<p className="note">Chargement de l’estimation…</p>}>
+            <SolarPanel outlook={solar} peakKwp={vm.peakKwp} today={vm.today} />
+          </Suspense>
+        </Collapsible>
+      )}
+
+      {mountain !== null &&
+        shouldShowMountain({
+          kind: vm.terrain?.kind ?? null,
+          elevation: vm.place.elevation,
+          outlook: mountain,
+        }) && (
+          <Collapsible
+            id="mountain"
+            eyebrow="72 heures"
+            title="Neige et isotherme 0 °C"
+            defaultOpen
+          >
+            <MountainPanel outlook={mountain} />
+          </Collapsible>
+        )}
+
+      <Collapsible id="conditions" eyebrow="Repères du jour" title="Soleil, rosée, gel">
+        <ConditionsPanel nowPoint={nowPoint} today={vm.days[0] ?? null} />
+      </Collapsible>
+
+      <Collapsible id="air" eyebrow="Air" title="Qualité de l’air et pollens">
+        <AirQualityPanel state={vm.airQuality} hour={vm.currentHour} />
+      </Collapsible>
+
+      <Collapsible id="alerts" eyebrow="Alertes personnelles" title="Me signaler, pour ce lieu">
         <AlertRulesEditor
           placeId={vm.place.id}
           placeName={vm.place.alias ?? vm.place.name}
@@ -152,7 +196,7 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           onToggle={vm.toggleAlert}
           onRemove={vm.removeAlert}
         />
-      </Section>
+      </Collapsible>
     </div>
   );
 }

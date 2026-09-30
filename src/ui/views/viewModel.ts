@@ -9,6 +9,8 @@ import type { EnsembleDay } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
 import type { StationCheck } from '../../domain/stationCheck';
 import type { StationTrace } from '../../domain/stationTrace';
+import type { LeadScores } from '../../domain/leadScores';
+import type { YesterdayReview } from '../../domain/yesterdayReview';
 import type { VigilanceSummary } from '../../domain/vigilance';
 import type {
   AlertRule,
@@ -53,12 +55,18 @@ export interface ForecastViewModel {
   readonly stationCheck: StationCheck | null;
   /** Mesure et modeles heure par heure sur les dernieres heures. */
   readonly stationTrace: StationTrace | null;
+  /** Hier, prevu la veille contre mesure a la station ; null sans assez de donnees. */
+  readonly yesterday: YesterdayReview | null;
+  /** Notes des echeances de 1 a 12 h sur les instantanes enregistres ; null hors station. */
+  readonly leadScores: LeadScores | null;
   /** Vigilance Meteo-France du departement, et sa synthese a l'instant. */
   readonly vigilance: DatasetState<VigilanceReport>;
   readonly vigilanceSummary: VigilanceSummary | null;
   readonly episodes: readonly PhenomenonEpisode[];
   readonly explanation: SelectionExplanation;
   readonly windUnit: Preferences['units']['wind'];
+  /** Puissance crete solaire saisie, kWc ; null : pas d'estimation solaire. */
+  readonly peakKwp: number | null;
   readonly now: Date;
   /** Date locale 'YYYY-MM-DD'. */
   readonly today: string;

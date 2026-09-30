@@ -131,6 +131,16 @@ describe('App', { timeout: 30000 }, () => {
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
+  it('explique en trois lignes, avant tout lieu, d ou vient chaque valeur', () => {
+    render(<App />);
+    const guide = screen.getByRole('list', { name: 'Comment lire ce carnet' });
+    const items = within(guide).getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent('celui qui convient le mieux au lieu est choisi');
+    expect(items[1]).toHaveTextContent('d’où elle vient');
+    expect(items[2]).toHaveTextContent('veille en arrière-plan');
+  });
+
   it("ouvre directement le releve d'un lieu d'exemple", async () => {
     server.use(...liveHandlers());
     const user = userEvent.setup();
@@ -365,12 +375,120 @@ describe('App', { timeout: 30000 }, () => {
     expect(
       screen.getByRole('table', { name: /Erreur absolue moyenne.*Température/ }),
     ).toBeInTheDocument();
+    // Biais de la prevision de la veille selon le moment de la journee.
+    expect(
+      await screen.findByRole('heading', { name: 'Biais selon le moment de la journée' }),
+    ).toBeInTheDocument();
 
     // Controle au dernier releve : METAR de 10 h UTC (12 h locale), 26 °C.
     // Jeu de donnees distinct de la verification : il peut arriver apres.
     const gaps = await screen.findByRole('table', { name: /face à la mesure/ }, { timeout: 8000 });
     expect(within(gaps).getAllByRole('row').length).toBeGreaterThan(2);
     expect(await screen.findByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
+  }, 20000);
+
+  it('juge velo, randonnee, linge et jardinage avec leurs criteres, sur le modele retenu', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    const heading = await screen.findByRole('heading', { name: 'Vélo, randonnée, linge, jardin' });
+    const section = heading.closest('section') as HTMLElement;
+    for (const name of ['Vélo', 'Randonnée', 'Linge qui sèche', 'Jardinage']) {
+      expect(within(section).getByText(name)).toBeInTheDocument();
+    }
+    expect(
+      within(section).getByText(/Jugé sur les heures de jour d’aujourd’hui/),
+    ).toBeInTheDocument();
+    await user.click(within(section).getByText('Vélo'));
+    expect(within(section).getAllByText(/Rafale maximale : /).length).toBeGreaterThan(0);
+  }, 20000);
+
+  it('estime la production solaire des que la puissance crete est saisie, et jamais avant', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    expect(
+      screen.queryByRole('heading', { name: 'Production solaire sur 48 heures' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.type(screen.getByLabelText('Puissance crête installée (kWc)'), '4,5');
+    await user.click(screen.getByRole('button', { name: 'Fermer' }));
+
+    const heading = await screen.findByRole('heading', {
+      name: 'Production solaire sur 48 heures',
+    });
+    const section = heading.closest('section') as HTMLElement;
+    expect(
+      await within(section).findByText(/Aujourd’hui : environ .* kWh estimés/),
+    ).toBeInTheDocument();
+    expect(await within(section).findByText(/Estimation, pas une mesure/)).toBeInTheDocument();
+  }, 20000);
+
+  it('imprime le releve en feuille de registre, avec sa date et ce que les valeurs sont', async () => {
+    server.use(...liveHandlers());
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    // La mention n'existe qu'une fois un lieu ouvert, et ne se voit qu'a l'impression.
+    const sheet = screen.getByText(/Feuille de registre, imprimée le lundi 28 septembre 2026/);
+    expect(sheet).toHaveTextContent('prévisions');
+    expect(sheet).toHaveTextContent('jamais des mesures');
+
+    await user.click(screen.getByRole('button', { name: 'Imprimer le relevé' }));
+    expect(print).toHaveBeenCalledOnce();
+    print.mockRestore();
+  }, 20000);
+
+  it('met l essentiel en tete d Aujourd hui et replie les sections secondaires', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    const order = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent);
+    const tendance = order.indexOf('Tendance');
+    expect(order.indexOf('Sortir sans pluie')).toBeLessThan(
+      order.indexOf('Les 24 prochaines heures'),
+    );
+    expect(order.indexOf('Les 24 prochaines heures')).toBeLessThan(tendance);
+    for (const secondary of ['Qualité de l’air et pollens', 'Soleil, rosée, gel']) {
+      expect(order.indexOf(secondary)).toBeGreaterThan(tendance);
+      expect(
+        screen.getByRole('heading', { name: secondary }).closest('details'),
+      ).not.toHaveAttribute('open');
+    }
+  }, 20000);
+
+  it('annonce la collecte des echeances courtes, avec les previsions deja enregistrees', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    await user.click(screen.getByRole('tab', { name: 'Fiabilité' }));
+    const heading = await screen.findByRole('heading', { name: 'De 1 à 12 heures avant' });
+    const section = heading.closest('section') as HTMLElement;
+    expect(
+      await within(section).findByText(/En collecte : 1 prévision enregistrée/),
+    ).toBeInTheDocument();
+  }, 20000);
+
+  it('compare hier, prevu la veille et mesure, station a station', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    await user.click(screen.getByRole('tab', { name: 'Fiabilité' }));
+    const heading = await screen.findByRole('heading', { name: 'Hier, prévu contre réel' });
+    const section = heading.closest('section') as HTMLElement;
+    const table = await within(section).findByRole(
+      'table',
+      { name: /telle qu’il la prévoyait la veille/ },
+      { timeout: 8000 },
+    );
+    expect(within(table).getAllByRole('row').length).toBeGreaterThan(1);
+    expect(within(section).getByText(/la station Lyon \/ Bron a mesuré de/)).toBeInTheDocument();
   }, 20000);
 
   it('confronte la valeur du modele retenu au dernier releve de la station', async () => {

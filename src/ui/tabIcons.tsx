@@ -84,3 +84,14 @@ export function ReliabilityIcon() {
     </Icon>
   );
 }
+
+/** Imprimante : le bouton « Imprimer le relevé » de l'en-tete. */
+export function PrintIcon() {
+  return (
+    <Icon>
+      <path d="M7 9V4h10v5" />
+      <rect x="4" y="9" width="16" height="8" rx="1" />
+      <path d="M7 14h10v6H7z" />
+    </Icon>
+  );
+}

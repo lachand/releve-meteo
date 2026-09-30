@@ -11,6 +11,7 @@ import {
   resetMemoryPreferencesForTests,
   setAlias,
   setApiKey,
+  setPeakKwp,
   setTheme,
   setWindUnit,
   toggleAlert,
@@ -196,5 +197,40 @@ describe('alertes', () => {
     const { alerts: _omitted, ...withoutAlerts } = defaultPreferences();
     localStorage.setItem('meteo-fr:prefs', JSON.stringify(withoutAlerts));
     expect(readPreferences().alerts).toEqual([]);
+  });
+});
+
+describe('setPeakKwp', () => {
+  it('enregistre une puissance crete valide, arrondie au dixieme', () => {
+    expect(setPeakKwp(defaultPreferences(), 3.04).solar).toEqual({ peakKwp: 3 });
+    expect(setPeakKwp(defaultPreferences(), 6.26).solar).toEqual({ peakKwp: 6.3 });
+  });
+
+  it('retombe a null pour une valeur absente, nulle, negative, infinie ou demesuree', () => {
+    const base = setPeakKwp(defaultPreferences(), 3);
+    for (const invalid of [null, 0, -2, Number.NaN, Number.POSITIVE_INFINITY, 101]) {
+      expect(setPeakKwp(base, invalid).solar).toEqual({ peakKwp: null });
+    }
+  });
+
+  it('ne touche a aucun autre champ', () => {
+    const base = setTheme(defaultPreferences(), 'dark');
+    expect(setPeakKwp(base, 3).theme).toBe('dark');
+  });
+});
+
+describe('readPreferences, puissance crete', () => {
+  it('ecarte une puissance illisible ou une section solaire absente', () => {
+    const stored = { ...defaultPreferences(), solar: { peakKwp: 'beaucoup' } };
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(stored));
+    expect(readPreferences().solar).toEqual({ peakKwp: null });
+    const { solar: _solar, ...withoutSolar } = defaultPreferences();
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(withoutSolar));
+    expect(readPreferences().solar).toEqual({ peakKwp: null });
+    localStorage.setItem(
+      'meteo-fr:prefs',
+      JSON.stringify({ ...defaultPreferences(), solar: { peakKwp: 4.5 } }),
+    );
+    expect(readPreferences().solar).toEqual({ peakKwp: 4.5 });
   });
 });

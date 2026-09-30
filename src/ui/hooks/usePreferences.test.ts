@@ -106,4 +106,15 @@ describe('usePreferences', () => {
     expect(db.clearAllLocalData).toHaveBeenCalledOnce();
     expect(result.current.preferences).toEqual(defaultPreferences());
   });
+
+  it('enregistre la puissance crete valide et la persiste, null hors limites', () => {
+    const { result } = renderHook(() => usePreferences());
+    act(() => result.current.setPeakKwp(4.5));
+    expect(result.current.preferences.solar).toEqual({ peakKwp: 4.5 });
+    expect(JSON.parse(localStorage.getItem('meteo-fr:prefs') ?? '{}').solar).toEqual({
+      peakKwp: 4.5,
+    });
+    act(() => result.current.setPeakKwp(-1));
+    expect(result.current.preferences.solar).toEqual({ peakKwp: null });
+  });
 });

@@ -10,6 +10,7 @@ import {
   removeFavourite as removeFavouriteFromPrefs,
   reorderFavourites as reorderFavouritesInPrefs,
   setAlias as setAliasInPrefs,
+  setPeakKwp as setPeakKwpInPrefs,
   setTheme as setThemeInPrefs,
   setWindUnit as setWindUnitInPrefs,
   toggleAlert as toggleAlertInPrefs,
@@ -26,6 +27,7 @@ export interface PreferencesApi {
   readonly setAlias: (placeId: string, alias: string | null) => void;
   readonly setWindUnit: (wind: 'kmh' | 'kt') => void;
   readonly setTheme: (theme: Preferences['theme']) => void;
+  readonly setPeakKwp: (peakKwp: number | null) => void;
   readonly addAlert: (rule: Omit<AlertRule, 'id'>) => void;
   readonly toggleAlert: (id: string) => void;
   readonly removeAlert: (id: string) => void;
@@ -89,6 +91,14 @@ export function usePreferences(): PreferencesApi {
     });
   }, []);
 
+  const setPeakKwp = useCallback((peakKwp: number | null) => {
+    setPreferences((current) => {
+      const next = setPeakKwpInPrefs(current, peakKwp);
+      writePreferences(next);
+      return next;
+    });
+  }, []);
+
   const setTheme = useCallback((theme: Preferences['theme']) => {
     setPreferences((current) => {
       const next = setThemeInPrefs(current, theme);
@@ -135,6 +145,7 @@ export function usePreferences(): PreferencesApi {
     setAlias,
     setWindUnit,
     setTheme,
+    setPeakKwp,
     addAlert,
     toggleAlert,
     removeAlert,

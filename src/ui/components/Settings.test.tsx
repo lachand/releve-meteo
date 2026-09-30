@@ -77,4 +77,51 @@ describe('Settings', () => {
     await user.click(screen.getByRole('button', { name: 'Fermer' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
+
+  describe('solaire', () => {
+    function renderSolar(peakKwp: number | null, onSetPeakKwp = vi.fn()) {
+      render(
+        <Settings
+          preferences={{ ...defaultPreferences(), solar: { peakKwp } }}
+          onSetWindUnit={vi.fn()}
+          onSetTheme={vi.fn()}
+          onSetPeakKwp={onSetPeakKwp}
+          onPurge={vi.fn().mockResolvedValue(undefined)}
+          onClose={vi.fn()}
+        />,
+      );
+      return onSetPeakKwp;
+    }
+
+    it('n affiche pas la section quand le reglage n est pas branche', () => {
+      render(
+        <Settings
+          preferences={defaultPreferences()}
+          onSetWindUnit={vi.fn()}
+          onSetTheme={vi.fn()}
+          onPurge={vi.fn().mockResolvedValue(undefined)}
+          onClose={vi.fn()}
+        />,
+      );
+      expect(screen.queryByLabelText(/Puissance crête installée/)).not.toBeInTheDocument();
+    });
+
+    it('saisit la puissance crete, avec la virgule francaise, et la vide pour desactiver', async () => {
+      const user = userEvent.setup();
+      const onSetPeakKwp = renderSolar(null);
+      const input = screen.getByLabelText('Puissance crête installée (kWc)');
+      expect(input).toHaveValue('');
+      await user.type(input, '4,5');
+      expect(onSetPeakKwp).toHaveBeenLastCalledWith(4.5);
+      await user.clear(input);
+      expect(onSetPeakKwp).toHaveBeenLastCalledWith(null);
+    });
+
+    it('montre la valeur enregistree et dit qu il s agit d une estimation', () => {
+      renderSolar(3.6);
+      expect(screen.getByLabelText('Puissance crête installée (kWc)')).toHaveValue('3.6');
+      expect(screen.getByText(/une estimation, pas une mesure/)).toBeInTheDocument();
+      expect(screen.getByText(/de l’orientation ni des masques/)).toBeInTheDocument();
+    });
+  });
 });

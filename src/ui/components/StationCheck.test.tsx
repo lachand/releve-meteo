@@ -34,7 +34,12 @@ function ready(
   match: StationMatch | null = MATCH,
   models: StationModelSeries | null = { timeline: [], temperature: {} },
 ): DatasetState<StationReport> {
-  return { status: 'ready', value: { match, records: [], models }, fetchedAt: 0, stale: false };
+  return {
+    status: 'ready',
+    value: { match, records: [], models, previousDay: null, snapshots: [] },
+    fetchedAt: 0,
+    stale: false,
+  };
 }
 
 const CHECK: StationCheck = {
