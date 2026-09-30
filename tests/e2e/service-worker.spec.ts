@@ -112,6 +112,17 @@ test.describe('Regression du service worker (TESTING.md 6.5)', () => {
       const cache = await caches.open('meteo-fr-tiles-v1');
       await cache.put('/synthetic-tile.png', new Response('tuile', { status: 200 }));
     });
+    // Sondes : a quelle etape l'entree disparait-elle, le cas echeant ?
+    const hasTile = () =>
+      page.evaluate(async () => {
+        const names = await caches.keys();
+        if (!names.includes('meteo-fr-tiles-v1')) {
+          return 'cache absent';
+        }
+        const cache = await caches.open('meteo-fr-tiles-v1');
+        return (await cache.match('/synthetic-tile.png')) === undefined ? 'entree absente' : 'ok';
+      });
+    const probes: string[] = [`apres semis : ${await hasTile()}`];
 
     // 2. Deployer la version B sur le serveur de test : memes sources,
     // nouvel identifiant de build (horodatage) genere par chaque
@@ -127,6 +138,7 @@ test.describe('Regression du service worker (TESTING.md 6.5)', () => {
     await expect(page.getByText('Une nouvelle version est disponible.')).toBeVisible({
       timeout: 20000,
     });
+    probes.push(`bandeau affiche : ${await hasTile()}`);
 
     // 4. Cliquer « Actualiser » : la version B prend le controle.
     const loadsBeforeClick = loadCount;
@@ -134,6 +146,8 @@ test.describe('Regression du service worker (TESTING.md 6.5)', () => {
     await expect(page.getByText('Une nouvelle version est disponible.')).toBeHidden({
       timeout: 20000,
     });
+
+    probes.push(`apres Actualiser : ${await hasTile()}`);
 
     // 6. Pas de boucle de rechargement : exactement une navigation de plus.
     await page.waitForTimeout(2000);
@@ -145,12 +159,8 @@ test.describe('Regression du service worker (TESTING.md 6.5)', () => {
       .not.toContain(shellBefore);
 
     // 7. Le cache de tuiles, non versionne sur le build, a survecu.
-    const tileSurvived = await page.evaluate(async () => {
-      const cache = await caches.open('meteo-fr-tiles-v1');
-      return (await cache.match('/synthetic-tile.png')) !== undefined;
-    });
-    const cacheNames = await page.evaluate(() => caches.keys());
-    expect(tileSurvived, `caches presents : ${cacheNames.join(', ')}`).toBe(true);
+    probes.push(`apres purge : ${await hasTile()}`);
+    expect(probes.at(-1), `sondes : ${probes.join(' | ')}`).toBe('apres purge : ok');
   });
 
   test('repli sur offline.html quand le shell precache est incomplet (SERVICE_WORKER.md 13)', async ({
