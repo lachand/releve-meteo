@@ -236,6 +236,44 @@ describe('App', { timeout: 30000 }, () => {
     expect(await favourites.findByText(/selon AROME$/)).toBeInTheDocument();
   });
 
+  it('compare deux favoris dans un tableau : valeur, extremes, pluie, rafales et modele', async () => {
+    server.use(...liveHandlers());
+    const favourite = (name: string, latitude: number, longitude: number) => ({
+      id: `${latitude.toFixed(4)}:${longitude.toFixed(4)}`,
+      name,
+      latitude,
+      longitude,
+      elevation: 170,
+      admin: null,
+      alias: null,
+    });
+    localStorage.setItem(
+      'meteo-fr:prefs',
+      JSON.stringify({
+        version: 1,
+        favourites: [favourite('Lyon', 45.7578, 4.832), favourite('Villeurbanne', 45.7719, 4.8902)],
+        units: { temperature: 'C', wind: 'kmh' },
+        theme: 'auto',
+        solar: { peakKwp: null },
+        apiKeys: { vigilance: null, infoclimat: null },
+        alerts: [],
+      }),
+    );
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('tab', { name: 'Cartes' }));
+    const table = await screen.findByRole(
+      'table',
+      { name: /Comparaison des lieux favoris/ },
+      { timeout: 8000 },
+    );
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(2);
+    // Les deux lieux recoivent la meme prevision enregistree : modele nomme, valeurs chiffrees.
+    await within(table).findAllByText('AROME', {}, { timeout: 8000 });
+    expect(within(rows[0] as HTMLElement).getAllByRole('cell')[1]?.textContent).toMatch(/^\d+$/);
+  });
+
   it('signale une alerte personnelle franchie par la prevision', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();

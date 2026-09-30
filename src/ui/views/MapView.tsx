@@ -1,6 +1,7 @@
 import { getForecastGrid } from '../../data/repository';
 import type { ModelId } from '../../domain/types';
 import { FavouritesMap } from '../components/FavouritesMap';
+import { FavouritesTable } from '../components/FavouritesTable';
 import { ForecastMap } from '../components/ForecastMap';
 import { RadarMap } from '../components/RadarMap';
 import { useDataset } from '../hooks/useDataset';
@@ -46,6 +47,16 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
       {favourites.length > 0 && (
         <Section eyebrow="Favoris" title="Mes lieux, en ce moment">
           <FavouritesMap snapshots={favourites} activePlaceId={vm.place.id} onOpen={vm.openPlace} />
+        </Section>
+      )}
+      {favourites.length > 1 && (
+        <Section eyebrow="Favoris" title="Comparer mes lieux, 24 heures">
+          <FavouritesTable
+            snapshots={favourites}
+            activePlaceId={vm.place.id}
+            windUnit={vm.windUnit}
+            onOpen={vm.openPlace}
+          />
         </Section>
       )}
     </div>
