@@ -1,0 +1,116 @@
+.wrapper {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.chart {
+  position: relative;
+  height: 240px;
+}
+
+.key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1) var(--esp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--pas-xs);
+  color: var(--encre);
+}
+
+.key li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+/* Mesure : trait d'encre pointe, comme le releve. */
+.measured {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 2px solid var(--encre);
+  position: relative;
+}
+
+.measured::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--encre);
+}
+
+.line {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 1.5px solid var(--model);
+}
+
+.line[data-active] {
+  border-top-width: 3px;
+}
+
+.tag {
+  padding: 0 var(--esp-1);
+  border: 1px solid var(--encre-faible);
+  color: var(--encre-faible);
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.drifts {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--pas-s);
+}
+
+.drifts li {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, max-content) 1fr;
+  gap: var(--esp-3);
+  padding-bottom: var(--esp-2);
+  border-bottom: 1px dotted var(--grille);
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-weight: 600;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--model);
+}
+
+@media (max-width: 559px) {
+  .drifts li {
+    grid-template-columns: 1fr;
+    gap: var(--esp-1);
+  }
+}
+
+.dataTable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

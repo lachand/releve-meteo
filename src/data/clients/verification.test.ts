@@ -34,6 +34,13 @@ describe('verificationWindow', () => {
     expect(window.startDate).toBe('2026-08-29');
   });
 
+  it('date la fenetre en heure de Paris, comme le parametre timezone de la requete', () => {
+    // 00h30 a Paris le 29 : encore le 28 en UTC.
+    const window = verificationWindow(new Date('2026-09-28T22:30:00Z'), 0);
+    expect(window.endDate).toBe('2026-09-29');
+    expect(window.startDate).toBe('2026-08-31');
+  });
+
   it('applique le retard ERA5', () => {
     const now = new Date('2026-09-28T12:00:00Z');
     const window = verificationWindow(now, REANALYSIS_DELAY_DAYS);
@@ -561,12 +568,62 @@ describe('fetchVerifications', () => {
     const temperature = result.value.references.find((r) => r.variable === 'temperature');
     expect(temperature?.provenance).toBe('observed');
     expect(temperature?.station).toEqual(STATION_MATCH);
+    // Derniere heure mesuree par la station, en heure de Paris.
+    expect(result.value.observedUntil).toBe('2026-09-27T01:00');
     expect(result.value.verifications.length).toBeGreaterThan(0);
     expect(
       result.value.verifications.some(
         (v) => v.variable === 'temperature' && v.reference === 'observed',
       ),
     ).toBe(true);
+  });
+});
+
+describe('fetchVerifications, fraicheur horaire', () => {
+  it('inclut les heures du jour : la fenetre de la station se termine aujourd hui, pas hier', async () => {
+    const ends: string[] = [];
+    server.use(
+      http.get('https://previous-runs-api.open-meteo.com/v1/forecast', ({ request }) => {
+        ends.push(new URL(request.url).searchParams.get('end_date') ?? '');
+        return HttpResponse.json(previousRunsBody());
+      }),
+      http.get('https://archive-api.open-meteo.com/v1/archive', () =>
+        HttpResponse.json(reanalysisBody()),
+      ),
+      http.get(`https://data.meteostat.net/hourly/2026/${STATION.id}.csv.gz`, async () => {
+        return new HttpResponse(await gzip(stationCsvWithHours(0)));
+      }),
+    );
+    await fetchVerifications({
+      ...PLACE,
+      models: ['arome'],
+      station: STATION_MATCH,
+      now: NOW,
+    });
+    // Les heures d'aujourd'hui entrent des que la station les a publiees.
+    expect(ends).toEqual(['2026-09-28']);
+  });
+});
+
+describe('fetchVerifications, derniere mesure', () => {
+  it('ne dit aucune heure mesuree quand la reference est la reanalyse', async () => {
+    server.use(
+      http.get('https://previous-runs-api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json(previousRunsBody()),
+      ),
+      http.get('https://archive-api.open-meteo.com/v1/archive', () =>
+        HttpResponse.json(reanalysisBody()),
+      ),
+    );
+    const result = await fetchVerifications({
+      ...PLACE,
+      models: ['arome'],
+      station: null,
+      now: NOW,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.observedUntil).toBeNull();
   });
 });
 

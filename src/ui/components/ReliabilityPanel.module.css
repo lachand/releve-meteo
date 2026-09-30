@@ -160,3 +160,11 @@ li[data-provenance='estimated'] .pastille {
   border-radius: var(--rayon);
   background: var(--papier-creux);
 }
+
+/* Heure de la derniere mesure : discrete, en italique de marge. */
+.freshness {
+  margin: 0;
+  font-size: var(--pas-s);
+  font-style: italic;
+  color: var(--encre-faible);
+}

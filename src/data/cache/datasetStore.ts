@@ -27,7 +27,8 @@ export interface CachedDataset<T> {
 const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   ensemble: 1,
   // v2 : verification a l'altitude de la station.
-  verification: 2,
+  // v3 : fenetre jusqu'a aujourd'hui, avec l'heure de la derniere mesure.
+  verification: 3,
   airQuality: 1,
   nowcast: 1,
   // v2 : temperatures des modeles au point de la station.

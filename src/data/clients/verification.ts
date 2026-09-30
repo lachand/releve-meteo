@@ -1,4 +1,5 @@
 import { verifyModel } from '../../domain/reliability';
+import { localIsoFromUtc } from '../../domain/time';
 import type { ModelVerification, VerificationPair } from '../../domain/reliability';
 import type { StationMatch } from '../../domain/stations';
 import type { LocalIsoHour, ModelId, Provenance, WeatherVariable } from '../../domain/types';
@@ -74,21 +75,29 @@ export interface VerificationReference {
 export interface VerificationReport {
   readonly verifications: readonly ModelVerification[];
   readonly references: readonly VerificationReference[];
+  /**
+   * Derniere heure locale mesuree par la station retenue, pour dire de
+   * quand date la comparaison ; null si aucune reference n'est observee.
+   */
+  readonly observedUntil: LocalIsoHour | null;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function isoDate(epochMs: number): string {
-  return new Date(epochMs).toISOString().slice(0, 10);
+/** Date 'YYYY-MM-DD' d'une date, decalee de `days` jours (calendrier, pas heures). */
+function shiftDate(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T12:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
-/** Fenetre de `VERIFICATION_WINDOW_DAYS` jours se terminant `delayDays` jours avant `now`. */
+/**
+ * Fenetre de `VERIFICATION_WINDOW_DAYS` jours se terminant `delayDays` jours
+ * avant `now`, en dates de Paris : les requetes demandent le fuseau
+ * Europe/Paris, la fenetre doit donc suivre le meme calendrier (a minuit
+ * passe, la date UTC a encore un jour de retard).
+ */
 export function verificationWindow(now: Date, delayDays: number): VerificationWindow {
-  const end = now.getTime() - delayDays * DAY_MS;
-  return {
-    startDate: isoDate(end - (VERIFICATION_WINDOW_DAYS - 1) * DAY_MS),
-    endDate: isoDate(end),
-  };
+  const endDate = shiftDate(localIsoFromUtc(now.getTime()).slice(0, 10), -delayDays);
+  return { startDate: shiftDate(endDate, -(VERIFICATION_WINDOW_DAYS - 1)), endDate };
 }
 
 /** Altitude transmise a Open-Meteo pour corriger la temperature du relief. */
@@ -273,6 +282,25 @@ export function buildVerifications(input: {
   return { ok: true, value: verifications };
 }
 
+/** Derniere heure mesuree, parmi les variables dont la station est la reference. */
+function latestObservedHour(
+  series: ObservationSeries | null,
+  references: readonly VerificationReference[],
+): LocalIsoHour | null {
+  let latest: LocalIsoHour | null = null;
+  for (const reference of references) {
+    if (reference.provenance !== 'observed') {
+      continue;
+    }
+    for (const time of series?.[reference.variable].keys() ?? []) {
+      if (isInWindow(time, reference.window) && (latest === null || time > latest)) {
+        latest = time;
+      }
+    }
+  }
+  return latest;
+}
+
 function yearsOf(window: VerificationWindow): readonly number[] {
   const first = Number(window.startDate.slice(0, 4));
   const last = Number(window.endDate.slice(0, 4));
@@ -287,7 +315,11 @@ export async function fetchVerifications(input: {
   readonly now: Date;
   readonly signal?: AbortSignal;
 }): Promise<HttpResult<VerificationReport>> {
-  const stationWindow = verificationWindow(input.now, 1);
+  // La station publie ses releves au fil des heures : la fenetre se termine
+  // aujourd'hui, les heures encore sans mesure sont simplement ecartees de
+  // l'appariement. Les scores evoluent donc a chaque rafraichissement, pas
+  // une fois par jour.
+  const stationWindow = verificationWindow(input.now, 0);
   const reanalysisWindow = verificationWindow(input.now, REANALYSIS_DELAY_DAYS);
   const unionWindow: VerificationWindow = {
     startDate: reanalysisWindow.startDate,
@@ -351,5 +383,12 @@ export async function fetchVerifications(input: {
   if (!verifications.ok) {
     return verifications;
   }
-  return { ok: true, value: { verifications: verifications.value, references } };
+  return {
+    ok: true,
+    value: {
+      verifications: verifications.value,
+      references,
+      observedUntil: latestObservedHour(stationSeries, references),
+    },
+  };
 }

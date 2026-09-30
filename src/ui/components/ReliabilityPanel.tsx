@@ -8,6 +8,7 @@ import { Chart, TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import {
   MISSING,
   formatCompact,
+  formatDayHour,
   formatDayMonth,
   formatInteger,
   formatOneDecimal,
@@ -227,7 +228,7 @@ export function ReliabilityPanel({ state }: ReliabilityPanelProps) {
       </p>
     );
   }
-  const { verifications, references } = state.value;
+  const { verifications, references, observedUntil } = state.value;
   const ready = verifications.some((v) => v.stats !== null);
   if (!ready) {
     return (
@@ -241,10 +242,16 @@ export function ReliabilityPanel({ state }: ReliabilityPanelProps) {
     <div className={styles.panel}>
       <div className={styles.method}>
         <p>
-          Chaque jour, les prévisions émises la veille (J+1) jusqu’à sept jours avant (J+7) sont
-          comparées à ce qui s’est réellement produit. Le chiffre est l’erreur absolue moyenne :
+          Les prévisions émises la veille (J+1) jusqu’à sept jours avant (J+7) sont comparées à ce
+          qui s’est réellement produit, heure par heure. Le chiffre est l’erreur absolue moyenne :
           plus il est bas, plus le modèle a été juste ici.
         </p>
+        {observedUntil !== null && (
+          <p className={styles.freshness}>
+            Dernière mesure de la station : {formatDayHour(observedUntil)}. Les scores se mettent à
+            jour toutes les heures, au rythme où la station publie ses relevés.
+          </p>
+        )}
         <ul className={styles.references}>
           {references.map((reference) => (
             <li key={reference.variable} data-provenance={reference.provenance}>
