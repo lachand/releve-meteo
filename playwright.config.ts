@@ -21,8 +21,13 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'], ...chromiumLaunchOptions } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    // Firefox et WebKit : `page.route` n'intercepte ni les requetes que le
+    // service worker relaie ni les siennes, qui partent alors sur le vrai
+    // reseau (geocodage, tuiles) : bruit console, resultats de recherche
+    // differents, tests instables en CI. Le service worker y est donc
+    // bloque, sauf dans les specs qui le testent (`serviceWorkers: 'allow'`).
+    { name: 'firefox', use: { ...devices['Desktop Firefox'], serviceWorkers: 'block' } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'], serviceWorkers: 'block' } },
     {
       name: 'mobile-380',
       use: {

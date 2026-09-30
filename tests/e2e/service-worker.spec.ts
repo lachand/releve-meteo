@@ -58,6 +58,9 @@ function stopServer(): Promise<void> {
 }
 
 test.describe('Regression du service worker (TESTING.md 6.5)', () => {
+  // Bloque par defaut sous Firefox et WebKit (playwright.config.ts).
+  test.use({ serviceWorkers: 'allow' });
+
   // Serie : le premier test reconstruit `OUT_DIR` en cours de route pour
   // simuler un second deploiement, ce qui entrerait en conflit avec un
   // autre test lisant les memes fichiers via le serveur statique partage
