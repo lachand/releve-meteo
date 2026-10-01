@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Relevé</string>
+    <string name="widget_small_label">Relevé, bulletin</string>
+    <string name="widget_medium_label">Relevé, bulletin et 12 heures</string>
+    <string name="widget_small_description">Le modèle retenu, la température et la confiance, pour un lieu.</string>
+    <string name="widget_medium_description">Le bulletin et les douze prochaines heures, pour un lieu.</string>
+</resources>

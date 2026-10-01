@@ -169,6 +169,32 @@ describe('useBackgroundWatch', () => {
     );
   });
 
+  it('dans l application Android, recopie les lieux meme sans veille du navigateur, et previent les widgets', async () => {
+    mocked.readWatchStatus.mockResolvedValue('unsupported');
+    const refreshWidgets = vi.fn();
+    Object.defineProperty(window, 'ReleveAndroid', {
+      configurable: true,
+      value: { refreshWidgets },
+    });
+    try {
+      const { result } = renderHook(() => useBackgroundWatch(inputs()));
+      await waitFor(() => expect(result.current.status).toBe('unsupported'));
+      await waitFor(async () =>
+        expect((await readWatchState()).entries.map((e) => e.place.id)).toEqual(['brest', 'lyon']),
+      );
+      await waitFor(() => expect(refreshWidgets).toHaveBeenCalled());
+    } finally {
+      delete (window as unknown as Record<string, unknown>).ReleveAndroid;
+    }
+  });
+
+  it('hors de l application Android, une veille non prise en charge ne recopie rien', async () => {
+    mocked.readWatchStatus.mockResolvedValue('unsupported');
+    const { result } = renderHook(() => useBackgroundWatch(inputs()));
+    await waitFor(() => expect(result.current.status).toBe('unsupported'));
+    expect((await readWatchState()).entries).toEqual([]);
+  });
+
   it('ne recopie rien veille eteinte, puis lance une premiere veille apres activation', async () => {
     mocked.readWatchStatus.mockResolvedValue('off');
     mocked.enableWatch.mockResolvedValue('on');
