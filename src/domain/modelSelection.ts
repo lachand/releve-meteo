@@ -124,10 +124,9 @@ export function priorFactor(verification: readonly ModelVerification[], leadHour
   if (counts.length === 0) {
     return 1;
   }
-  const median =
-    counts.length % 2 === 1
-      ? (counts[(counts.length - 1) / 2] ?? 0)
-      : ((counts[counts.length / 2 - 1] ?? 0) + (counts[counts.length / 2] ?? 0)) / 2;
+  // Mediane : le terme du milieu, ou la moyenne des deux termes du milieu.
+  const middle = counts.slice(Math.ceil(counts.length / 2) - 1, Math.floor(counts.length / 2) + 1);
+  const median = middle.reduce((sum, value) => sum + value, 0) / middle.length;
   return 1 - SELECTION_WEIGHTS.priorFade * evidenceWeight(median);
 }
 
