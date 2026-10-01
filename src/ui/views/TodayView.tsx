@@ -1,12 +1,10 @@
 import { Suspense, lazy } from 'react';
 import { briefingAt } from '../../domain/briefing';
-import { dayDigest } from '../../domain/dayDigest';
 import { bestDryWindow } from '../../domain/dryWindow';
 import { solarOutlook } from '../../domain/solarOutlook';
 import { mountainOutlook } from '../../domain/mountainOutlook';
 import { anomalyAgainst } from '../../domain/normals';
 import { briefingSentence } from '../briefingPresentation';
-import { digestBody } from '../digestPresentation';
 import { NORMALS_CAVEAT, normalSentence } from '../normalsPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
 import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
@@ -20,7 +18,6 @@ import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
 import { NowPanel } from '../components/NowPanel';
 import { PhenomenaPanel } from '../components/PhenomenaPanel';
-import { SpeakButton } from '../components/SpeakButton';
 import { StationLine } from '../components/StationCheck';
 import { VigilanceBanner, VigilanceLine } from '../components/Vigilance';
 import { Collapsible } from './Collapsible';
@@ -50,13 +47,6 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           active: { model: nowPoint.model, temperature: nowPoint.temperature.value },
           verdict: confidenceNow,
         });
-
-  // Ce qui se lit a voix haute : le bulletin et les 24 heures, avec le lieu pour commencer.
-  const spoken = digestBody(
-    briefing,
-    dayDigest({ points: cascade.points.filter((point) => point !== null), now: vm.now }),
-    vm.windUnit,
-  );
 
   const todayDay = vm.days[0];
   const normalLine =
@@ -100,9 +90,6 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
       />
       <Section eyebrow="Maintenant" className={styles.nowSheet}>
         {briefing !== null && <p className={styles.briefing}>{briefingSentence(briefing)}</p>}
-        {spoken !== null && (
-          <SpeakButton text={`Relevé de ${vm.place.alias ?? vm.place.name}. ${spoken}`} />
-        )}
         <NowPanel
           point={nowPoint}
           confidence={confidenceNow}

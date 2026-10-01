@@ -86,13 +86,16 @@ function placeLabel(entry: WatchEntry): string {
   return entry.place.alias ?? entry.place.name;
 }
 
-interface EntryForecast {
+export interface EntryForecast {
   readonly bundle: ForecastBundle;
   readonly cascade: CascadeView;
 }
 
 /** Prevision rechargee d'un lieu et sa cascade : celle de la page, avec les memes intrants. */
-async function loadEntryForecast(entry: WatchEntry, now: Date): Promise<EntryForecast | null> {
+export async function loadEntryForecast(
+  entry: WatchEntry,
+  now: Date,
+): Promise<EntryForecast | null> {
   const response = await fetchForecast({
     latitude: entry.place.latitude,
     longitude: entry.place.longitude,

@@ -61,4 +61,9 @@ function serviceWorkerPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), serviceWorkerPlugin()],
+  build: {
+    // Deux pages : l'application, et widget.html, charge sans interface par
+    // l'application Android pour calculer le contenu de ses widgets.
+    rollupOptions: { input: { main: 'index.html', widget: 'widget.html' } },
+  },
 });

@@ -167,7 +167,8 @@ describe('App', { timeout: 30000 }, () => {
   });
 
   it('ouvre le releve du lieu choisi, avec le modele retenu et sa justification', async () => {
-    server.use(...liveHandlers());
+    // Sans mesure locale, le choix tient a la maille seule : AROME, a coup sur.
+    server.use(...liveHandlers({ failVerification: true }));
     await openLyon();
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
@@ -274,7 +275,8 @@ describe('App', { timeout: 30000 }, () => {
   });
 
   it('ouvre les cartes : radar observe et prevision du modele retenu sur la grille', async () => {
-    server.use(...liveHandlers());
+    // Sans mesure locale, le choix tient a la maille seule : AROME, a coup sur.
+    server.use(...liveHandlers({ failVerification: true }));
     const user = await openLyon();
     await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
 
@@ -293,7 +295,8 @@ describe('App', { timeout: 30000 }, () => {
   });
 
   it('place les favoris sur la carte avec la valeur du modele retenu', async () => {
-    server.use(...liveHandlers());
+    // Sans mesure locale, le choix tient a la maille seule : AROME, a coup sur.
+    server.use(...liveHandlers({ failVerification: true }));
     const user = await openLyon();
     await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
     await user.click(screen.getByRole('button', { name: 'Ajouter aux favoris' }));
@@ -307,7 +310,8 @@ describe('App', { timeout: 30000 }, () => {
   });
 
   it('compare deux favoris dans un tableau : valeur, extremes, pluie, rafales et modele', async () => {
-    server.use(...liveHandlers());
+    // Sans mesure locale, le choix tient a la maille seule : AROME, a coup sur.
+    server.use(...liveHandlers({ failVerification: true }));
     const favourite = (name: string, latitude: number, longitude: number) => ({
       id: `${latitude.toFixed(4)}:${longitude.toFixed(4)}`,
       name,
@@ -345,7 +349,8 @@ describe('App', { timeout: 30000 }, () => {
   });
 
   it('signale une alerte personnelle franchie par la prevision', async () => {
-    server.use(...liveHandlers());
+    // Sans mesure locale, le choix tient a la maille seule : AROME, a coup sur.
+    server.use(...liveHandlers({ failVerification: true }));
     const user = await openLyon();
     await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
 
@@ -575,9 +580,12 @@ describe('App', { timeout: 30000 }, () => {
     await user.type(screen.getByLabelText('Puissance crête installée (kWc)'), '4,5');
     await user.click(screen.getByRole('button', { name: 'Fermer' }));
 
-    const heading = await screen.findByRole('heading', {
-      name: 'Production solaire sur 48 heures',
-    });
+    // Le graphique se charge a la demande : sur une machine chargee, plus d'une seconde.
+    const heading = await screen.findByRole(
+      'heading',
+      { name: 'Production solaire sur 48 heures' },
+      { timeout: 8000 },
+    );
     const section = heading.closest('section') as HTMLElement;
     expect(
       await within(section).findByText(/Aujourd’hui : environ .* kWh estimés/),

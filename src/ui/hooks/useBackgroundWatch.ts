@@ -35,6 +35,7 @@ import {
   readWatchStatus,
   requestWatchRun,
 } from '../../pwa/backgroundWatch';
+import { androidApp } from '../../pwa/androidApp';
 import type { WatchStatus } from '../../pwa/backgroundWatch';
 import { WATCH_DONE_MESSAGE } from '../../pwa/watchTags';
 import { terrainOf } from './useTerrain';
@@ -179,8 +180,11 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   }, [refresh]);
 
   const on = status === 'on';
-  // Les lieux sont recopies des que la collecte tourne, notifications ou non.
-  const active = status === 'on' || status === 'collecting';
+  // Les lieux sont recopies des que la collecte tourne, notifications ou non, et dans
+  // l'application Android, dont les widgets lisent ces lieux (la veille du navigateur
+  // n'y existe pas : le statut y reste « non pris en charge »).
+  const inAndroidApp = androidApp() !== null;
+  const active = status === 'on' || status === 'collecting' || inAndroidApp;
   const { place, terrain, verification, preferred, favourites, rules, windUnit } = inputs;
 
   // Recopie des lieux veilles, seulement quand la veille est active.
@@ -195,6 +199,8 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
           return;
         }
         void saveWatchEntries(entries, windUnit, new Date()).then(() => {
+          // Les lieux ont change : l'application Android recalcule ses widgets.
+          androidApp()?.refreshWidgets?.();
           if (runAfterMirror.current) {
             runAfterMirror.current = false;
             void requestWatchRun();

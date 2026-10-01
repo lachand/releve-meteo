@@ -61,6 +61,8 @@ export default [
       'public/**',
       'scripts/**',
       '.claude/**',
+      // Projet Android (Kotlin) et sa copie du build web.
+      'android/**',
     ],
   },
   js.configs.recommended,
