@@ -40,6 +40,9 @@ object WidgetFormat {
 
     fun degreesGap(value: Double): String = "${oneDecimal(value)}$NBSP°C"
 
+    /** « AROME prévoit » : le modèle précède toujours le chiffre, qui s'écrit en grand juste dessous. */
+    fun lead(now: WidgetNow): String = "${modelLabel(now.model)} prévoit"
+
     /** « AROME prévoit 14 °C » : jamais « 14 °C » seul. */
     fun headline(now: WidgetNow): String = "${modelLabel(now.model)} prévoit ${temperature(now.temperature)}"
 

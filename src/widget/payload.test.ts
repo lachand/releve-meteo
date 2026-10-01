@@ -4,6 +4,7 @@ import forecastLyon from '../../tests/fixtures/live/forecast-lyon.json';
 import { server } from '../../tests/msw';
 import type { WatchEntry } from '../domain/watch';
 import { loadEntryForecast } from '../pwa/watchRun';
+import { sharedPlaceSearch } from '../ui/sharedPlace';
 import type { EntryForecast } from '../pwa/watchRun';
 import { WIDGET_HOURS, WIDGET_PAYLOAD_VERSION, widgetPayload, widgetPlace } from './payload';
 
@@ -56,6 +57,13 @@ describe('widgetPlace', () => {
     expect(place.hours[0]?.time).toBe('2026-09-28T17:00');
     expect(place.hours.at(-1)?.time).toBe('2026-09-29T04:00');
     expect(place.day?.tempMax).not.toBeNull();
+  });
+
+  it('porte le lien qui ouvre ce lieu dans l application', async () => {
+    const place = widgetPlace({ entry: LYON, forecast: await forecastOf(LYON), now: NOW });
+    expect(place.link).toBe(sharedPlaceSearch(LYON.place));
+    expect(place.link).toContain('lat=');
+    expect(place.link).toContain('nom=');
   });
 
   it('prefere l alias du lieu, et ne dit aucune confiance quand le terrain est inconnu', async () => {

@@ -60,9 +60,20 @@ class MainActivity : Activity() {
                 }
             }
         web.addJavascriptInterface(Bridge(), "ReleveAndroid")
-        web.loadUrl(intent?.data?.takeIf { it.host == WebAssets.HOST }?.toString() ?: WebAssets.APP_URL)
+        web.loadUrl(urlOf(intent))
         WidgetScheduler.schedule(this)
     }
+
+    /** Un clic sur un widget quand l'application est deja ouverte : elle montre le lieu du widget. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Sans lieu a montrer, l'application reste telle que l'utilisateur l'a laissee.
+        if (intent.data != null) web.loadUrl(urlOf(intent))
+    }
+
+    private fun urlOf(intent: Intent?): String =
+        intent?.data?.takeIf { it.host == WebAssets.HOST }?.toString() ?: WebAssets.APP_URL
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)

@@ -47,6 +47,8 @@ class WidgetWorkerTest {
         assertNotNull(now)
         assertTrue(WidgetFormat.headline(now!!).contains("prévoit"))
         assertEquals(12, place.hours.size)
+        // Le clic sur le widget ouvre l'application sur ce lieu.
+        assertTrue(place.link.startsWith("?lat=45.7578"))
         assertTrue("trop long : $elapsed ms", elapsed < 60_000)
     }
 }

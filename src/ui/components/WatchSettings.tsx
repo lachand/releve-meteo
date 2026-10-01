@@ -1,4 +1,5 @@
 import { localIsoFromUtc } from '../../domain/time';
+import { androidApp } from '../../pwa/androidApp';
 import { formatDayHour } from '../format';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
 import styles from './Settings.module.css';
@@ -142,7 +143,39 @@ function NoticeSettings({ watch }: { readonly watch: BackgroundWatch }) {
   );
 }
 
+/**
+ * Dans l'application Android, la veille du navigateur n'existe pas : ce sont les
+ * widgets qui rechargent la prevision. Le dire, plutot que renvoyer a un navigateur.
+ */
+function AndroidSettings() {
+  return (
+    <section className={styles.section} aria-labelledby="veille-titre">
+      <p className="eyebrow" id="veille-titre">
+        Widgets et veille
+      </p>
+      <p className={styles.explanation} role="status">
+        Dans l’application Android, ce sont les widgets de l’écran d’accueil qui rechargent la
+        prévision de vos favoris, environ toutes les heures : Android choisit le moment, jamais sans
+        réseau ni en économie d’énergie, et un widget qui n’a pas pu se mettre à jour le dit. La
+        veille par notification n’existe pas dans l’application : vos alertes sont évaluées à chaque
+        ouverture.
+      </p>
+      <button
+        type="button"
+        className={styles.purgeButton}
+        onClick={() => androidApp()?.refreshWidgets?.()}
+      >
+        Mettre à jour les widgets
+      </button>
+    </section>
+  );
+}
+
 export function WatchSettings({ watch }: { readonly watch: BackgroundWatch }) {
+  // L'appel passe toujours par l'objet du pont : une methode Java detachee ne s'execute pas.
+  if (androidApp()?.refreshWidgets !== undefined) {
+    return <AndroidSettings />;
+  }
   const canEnable = watch.status === 'off' || watch.status === 'needs-install';
   return (
     <section className={styles.section} aria-labelledby="veille-titre">

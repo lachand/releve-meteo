@@ -42,6 +42,8 @@ data class WidgetDay(
 data class WidgetPlace(
     val id: String,
     val name: String,
+    /** Chaine de recherche qui ouvre ce lieu dans l'application, ou vide pour l'ouvrir sans lieu. */
+    val link: String = "",
     val now: WidgetNow? = null,
     val hours: List<WidgetHour> = emptyList(),
     val day: WidgetDay? = null,

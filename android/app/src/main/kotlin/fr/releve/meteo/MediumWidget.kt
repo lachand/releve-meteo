@@ -1,6 +1,7 @@
 package fr.releve.meteo
 
 import android.content.Context
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -8,34 +9,38 @@ import androidx.glance.GlanceModifier
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
-import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
-import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 
-/** Grand widget (4 sur 2) : le bulletin, les heures a venir et le resume des 24 heures. */
+/** Grand widget (4 sur 2) : le bulletin a gauche, les heures a venir et le resume des 24 heures a droite. */
 class MediumWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val shown = WidgetStore.load(context).firstOrNull()
         val nowMs = System.currentTimeMillis()
         provideContent {
-            WidgetFrame {
+            WidgetFrame(shown?.place?.link.orEmpty()) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT)
                 } else {
-                    BulletinBlock(shown, nowMs)
-                    Spacer(GlanceModifier.height(4.dp))
-                    HoursRow(shown.place.hours)
-                    shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
-                        Spacer(GlanceModifier.height(4.dp))
-                        SmallText(it, faint = false)
+                    Row(modifier = GlanceModifier.fillMaxSize()) {
+                        Column(modifier = GlanceModifier.width(112.dp)) {
+                            PlaceBlock(shown, nowMs, temperatureSize = 28.sp)
+                        }
+                        Spacer(GlanceModifier.width(COLUMN_GAP))
+                        Column(modifier = GlanceModifier.defaultWeight()) {
+                            HoursRow(shown.place.hours)
+                            shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
+                                Spacer(GlanceModifier.height(3.dp))
+                                Label(it, 10.sp, INK, maxLines = 2)
+                            }
+                            Spacer(GlanceModifier.height(2.dp))
+                            Freshness(shown, nowMs)
+                        }
                     }
                 }
             }
@@ -43,28 +48,20 @@ class MediumWidget : GlanceAppWidget() {
     }
 }
 
-/** Une heure sur deux, six au plus : l'heure, la temperature, la pluie. Une valeur absente reste un tiret. */
-@androidx.compose.runtime.Composable
+/** Les heures a venir, de trois en trois, quatre au plus : l'heure, la temperature, la pluie. Une valeur absente reste un tiret. */
+@Composable
 private fun HoursRow(hours: List<WidgetHour>) {
-    val shown = hours.filterIndexed { index, _ -> index % 2 == 1 }.take(6)
-    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+    val shown = hours.filterIndexed { index, _ -> index % 3 == 2 }.take(4)
+    Row(modifier = GlanceModifier.fillMaxWidth()) {
         shown.forEach { hour ->
-            Column(modifier = GlanceModifier.padding(end = 10.dp)) {
-                Text(
-                    text = WidgetFormat.hourLabel(hour.time),
-                    style = TextStyle(color = INK_FAINT, fontSize = 10.sp),
-                )
-                Text(
-                    text = hour.temperature?.let { "${Math.round(it)}°" } ?: "–",
-                    style = TextStyle(color = INK, fontSize = 13.sp, fontWeight = FontWeight.Bold),
-                )
-                Text(
-                    text = WidgetFormat.rain(hour.precipitation)?.let { "$it mm" } ?: "–",
-                    style = TextStyle(color = INK_FAINT, fontSize = 10.sp),
-                )
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Label(WidgetFormat.hourLabel(hour.time), 10.sp, INK_FAINT)
+                Label(hour.temperature?.let { "${Math.round(it)}°" } ?: "–", 14.sp, INK, bold = true)
+                val rain = WidgetFormat.rain(hour.precipitation)
+                val wet = rain != null && rain != "0"
+                Label(rain?.let { "$it mm" } ?: "–", 9.sp, if (wet) RAIN else INK_FAINT, bold = wet)
             }
         }
-        Spacer(GlanceModifier.width(0.dp))
     }
 }
 
