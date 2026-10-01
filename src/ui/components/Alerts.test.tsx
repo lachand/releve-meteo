@@ -1,9 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import type { AirHit } from '../../domain/airAlerts';
 import type { AlertHit } from '../../domain/alerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
-import type { AlertRule } from '../../domain/types';
+import type { AlertRule, NewAlertRule } from '../../domain/types';
 import { AlertBanner, AlertRulesEditor } from './Alerts';
 
 const frost: AlertRule = {
@@ -75,11 +76,33 @@ describe('AlertBanner, modeles en desaccord', () => {
   });
 });
 
+describe('AlertBanner, air, pollens et UV', () => {
+  const airRule: AlertRule = {
+    id: 'pollen',
+    kind: 'air',
+    placeId: 'lyon',
+    variable: 'pollen',
+    comparator: 'gt',
+    threshold: 80,
+    enabled: true,
+  };
+  const peak = { time: '2026-09-29T12:00' as const, value: 150, pollen: 'birch' };
+  const airHit: AirHit = { rule: airRule, first: peak, extreme: peak, hours: 2 };
+
+  it('annonce une alerte d air seule, avec le pollen en cause et la source CAMS', () => {
+    render(<AlertBanner hits={[]} airHits={[airHit]} windUnit="kmh" />);
+    const banner = screen.getByRole('region', { name: 'Votre alerte est franchie' });
+    expect(banner).toHaveTextContent(
+      'Pollens au-dessus de 80 grains/m³ : dès mardi 12h, 150 grains/m³ (bouleau), 2 h au total, prévision CAMS Europe.',
+    );
+  });
+});
+
 describe('AlertRulesEditor', () => {
   function renderEditor(
     overrides: { readonly rules?: readonly AlertRule[]; readonly windUnit?: 'kmh' | 'kt' } = {},
   ) {
-    const onAdd = vi.fn<(rule: Omit<AlertRule, 'id'>) => void>();
+    const onAdd = vi.fn<(rule: NewAlertRule) => void>();
     const onToggle = vi.fn<(id: string) => void>();
     const onRemove = vi.fn<(id: string) => void>();
     render(
@@ -196,5 +219,39 @@ describe('AlertRulesEditor', () => {
         name: /^Modèles en désaccord de plus de 3\s°C sur la température$/,
       }),
     ).toBeChecked();
+  });
+
+  it('ajoute une regle d air, de pollens ou d UV : toujours au-dessus, seuil propose par grandeur', async () => {
+    const user = userEvent.setup();
+    const props = renderEditor({ rules: [] });
+    const form = within(screen.getByRole('form', { name: 'Nouvelle alerte' }));
+    await user.selectOptions(form.getByLabelText('Type'), 'air');
+    expect(form.queryByLabelText('Sens')).not.toBeInTheDocument();
+    // L'UV est le premier choix, avec son seuil usuel et sans unite : un indice.
+    expect(form.getByLabelText('Grandeur')).toHaveValue('uv');
+    expect(form.getByLabelText('Seuil (indice)')).toHaveValue('6');
+    await user.selectOptions(form.getByLabelText('Grandeur'), 'pollen');
+    const threshold = form.getByLabelText('Seuil (grains/m³)');
+    expect(threshold).toHaveValue('80');
+    await user.clear(threshold);
+    await user.type(threshold, '120');
+    await user.click(form.getByRole('button', { name: 'Ajouter' }));
+    expect(props.onAdd).toHaveBeenCalledWith({
+      placeId: 'lyon',
+      kind: 'air',
+      variable: 'pollen',
+      comparator: 'gt',
+      threshold: 120,
+      enabled: true,
+    });
+  });
+
+  it('remet le seuil usuel de la grandeur quand on change de type pour l air', async () => {
+    const user = userEvent.setup();
+    renderEditor({ rules: [] });
+    const form = within(screen.getByRole('form', { name: 'Nouvelle alerte' }));
+    await user.selectOptions(form.getByLabelText('Type'), 'air');
+    await user.selectOptions(form.getByLabelText('Grandeur'), 'pm25');
+    expect(form.getByLabelText('Seuil (µg/m³)')).toHaveValue('25');
   });
 });

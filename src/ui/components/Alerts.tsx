@@ -1,12 +1,23 @@
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
+import { AIR_DEFAULT_THRESHOLDS, AIR_VARIABLES } from '../../domain/airAlerts';
+import type { AirHit } from '../../domain/airAlerts';
 import { ALERT_HORIZON_HOURS } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
-import type { AlertRule, Preferences, WeatherVariable } from '../../domain/types';
+import type {
+  AirVariable,
+  AlertRule,
+  NewAlertRule,
+  Preferences,
+  WeatherVariable,
+} from '../../domain/types';
 import {
+  AIR_UNITS,
+  AIR_VARIABLE_LABELS,
   ALERT_COMPARATOR_LABELS,
   ALERT_VARIABLE_LABELS,
+  airHitSentence,
   alertUnit,
   hitSentence,
   ruleSentence,
@@ -30,14 +41,17 @@ const VARIABLES: readonly WeatherVariable[] = ['temperature', 'precipitation', '
 export function AlertBanner({
   hits,
   spreadHits = [],
+  airHits = [],
   windUnit,
 }: {
   readonly hits: readonly AlertHit[];
   /** Regles d'ecart entre modeles depassees. */
   readonly spreadHits?: readonly SpreadHit[];
+  /** Regles d'air, de pollens et d'UV depassees. */
+  readonly airHits?: readonly AirHit[];
   readonly windUnit: WindUnit;
 }) {
-  const total = hits.length + spreadHits.length;
+  const total = hits.length + spreadHits.length + airHits.length;
   if (total === 0) {
     return null;
   }
@@ -58,6 +72,11 @@ export function AlertBanner({
             .
           </li>
         ))}
+        {airHits.map((hit) => (
+          <li key={hit.rule.id}>
+            <strong>{ruleSentence(hit.rule, windUnit)}</strong> : {airHitSentence(hit)}.
+          </li>
+        ))}
       </ul>
     </section>
   );
@@ -68,7 +87,7 @@ interface AlertRulesEditorProps {
   readonly placeName: string;
   readonly rules: readonly AlertRule[];
   readonly windUnit: WindUnit;
-  readonly onAdd: (rule: Omit<AlertRule, 'id'>) => void;
+  readonly onAdd: (rule: NewAlertRule) => void;
   readonly onToggle: (id: string) => void;
   readonly onRemove: (id: string) => void;
 }
@@ -84,8 +103,9 @@ export function AlertRulesEditor({
   onRemove,
 }: AlertRulesEditorProps) {
   const id = useId().replace(/:/g, '');
-  const [kind, setKind] = useState<'value' | 'spread'>('value');
+  const [kind, setKind] = useState<'value' | 'spread' | 'air'>('value');
   const [variable, setVariable] = useState<WeatherVariable>('temperature');
+  const [airVariable, setAirVariable] = useState<AirVariable>('uv');
   const [comparator, setComparator] = useState<AlertRule['comparator']>('lt');
   const [threshold, setThreshold] = useState('2');
   const parsed = Number(threshold.replace(',', '.'));
@@ -96,13 +116,25 @@ export function AlertRulesEditor({
     if (!valid) {
       return;
     }
+    if (kind === 'air') {
+      // Air, pollens et UV : toujours « au-dessus de », sur la prevision CAMS.
+      onAdd({
+        placeId,
+        kind,
+        variable: airVariable,
+        comparator: 'gt',
+        threshold: parsed,
+        enabled: true,
+      });
+      return;
+    }
     const converted = variable === 'wind' ? toKmh(parsed, windUnit) : parsed;
     // Une regle de valeur ne porte pas de `kind` : meme forme qu'avant l'alerte d'ecart.
-    onAdd(
+    const rule: NewAlertRule =
       kind === 'spread'
         ? { placeId, variable, comparator: 'gt', threshold: converted, enabled: true, kind }
-        : { placeId, variable, comparator, threshold: converted, enabled: true },
-    );
+        : { placeId, variable, comparator, threshold: converted, enabled: true };
+    onAdd(rule);
   };
 
   return (
@@ -110,8 +142,9 @@ export function AlertRulesEditor({
       <p className={styles.note}>
         Évaluées à chaque ouverture du relevé, sur les {ALERT_HORIZON_HOURS} prochaines heures, avec
         le modèle retenu heure par heure ; une alerte « modèles en désaccord » compare à la place le
-        plus haut et le plus bas des modèles disponibles. Sans serveur, Relevé ne peut vous prévenir
-        application fermée que par la veille en arrière-plan, là où le navigateur la permet
+        plus haut et le plus bas des modèles disponibles ; une alerte d’air, de pollens ou d’UV suit
+        la prévision CAMS Europe, toujours « au-dessus de ». Sans serveur, Relevé ne peut vous
+        prévenir application fermée que par la veille en arrière-plan, là où le navigateur la permet
         (Réglages).
       </p>
 
@@ -144,25 +177,50 @@ export function AlertRulesEditor({
           <select
             id={`${id}-type`}
             value={kind}
-            onChange={(event) => setKind(event.target.value as 'value' | 'spread')}
+            onChange={(event) => {
+              const next = event.target.value as 'value' | 'spread' | 'air';
+              setKind(next);
+              if (next === 'air') {
+                setThreshold(String(AIR_DEFAULT_THRESHOLDS[airVariable]));
+              }
+            }}
           >
             <option value="value">Valeur franchie</option>
             <option value="spread">Modèles en désaccord</option>
+            <option value="air">Air, pollens ou UV</option>
           </select>
         </label>
         <label className={styles.field} htmlFor={`${id}-grandeur`}>
           <span>Grandeur</span>
-          <select
-            id={`${id}-grandeur`}
-            value={variable}
-            onChange={(event) => setVariable(event.target.value as WeatherVariable)}
-          >
-            {VARIABLES.map((option) => (
-              <option key={option} value={option}>
-                {ALERT_VARIABLE_LABELS[option]}
-              </option>
-            ))}
-          </select>
+          {kind === 'air' ? (
+            <select
+              id={`${id}-grandeur`}
+              value={airVariable}
+              onChange={(event) => {
+                const next = event.target.value as AirVariable;
+                setAirVariable(next);
+                setThreshold(String(AIR_DEFAULT_THRESHOLDS[next]));
+              }}
+            >
+              {AIR_VARIABLES.map((option) => (
+                <option key={option} value={option}>
+                  {AIR_VARIABLE_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              id={`${id}-grandeur`}
+              value={variable}
+              onChange={(event) => setVariable(event.target.value as WeatherVariable)}
+            >
+              {VARIABLES.map((option) => (
+                <option key={option} value={option}>
+                  {ALERT_VARIABLE_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
         {kind === 'value' && (
           <label className={styles.field} htmlFor={`${id}-sens`}>
@@ -179,7 +237,12 @@ export function AlertRulesEditor({
         )}
         <label className={styles.field} htmlFor={`${id}-seuil`}>
           <span>
-            {kind === 'spread' ? 'Écart entre modèles' : 'Seuil'} ({alertUnit(variable, windUnit)})
+            {kind === 'spread' ? 'Écart entre modèles' : 'Seuil'}{' '}
+            {kind === 'air'
+              ? AIR_UNITS[airVariable] === ''
+                ? '(indice)'
+                : `(${AIR_UNITS[airVariable]})`
+              : `(${alertUnit(variable, windUnit)})`}
           </span>
           <input
             id={`${id}-seuil`}

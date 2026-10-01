@@ -11,7 +11,7 @@ import { resetDepartmentsForTests } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
-import type { AlertRule, Place } from '../../domain/types';
+import type { Place, WeatherAlertRule } from '../../domain/types';
 import * as backgroundWatch from '../../pwa/backgroundWatch';
 import { buildWatchEntries, useBackgroundWatch } from './useBackgroundWatch';
 import type { WatchMirrorInputs } from './useBackgroundWatch';
@@ -33,7 +33,7 @@ const LYON = place('lyon', 'Lyon', 45.7578, 4.832);
 const BREST = place('brest', 'Brest', 48.3904, -4.4861);
 const ANNECY = place('annecy', 'Annecy', 45.8992, 6.1294);
 
-function rule(placeId: string, enabled = true): AlertRule {
+function rule(placeId: string, enabled = true): WeatherAlertRule {
   return {
     id: `r-${placeId}`,
     placeId,

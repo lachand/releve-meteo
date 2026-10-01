@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { hourlyPoint } from '../../tests/factories';
 import { ALERT_HORIZON_HOURS, evaluateAlerts } from './alerts';
 import type { AlertPoint } from './alerts';
-import type { AlertRule, ModelId } from './types';
+import type { ModelId, WeatherAlertRule } from './types';
 
 // 15 h 27 locale le 28 septembre 2026.
 const NOW = new Date('2026-09-28T13:27:00Z');
@@ -15,7 +15,7 @@ function point(
   return { ...hourlyPoint(time, values), model };
 }
 
-function rule(overrides: Partial<AlertRule> = {}): AlertRule {
+function rule(overrides: Partial<WeatherAlertRule> = {}): WeatherAlertRule {
   return {
     id: 'r1',
     placeId: 'lyon',

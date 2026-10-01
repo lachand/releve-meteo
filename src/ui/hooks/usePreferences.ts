@@ -18,7 +18,7 @@ import {
   toggleAlert as toggleAlertInPrefs,
   writePreferences,
 } from '../../data/cache/preferences';
-import type { AlertRule, Place, Preferences } from '../../domain/types';
+import type { NewAlertRule, Place, Preferences } from '../../domain/types';
 import { requestPersistentStorageOnce } from '../../pwa/storage';
 
 export interface PreferencesApi {
@@ -31,7 +31,7 @@ export interface PreferencesApi {
   readonly setTheme: (theme: Preferences['theme']) => void;
   readonly setQuickReading: (quick: boolean) => void;
   readonly setPeakKwp: (peakKwp: number | null) => void;
-  readonly addAlert: (rule: Omit<AlertRule, 'id'>) => void;
+  readonly addAlert: (rule: NewAlertRule) => void;
   readonly toggleAlert: (id: string) => void;
   readonly removeAlert: (id: string) => void;
   readonly purgeLocalData: () => Promise<void>;
@@ -127,7 +127,7 @@ export function usePreferences(): PreferencesApi {
   }, []);
 
   const addAlert = useCallback(
-    (rule: Omit<AlertRule, 'id'>) =>
+    (rule: NewAlertRule) =>
       update((current) => addAlertToPrefs(current, { ...rule, id: newAlertId() })),
     [update],
   );

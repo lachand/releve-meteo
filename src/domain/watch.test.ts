@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { AlertHit } from './alerts';
-import type { AlertRule, Place } from './types';
+import type { Place, WeatherAlertRule } from './types';
 import { DEFAULT_NOTIFY } from './weatherNotices';
 import {
   NOTIFIED_RETENTION_HOURS,
+  airKey,
   alertKey,
   digestKey,
   emptyWatchState,
@@ -17,7 +18,7 @@ function place(id: string): Place {
   return { id, name: id, latitude: 45, longitude: 5, elevation: 200, admin: null, alias: null };
 }
 
-function rule(placeId: string, enabled = true): AlertRule {
+function rule(placeId: string, enabled = true): WeatherAlertRule {
   return {
     id: `r-${placeId}`,
     placeId,
@@ -78,6 +79,25 @@ describe('cles de notification', () => {
       hours: 2,
     };
     expect(spreadKey(hit)).toBe('ecart|r-ecart|2026-09-29T06:00');
+  });
+
+  it('une alerte d air par regle et par premiere heure depassee', () => {
+    const crossing = { time: '2026-09-29T11:00' as const, value: 8, pollen: null };
+    const hit = {
+      rule: {
+        id: 'r-air',
+        kind: 'air',
+        placeId: 'lyon',
+        variable: 'uv',
+        comparator: 'gt',
+        threshold: 6,
+        enabled: true,
+      } as const,
+      first: crossing,
+      extreme: crossing,
+      hours: 1,
+    };
+    expect(airKey(hit)).toBe('air|r-air|2026-09-29T11:00');
   });
 
   it('une vigilance par phenomene, niveau, debut et domaine', () => {

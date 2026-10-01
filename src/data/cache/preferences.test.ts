@@ -206,6 +206,31 @@ describe('alertes', () => {
     expect(readPreferences().alerts).toEqual([frost, spread, value]);
   });
 
+  it('relit une regle d air, de pollens ou d UV, et ecarte une grandeur ou un sens invalide', () => {
+    const air: AlertRule = {
+      id: 'uv',
+      kind: 'air',
+      placeId: virieu.id,
+      variable: 'uv',
+      comparator: 'gt',
+      threshold: 7,
+      enabled: true,
+    };
+    const stored = {
+      ...defaultPreferences(),
+      alerts: [
+        air,
+        // Un UV « sous » un seuil n'existe pas ; ni une temperature rangee parmi les regles d'air.
+        { ...air, id: 'sous', comparator: 'lt' },
+        { ...air, id: 'autre', variable: 'temperature' },
+        // Et une grandeur d'air sur une regle de valeur est refusee.
+        { ...frost, id: 'melange', variable: 'pollen' },
+      ],
+    };
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(stored));
+    expect(readPreferences().alerts).toEqual([air]);
+  });
+
   it('vaut une liste vide quand le champ manque dans un enregistrement ancien', () => {
     const { alerts: _omitted, ...withoutAlerts } = defaultPreferences();
     localStorage.setItem('meteo-fr:prefs', JSON.stringify(withoutAlerts));

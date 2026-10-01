@@ -1,3 +1,4 @@
+import type { AirHit } from './airAlerts';
 import type { AlertHit } from './alerts';
 import type { ModelVerification } from './reliability';
 import type { SpreadHit } from './spreadAlerts';
@@ -98,6 +99,11 @@ export function digestKey(date: string, placeId: string): string {
 /** Un desaccord entre modeles est notifie une fois par regle et par premiere heure depassee. */
 export function spreadKey(hit: SpreadHit): string {
   return `ecart|${hit.rule.id}|${hit.first.time}`;
+}
+
+/** Une alerte d'air, de pollens ou d'UV est notifiee une fois par regle et par premiere heure depassee. */
+export function airKey(hit: AirHit): string {
+  return `air|${hit.rule.id}|${hit.first.time}`;
 }
 
 /** Une vigilance est notifiee une fois par phenomene, niveau et debut. */

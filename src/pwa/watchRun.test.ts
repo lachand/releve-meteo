@@ -288,6 +288,47 @@ describe('collectWatchNotifications', () => {
       return { ...airQualityLyon, hourly };
     }
 
+    it('une regle d air notifie une fois, avec la source CAMS, sans recharger la prevision des modeles', async () => {
+      let forecastCalls = 0;
+      server.use(
+        http.get(FORECAST_URL, () => {
+          forecastCalls += 1;
+          return HttpResponse.json(forecastLyon);
+        }),
+        http.get(AIR_URL, () => HttpResponse.json(pollenBody(150))),
+      );
+      const airRule: WatchEntry = {
+        ...NO_RULES,
+        rules: [
+          {
+            id: 'pollen',
+            kind: 'air',
+            placeId: ID,
+            variable: 'pollen',
+            comparator: 'gt',
+            threshold: 100,
+            enabled: true,
+          },
+        ],
+      };
+      const found = await collectWatchNotifications(state([airRule]), NOW);
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        key: expect.stringMatching(/^air\|pollen\|2026-09-28T\d\d:00$/) as unknown as string,
+        title: 'Lyon · Pollens au-dessus de 100\u00a0grains/m³',
+      });
+      expect(found[0]?.body).toMatch(/^Dès .*graminées.*prévision CAMS Europe\.$/u);
+      // Une regle d'air ne demande pas la prevision des modeles.
+      expect(forecastCalls).toBe(0);
+      // Deja notifiee, ou sous le seuil, ou service en panne : rien.
+      const known = Object.fromEntries(found.map((n) => [n.key, NOW.getTime()]));
+      expect(await collectWatchNotifications(state([airRule], known), NOW)).toEqual([]);
+      server.use(http.get(AIR_URL, () => HttpResponse.json(pollenBody(30))));
+      expect(await collectWatchNotifications(state([airRule]), NOW)).toEqual([]);
+      server.use(http.get(AIR_URL, () => new HttpResponse(null, { status: 500 })));
+      expect(await collectWatchNotifications(state([airRule]), NOW)).toEqual([]);
+    });
+
     it('des la detection : un vent violent a venir, une fois, avec son modele', async () => {
       server.use(
         http.get(FORECAST_URL, () =>

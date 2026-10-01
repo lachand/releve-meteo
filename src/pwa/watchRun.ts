@@ -2,6 +2,7 @@ import { fetchAirQuality } from '../data/clients/airQuality';
 import { fetchForecast } from '../data/clients/openMeteo';
 import { fetchVigilance } from '../data/clients/vigilance';
 import { mapOpenMeteoResponse } from '../data/mappers/openMeteoMapper';
+import { evaluateAirAlerts, isAirRule } from '../domain/airAlerts';
 import { evaluateAlerts } from '../domain/alerts';
 import { briefingAt } from '../domain/briefing';
 import { confidenceAt } from '../domain/confidence';
@@ -15,6 +16,7 @@ import type { ForecastBundle } from '../domain/types';
 import {
   DIGEST_MAX_PLACES as NOTICE_MAX_PLACES,
   WATCH_VIGILANCE_MIN_LEVEL,
+  airKey,
   alertKey,
   digestKey,
   spreadKey,
@@ -32,7 +34,12 @@ import {
   violentKey,
 } from '../domain/weatherNotices';
 import type { PollenPeak } from '../domain/weatherNotices';
-import { hitSentence, ruleSentence, spreadHitSentence } from '../ui/alertPresentation';
+import {
+  airHitSentence,
+  hitSentence,
+  ruleSentence,
+  spreadHitSentence,
+} from '../ui/alertPresentation';
 import { computeCascadeView } from '../ui/cascadeView';
 import type { CascadeView } from '../ui/cascadeView';
 import { digestBody } from '../ui/digestPresentation';
@@ -175,12 +182,6 @@ function digestText(
   );
 }
 
-/** Pollens eleves des prochaines 24 h, liste vide si le service ne repond pas. */
-async function loadHighPollen(entry: WatchEntry, now: Date): Promise<readonly PollenPeak[]> {
-  const result = await fetchAirQuality(entry.place.latitude, entry.place.longitude);
-  return result.ok ? highPollen(result.value.timeline, result.value.pollen, now) : [];
-}
-
 /**
  * Risques, pluie et pollens voulus par l'utilisateur, pour un lieu : des
  * notifications distinctes au fil de l'eau (mode « des la detection »), ou
@@ -288,19 +289,39 @@ export async function collectWatchNotifications(
     // Une observation n'attend pas le matin : toujours des la detection.
     const wantsLightning = limited && notify.lightning;
     const needsForecast =
-      entry.rules.some((rule) => rule.enabled) ||
+      entry.rules.some((rule) => rule.enabled && !isAirRule(rule)) ||
       (morningWanted && (state.digest || (grouped && (notify.risks || notify.rain)))) ||
       instantRisks ||
       instantRain;
     const forecast = needsForecast ? await loadEntryForecast(entry, now) : null;
     const needsPollen = notify.pollen && ((morningWanted && grouped) || instantPollen);
-    const pollen = needsPollen ? await loadHighPollen(entry, now) : [];
+    const hasAirRules = entry.rules.some((rule) => rule.enabled && isAirRule(rule));
+    // Une seule lecture de CAMS pour les pollens et pour les regles d'air du lieu.
+    const air =
+      needsPollen || hasAirRules
+        ? await fetchAirQuality(entry.place.latitude, entry.place.longitude)
+        : null;
+    const airSeries = air !== null && air.ok ? air.value : null;
+    const pollen: readonly PollenPeak[] =
+      needsPollen && airSeries !== null
+        ? highPollen(airSeries.timeline, airSeries.pollen, now)
+        : [];
     const notices = noticesFor(entry, now, forecast, pollen);
 
     const found: WatchNotification[] = [
       // Meme cle pour deux lieux d'un departement : notifiee une fois.
       ...(await vigilanceNotifications(entry, now, bulletins)),
       ...(forecast === null ? [] : alertNotifications(entry, state.windUnit, now, forecast)),
+      ...(airSeries === null || !hasAirRules
+        ? []
+        : evaluateAirAlerts({ rules: entry.rules, placeId: id, air: airSeries, now }).map(
+            (hit) => ({
+              key: airKey(hit),
+              title: `${placeLabel(entry)} · ${ruleSentence(hit.rule, state.windUnit)}`,
+              body: `${capitalize(airHitSentence(hit))}.`,
+              url,
+            }),
+          )),
     ];
     if (instantRisks) {
       found.push(...notices.risks.map((risk) => ({ ...risk, url })));

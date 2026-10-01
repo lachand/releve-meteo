@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { AlertHit } from '../domain/alerts';
 import type { SpreadCrossing, SpreadHit } from '../domain/spreadAlerts';
 import type { AlertRule } from '../domain/types';
-import { alertUnit, hitSentence, ruleSentence, spreadHitSentence } from './alertPresentation';
+import type { AirHit } from '../domain/airAlerts';
+import {
+  airHitSentence,
+  alertUnit,
+  hitSentence,
+  ruleSentence,
+  spreadHitSentence,
+} from './alertPresentation';
 import { toKmh } from './windUnit';
 
 const gusts: AlertRule = {
@@ -108,5 +115,63 @@ describe('toKmh', () => {
   it('ramene une saisie en noeuds vers les km/h du domaine', () => {
     expect(toKmh(10, 'kt')).toBeCloseTo(18.52, 5);
     expect(toKmh(10, 'kmh')).toBe(10);
+  });
+});
+
+describe('regles et phrases d air, de pollens et d UV', () => {
+  const uv: AlertRule = {
+    id: 'uv',
+    kind: 'air',
+    placeId: 'lyon',
+    variable: 'uv',
+    comparator: 'gt',
+    threshold: 7,
+    enabled: true,
+  };
+
+  it('dit la regle avec son unite, ou sans unite pour un indice', () => {
+    expect(ruleSentence(uv, 'kmh')).toBe('Indice UV au-dessus de 7');
+    expect(ruleSentence({ ...uv, variable: 'aqi', threshold: 60 }, 'kmh')).toBe(
+      'Indice européen de qualité de l’air au-dessus de 60',
+    );
+    expect(ruleSentence({ ...uv, variable: 'pm25', threshold: 25 }, 'kmh')).toBe(
+      'Particules fines PM2,5 au-dessus de 25\u00a0µg/m³',
+    );
+    expect(ruleSentence({ ...uv, variable: 'pollen', threshold: 80 }, 'kmh')).toBe(
+      'Pollens au-dessus de 80\u00a0grains/m³',
+    );
+  });
+
+  it('dit quand, jusqu ou, la duree, le pollen en cause et la source CAMS', () => {
+    const first = { time: '2026-09-29T11:00' as const, value: 90, pollen: 'grass' };
+    const extreme = { time: '2026-09-29T13:00' as const, value: 150, pollen: 'birch' };
+    const hit: AirHit = {
+      rule: { ...uv, variable: 'pollen', threshold: 80 },
+      first,
+      extreme,
+      hours: 3,
+    };
+    expect(airHitSentence(hit)).toBe(
+      'dès mardi 11h, jusqu’à 150\u00a0grains/m³ mardi 13h (bouleau), 3\u00a0h au total, prévision CAMS Europe',
+    );
+    expect(airHitSentence({ ...hit, extreme: first, hours: 1 })).toBe(
+      'dès mardi 11h, 90\u00a0grains/m³ (graminées), une heure, prévision CAMS Europe',
+    );
+    const uvPeak = { time: '2026-09-29T12:00' as const, value: 8, pollen: null };
+    expect(airHitSentence({ rule: uv, first: uvPeak, extreme: uvPeak, hours: 1 })).toBe(
+      'dès mardi 12h, 8, une heure, prévision CAMS Europe',
+    );
+  });
+
+  it('garde le nom d un pollen inconnu tel quel', () => {
+    const peak = { time: '2026-09-29T12:00' as const, value: 90, pollen: 'cypres' };
+    expect(
+      airHitSentence({
+        rule: { ...uv, variable: 'pollen' },
+        first: peak,
+        extreme: peak,
+        hours: 1,
+      }),
+    ).toContain('(cypres)');
   });
 });

@@ -9,9 +9,11 @@ import {
   getVigilance,
   getVerifications,
 } from '../../data/repository';
+import { evaluateAirAlerts } from '../../domain/airAlerts';
 import { evaluateAlerts } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
 import { evaluateSpreadAlerts } from '../../domain/spreadAlerts';
+import type { AirHit } from '../../domain/airAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble, rainOutlook, temperatureSpaghetti } from '../../domain/ensemble';
@@ -74,6 +76,7 @@ const ReliabilityView = lazy(() =>
 /** Aucune alerte franchie : reference stable pour la veille. */
 const NO_HITS: readonly AlertHit[] = [];
 const NO_SPREAD_HITS: readonly SpreadHit[] = [];
+const NO_AIR_HITS: readonly AirHit[] = [];
 
 const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.', icon: <TodayIcon /> },
@@ -372,6 +375,15 @@ export function App() {
         bundle,
         now,
       }),
+      airHits:
+        airQuality.status === 'ready'
+          ? evaluateAirAlerts({
+              rules: preferences.preferences.alerts,
+              placeId: place.id,
+              air: airQuality.value,
+              now,
+            })
+          : NO_AIR_HITS,
       addAlert: preferences.addAlert,
       toggleAlert: preferences.toggleAlert,
       removeAlert: preferences.removeAlert,
@@ -417,6 +429,7 @@ export function App() {
     windUnit: preferences.preferences.units.wind,
     alertHits: vm?.alertHits ?? NO_HITS,
     spreadHits: vm?.spreadHits ?? NO_SPREAD_HITS,
+    airHits: vm?.airHits ?? NO_AIR_HITS,
     vigilance:
       vm !== null &&
       vm.vigilanceSummary !== null &&
