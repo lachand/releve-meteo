@@ -1,113 +1,82 @@
-# Plan : un widget Android pour Relevé
+# Widget Android pour Relevé
 
-Statut : **étape 0 faite le 2026-10-01, elle échoue sur l'architecture approuvée : arrêt**. Rien n'est codé côté Android. Décisions de l'utilisateur : le widget se fait, en APK d'abord (Play Store plus tard), deux tailles, et on s'arrête si l'essai échoue. Voir « Résultat de l'étape 0 » et « Variante à décider ».
+Statut : **variante adoptée et construite** (APK de test, deux tailles de widget). La première voie essayée (Capacitor et Background Runner) a échoué ; la variante « WebView sans interface lancée par WorkManager » a réussi l'essai sur émulateur. Distribution : APK d'abord, Play Store plus tard.
 
-## Résultat de l'étape 0 (2026-10-01)
+## Décisions de l'utilisateur
 
-Question : le code que le service worker exécute déjà sans DOM (`watchRun.ts` et `src/domain/`) tourne-t-il dans le moteur du Background Runner de Capacitor ?
-
-Méthode : le plugin (`@capacitor/background-runner` 3.0.0) embarque QuickJS (version du 2025-04-26, vue dans la bibliothèque native). J'ai groupé `src/pwa/watchRun.ts` en un seul script (100 ko) et je l'ai exécuté dans QuickJS (`quickjs-emscripten`) avec les seules globales que le plugin annonce (`console`, `setTimeout`, `fetch`).
-
-Résultats :
-
-- **Le script ne se charge pas** : `ReferenceError: 'Intl' is not defined`, dès `domain/time.ts`, qui convertit l'heure de Paris avec `Intl.DateTimeFormat`.
-- Absents de QuickJS : `Intl`, `URL`, `URLSearchParams`, `AbortController`, `AbortSignal`, `Response`, `Headers`, `structuredClone`, `queueMicrotask`. `toLocaleString` ignore le fuseau horaire.
-- Le plugin documente un `fetch` réduit (seuls `method`, `headers` et `body`, pas d'objet `Request`), et un contexte détruit après chaque appel (aucun état conservé).
-- Notre code s'appuie sur ces absents partout : une dizaine de formes d'`Intl` (heure de Paris, nombres et noms de jours en français), `new URL` dans tous les clients, `AbortSignal.any` dans la couche HTTP, `Response` pour les fichiers compressés.
-
-Verdict : **l'essai échoue**. Le contourner demanderait de réécrire une demi-douzaine de polyfills, dont la conversion de l'heure de Paris, où une erreur silencieuse donnerait une « heure courante » fausse, et un `fetch` dont je ne peux pas tester la forme ici (pas d'émulateur dans l'environnement de développement). Ce serait précisément le risque de divergence que la règle 4 interdit. D'où l'arrêt, comme décidé.
-
-## Variante à décider (non engagée)
-
-Le même principe (une seule logique, en TypeScript) sans le Background Runner : **une WebView sans interface lancée par WorkManager**.
-
-```
-WorkManager (toutes les heures, au mieux)
-   crée une WebView (fil principal), sans l'afficher
-   charge /widget.html depuis les ressources de l'application (WebViewAssetLoader)
-        │  même origine que l'application : elle lit le même IndexedDB, où la page recopie déjà les lieux veillés
-        │  Intl, URL, fetch, CORS : un vrai navigateur, rien à réécrire
-        ▼
-widget.html exécute widgetPayload(...) et appelle Android.publish(json)
-        ▼
-Kotlin écrit le JSON (DataStore) et met à jour les widgets Glance
-```
-
-Ce qui change par rapport au plan : pas de Capacitor ni de Background Runner, une coque Android simple (une activité WebView plus le worker). Ce qui reste : `widgetPayload` en TypeScript pur, widgets Glance de deux tailles, règles 1 à 4.
-
-À vérifier avant de s'engager, sur émulateur (GitHub Actions peut en lancer un, pas cet environnement) : qu'une WebView créée dans un worker charge la page, lise l'IndexedDB partagé, fasse le `fetch` et rende la main en quelques secondes, application fermée. Coût et risques propres : une WebView en arrière-plan (mémoire de quelques dizaines de Mo, quelques secondes de calcul), et les limites habituelles d'Android (fréquence, économie de batterie).
+- Le widget se fait, en APK d'abord (Play Store plus tard), en deux tailles.
+- On s'arrête si l'essai échoue. Il a échoué une fois (voie Background Runner, ci-dessous), puis réussi (voie WebView).
 
 ## Pourquoi pas en PWA
 
-Une PWA n'a pas d'API de widget sur Android. Le navigateur peut installer l'application et lui donner des raccourcis (déjà faits dans `manifest.webmanifest`), mais pas poser une vignette vivante sur l'écran d'accueil. Les widgets de PWA n'existent que sous Windows (Edge). Il faut donc une application Android native qui porte le widget.
+Une PWA n'a pas d'API de widget sur Android. Le navigateur peut installer l'application et lui donner des raccourcis (déjà faits dans `manifest.webmanifest`), mais pas poser une vignette vivante sur l'écran d'accueil. Il faut donc une application Android native qui porte le widget.
 
-## Ce que le widget doit tenir, quoi qu'il arrive
+## Ce que le widget tient, quoi qu'il arrive
 
-Ce sont les règles du produit, pas des options :
+1. **Le modèle est nommé.** « AROME prévoit 14 °C », la confiance, l'écart des autres modèles chiffré, la pastille de provenance (prévu).
+2. **Jamais une donnée ancienne présentée comme actuelle.** Chaque widget écrit l'heure de sa dernière mise à jour. Au-delà de trois heures, il se grise et dit « ancien : mis à jour 08:10, il y a 5 h ».
+3. **Aucune clé d'API, aucun serveur à nous** : la page lit Open-Meteo directement, comme l'application.
+4. **La sélection de modèle est celle de la page.** Elle n'est pas récrite en Kotlin : le widget affiche ce que `src/domain/` a calculé.
 
-1. **Le modèle est nommé.** Pas de « 14 °C » seul : « AROME prévoit 14 °C, confiance élevée », avec la pastille de provenance (prévu).
-2. **Jamais une donnée ancienne présentée comme actuelle.** Chaque widget écrit l'heure de sa dernière mise à jour. Au-delà de trois heures, il se grise et dit « ancien ».
-3. **Aucune clé d'API dans l'application**, aucune donnée envoyée à un serveur à nous : le widget lit Open-Meteo directement, comme la page.
-4. **La sélection de modèle est la même que dans la page.** Si le widget choisissait son modèle autrement, il dirait autre chose que l'application : c'est une régression produit.
+## Résultat de l'essai raté : Capacitor et Background Runner (2026-10-01)
 
-La quatrième règle décide de tout : la logique de sélection (`src/domain/`, TypeScript pur) ne doit pas être récrite en Kotlin.
+`@capacitor/background-runner` 3.0.0 exécute le JavaScript dans QuickJS. J'y ai chargé `src/pwa/watchRun.ts` groupé en un script (100 ko), avec les seules globales annoncées (`console`, `setTimeout`, `fetch`).
 
-## Architecture proposée
+- Le script ne se charge pas : `ReferenceError: 'Intl' is not defined`, dès `domain/time.ts`.
+- Absents de QuickJS : `Intl`, `URL`, `URLSearchParams`, `AbortController`, `AbortSignal`, `Response`, `Headers`, `structuredClone`, `queueMicrotask`. Le plugin documente un `fetch` réduit et un contexte détruit après chaque appel.
+- Notre code s'appuie partout sur ces absents. Les remplacer par des polyfills ferait diverger l'heure de Paris (erreur silencieuse sur l'« heure courante »), ce que la règle 4 interdit. Voie abandonnée.
 
-**Capacitor** (WebView) autour du build web existant, plus un **plugin natif** et un **widget Glance** (Jetpack, Kotlin).
+## Variante adoptée : une WebView sans interface
 
 ```
-Capacitor Background Runner (JS, sans DOM)
-   exécute src/pwa/watchRun.ts + une fonction pure « données du widget »
-        │  fetch Open-Meteo, mêmes appels que la page
+WorkManager (toutes les heures au mieux, et à la demande)
+   WidgetWorker crée une WebView sur le fil principal, sans l'afficher
+   charge https://appassets.androidplatform.net/widget.html (WebViewAssetLoader, build web embarqué)
+        │  même origine que l'application : même IndexedDB, où la page recopie les lieux veillés
+        │  Intl, URL, fetch, CORS : un vrai navigateur, rien à réécrire
         ▼
-SharedPreferences (JSON : lieu, modèle retenu, température, confiance, 24 h, heure de mise à jour)
+widget.html : runWidget() choisit le modèle comme la page, calcule le contenu
+   et appelle ReleveAndroid.publish(json)
         ▼
-Widget Glance (Kotlin) : lit le JSON et le dessine, rien d'autre
+WidgetStore garde le JSON (SharedPreferences), les widgets Glance se redessinent
 ```
 
-Pourquoi cette forme : `watchRun.ts` et tout `src/domain/` s'exécutent déjà sans DOM (c'est le contrat du service worker). Le Background Runner de Capacitor est un moteur JS sans DOM : le même code y tourne. Le widget ne contient que de l'affichage, donc rien à tenir en double.
+### Ce qui existe
 
-Une fonction pure à ajouter côté TypeScript : `widgetPayload({ entry, forecast, now })`, qui réutilise `briefingAt`, `confidenceAt` et `digestBody`, et qui renvoie le JSON ci-dessus (testée à 100 % comme le reste du domaine).
+| Élément                                  | Fichiers                                                                                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Contenu du widget, TypeScript pur, testé | `src/widget/payload.ts` (`WidgetPayload` v1), `src/widget/run.ts` (`runWidget`, `placeFromSearch`), `src/widget/main.ts`, `widget.html`                                        |
+| Pont application vers widgets            | `src/pwa/androidApp.ts`, `useBackgroundWatch.ts` (les favoris sont recopiés dans IndexedDB, puis `ReleveAndroid.refreshWidgets()`)                                             |
+| Coque Android                            | `android/` : `MainActivity` (l'application dans une WebView), `WebAssets` (WebViewAssetLoader), `WidgetPage`, `WidgetWorker`, `WidgetScheduler`, `WidgetStore`, `WidgetFormat` |
+| Widgets Glance                           | `SmallWidget` (petit, lieu, température et modèle, confiance, mise à jour), `MediumWidget` (moyen, plus les 12 heures suivantes et la phrase « Sur 24 h »)                     |
+| Tests                                    | `WidgetFormatTest` (JVM), `WidgetWorkerTest` et `SharedStorageTest` (émulateur), `tests/e2e/widget.spec.ts` et tests unitaires de `src/widget/`                                |
+| CI                                       | `.github/workflows/android.yml` : build du web, tests JVM, APK de debug (artefact `releve-debug-apk`), essai sur émulateur API 34                                              |
 
-### Contenu des widgets
+Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l'ordre). Sans favori, un lieu peut être passé dans l'adresse de la page (essai, premier lancement).
 
-- **Petit (2 sur 1)** : lieu, température, modèle nommé, confiance, heure de mise à jour.
-- **Moyen (4 sur 2)** : le précédent, plus les 12 prochaines heures (température et pluie) et la phrase « Sur 24 h ».
+### Ce que l'essai a établi (émulateur API 34, GitHub Actions, réseau réel)
 
-## Alternatives écartées
+- Une WebView créée dans un worker charge `widget.html` depuis les ressources de l'application, fait le `fetch` Open-Meteo et rend le contenu en **environ 1,3 s**, application fermée. Le contenu porte le modèle nommé et 12 heures.
+- Le stockage est partagé : l'application (une WebView) recopie un favori, la page des widgets (une autre WebView, sans paramètre) le relit dans IndexedDB (`SharedStorageTest`). C'était le point dont dépendait toute la variante.
+- Les deux essais partagent l'origine : ils remettent le stockage à zéro (`CleanStorage`), sinon les lieux de l'un deviennent ceux de l'autre.
 
-| Option                                        | Pourquoi pas                                                                                                                                              |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TWA (Bubblewrap) seul                         | Même habillage, mais pas de moteur JS en arrière-plan : le widget devrait refaire la sélection en Kotlin.                                                 |
-| Widget Kotlin autonome qui appelle Open-Meteo | Double la logique de sélection et de confiance, qui divergerait de la page. Acceptable seulement en repli dégradé, étiqueté « sans sélection » à l'écran. |
-| Image générée par la page                     | Le navigateur n'écrit pas dans l'espace d'une autre application.                                                                                          |
+## Limites connues et suite
 
-## Étapes
-
-| Étape        | Contenu                                                                                                                                  | Sortie                                                  |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 0. Essai     | Capacitor + Background Runner : un `fetch` Open-Meteo et le calcul de `digestBody` en arrière-plan, sur un émulateur et un appareil réel | Verdict : le moteur tient-il (durée, fréquence, Doze) ? |
-| 1. Coque     | Projet Capacitor qui embarque le build web hors ligne ; l'identifiant d'application reste distinct de la PWA                             | APK qui ouvre Relevé                                    |
-| 2. Données   | `widgetPayload` (domaine pur, tests), écriture dans les préférences partagées par le plugin                                              | JSON fiable, âge et lieu inclus                         |
-| 3. Widget    | Glance, deux tailles, états : à jour, ancien, sans donnée, aucun lieu choisi                                                             | Widget posé sur l'écran                                 |
-| 4. Réglages  | Choix du lieu du widget parmi les favoris, dans l'application                                                                            | Un widget par lieu possible                             |
-| 5. Livraison | CI GitHub (SDK Android), signature, APK en publication de dépôt ; Play Store en option                                                   | Fichier installable                                     |
-
-Ordre de grandeur : 2 à 3 semaines de travail, dont l'étape 0 en un à deux jours, qui peut tout arrêter à bon compte.
-
-## Risques
-
-- **Rafraîchissement** : Android limite l'arrière-plan (WorkManager à 15 minutes au mieux, Doze). Le widget affichera parfois une donnée de plusieurs heures : d'où la règle 2.
-- **Background Runner** : plugin jeune, à tester avant tout engagement (étape 0).
-- **Maintenance** : un second projet (Kotlin, Gradle, SDK Android) à tenir à jour, et une signature à conserver.
+- **Pas encore essayé sur un appareil réel** : l'émulateur ne dit rien de la batterie, de Doze ni de la fréquence réelle de WorkManager (15 minutes au mieux, une heure demandée). À la charge de l'utilisateur, la première fois.
+- **APK de debug seulement** : pas de signature de publication. À faire avec le Play Store (compte, clé de signature conservée, fiche).
+- **Choix des lieux** : les favoris, dans l'ordre, sans réglage par widget. Un choix du lieu par widget (écran de configuration) reste à faire.
+- **Géolocalisation** : demande minimale dans `MainActivity`.
+- **Service worker dans la WebView** : non traité spécifiquement ; la veille par notification reste celle du navigateur.
 - **iOS** : hors périmètre (WidgetKit demanderait un autre habillage, un compte payant et un Mac).
-- **Quota Open-Meteo** : chaque appareil interroge depuis sa propre adresse, comme la page ; une fréquence horaire pour trois lieux reste très en dessous des limites gratuites.
-- **Tests** : Playwright ne voit pas un widget. Le domaine reste testé en Node ; l'affichage se vérifie à la main sur émulateur.
+- **Quota Open-Meteo** : chaque appareil interroge depuis sa propre adresse, comme la page ; une fois par heure pour trois lieux reste très en dessous des limites gratuites.
 
-## Décisions à prendre
+## Construire et installer
 
-1. **Faut-il le faire ?** Le gain est un chiffre sur l'écran d'accueil ; le coût est un second projet à tenir.
-2. **Distribution** : fichier APK en publication du dépôt (gratuit, installation manuelle), ou Play Store (compte à 25 dollars, une fois, et revue de Google).
-3. **Contenu** : les deux tailles proposées, ou une seule pour commencer.
-4. **Repli** : si l'étape 0 échoue, accepter ou non un widget autonome dégradé, étiqueté « sans sélection de modèle » ? Je recommande de s'arrêter plutôt que de montrer une prévision qui ne dit pas pourquoi.
+Depuis l'onglet Actions de GitHub : workflow « Android », artefact `releve-debug-apk`, à installer sur le téléphone (sources inconnues autorisées). En local (JDK 17 et SDK Android) :
+
+```
+npm run build
+cd android && ./gradlew :app:assembleDebug
+```
+
+Le build Gradle recopie `dist/` dans les ressources de l'application. Poser ensuite un widget depuis l'écran d'accueil (Relevé, petit ou moyen), après avoir ajouté un favori dans l'application.
