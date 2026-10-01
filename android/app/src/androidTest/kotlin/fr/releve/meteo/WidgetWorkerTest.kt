@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -20,6 +21,9 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class WidgetWorkerTest {
+    @get:Rule
+    val clean = CleanStorage()
+
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Test

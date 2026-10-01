@@ -14,6 +14,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
@@ -26,6 +27,9 @@ import java.util.concurrent.TimeUnit
  */
 @RunWith(AndroidJUnit4::class)
 class SharedStorageTest {
+    @get:Rule
+    val clean = CleanStorage()
+
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
