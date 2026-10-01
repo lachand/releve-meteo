@@ -52,7 +52,7 @@ WidgetStore garde le JSON (SharedPreferences), les widgets Glance se redessinent
 | Tests                                    | `WidgetFormatTest` (JVM), `WidgetWorkerTest` et `SharedStorageTest` (émulateur), `tests/e2e/widget.spec.ts` et tests unitaires de `src/widget/`                                                                            |
 | CI                                       | `.github/workflows/android.yml` : build du web, tests JVM, APK de debug (artefact `releve-debug-apk`), essai sur émulateur API 34                                                                                          |
 
-Un clic sur un widget ouvre l'application sur le lieu du widget (`link` du contenu, repris par `MainActivity`, y compris application déjà ouverte). Dans l'application, le réglage de veille dit que ce sont les widgets qui rechargent la prévision et propose de les mettre à jour tout de suite.
+Les deux widgets s'adaptent à la taille donnée : étirés en hauteur, ils ajoutent la phrase de l'écart des autres modèles, les heures à venir (petit) et la phrase « Sur 24 h » (petit). Un clic sur un widget ouvre l'application sur le lieu du widget (`link` du contenu, repris par `MainActivity`, y compris application déjà ouverte). Dans l'application, le réglage de veille dit que ce sont les widgets qui rechargent la prévision et propose de les mettre à jour tout de suite.
 
 Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l'ordre). Sans favori, un lieu peut être passé dans l'adresse de la page (essai, premier lancement).
 

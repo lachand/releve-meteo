@@ -2,10 +2,13 @@ package fr.releve.meteo
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
@@ -19,6 +22,8 @@ import androidx.glance.layout.width
 
 /** Grand widget (4 sur 2) : le bulletin a gauche, les heures a venir et le resume des 24 heures a droite. */
 class MediumWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(setOf(DpSize(250.dp, 110.dp), DpSize(250.dp, 200.dp)))
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val shown = WidgetStore.load(context).firstOrNull()
         val nowMs = System.currentTimeMillis()
@@ -30,6 +35,10 @@ class MediumWidget : GlanceAppWidget() {
                     Row(modifier = GlanceModifier.fillMaxSize()) {
                         Column(modifier = GlanceModifier.width(112.dp)) {
                             PlaceBlock(shown, nowMs, temperatureSize = 28.sp)
+                            if (LocalSize.current.height >= ROOMY_HEIGHT) {
+                                Spacer(GlanceModifier.height(6.dp))
+                                SpreadLine(shown)
+                            }
                         }
                         Spacer(GlanceModifier.width(COLUMN_GAP))
                         Column(modifier = GlanceModifier.defaultWeight()) {

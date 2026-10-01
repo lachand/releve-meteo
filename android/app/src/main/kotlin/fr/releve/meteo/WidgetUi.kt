@@ -20,6 +20,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.text.FontStyle
@@ -129,3 +130,32 @@ fun Freshness(shown: ShownPlace, nowMs: Long) {
 }
 
 val COLUMN_GAP: Dp = 8.dp
+
+/** Hauteur a partir de laquelle un widget montre aussi l'ecart des autres modeles et les heures a venir. */
+val ROOMY_HEIGHT: Dp = 180.dp
+
+/** « Les 5 autres modèles s'écartent de 0,8 °C… » : le modele retenu n'est jamais dit seul quand il y a la place. */
+@Composable
+fun SpreadLine(shown: ShownPlace) {
+    shown.place.now?.let { Label(WidgetFormat.spread(it), 10.sp, INK, maxLines = 4) }
+}
+
+/** Les heures a venir en liste, de trois en trois : l'heure, la temperature, la pluie. Une valeur absente reste un tiret. */
+@Composable
+fun HoursList(hours: List<WidgetHour>, count: Int = 4) {
+    hours.filterIndexed { index, _ -> index % 3 == 2 }.take(count).forEach { hour ->
+        Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 1.dp)) {
+            Label(WidgetFormat.hourLabel(hour.time), 11.sp, INK_FAINT, modifier = GlanceModifier.width(30.dp))
+            Label(
+                hour.temperature?.let { "${Math.round(it)}°" } ?: "–",
+                13.sp,
+                INK,
+                bold = true,
+                modifier = GlanceModifier.width(36.dp),
+            )
+            val rain = WidgetFormat.rain(hour.precipitation)
+            val wet = rain != null && rain != "0"
+            Label(rain?.let { "$it mm" } ?: "–", 11.sp, if (wet) RAIN else INK_FAINT, bold = wet)
+        }
+    }
+}
