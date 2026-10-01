@@ -43,14 +43,16 @@ WidgetStore garde le JSON (SharedPreferences), les widgets Glance se redessinent
 
 ### Ce qui existe
 
-| Élément                                  | Fichiers                                                                                                                                                                       |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Contenu du widget, TypeScript pur, testé | `src/widget/payload.ts` (`WidgetPayload` v1), `src/widget/run.ts` (`runWidget`, `placeFromSearch`), `src/widget/main.ts`, `widget.html`                                        |
-| Pont application vers widgets            | `src/pwa/androidApp.ts`, `useBackgroundWatch.ts` (les favoris sont recopiés dans IndexedDB, puis `ReleveAndroid.refreshWidgets()`)                                             |
-| Coque Android                            | `android/` : `MainActivity` (l'application dans une WebView), `WebAssets` (WebViewAssetLoader), `WidgetPage`, `WidgetWorker`, `WidgetScheduler`, `WidgetStore`, `WidgetFormat` |
-| Widgets Glance                           | `SmallWidget` (petit, lieu, température et modèle, confiance, mise à jour), `MediumWidget` (moyen, plus les 12 heures suivantes et la phrase « Sur 24 h »)                     |
-| Tests                                    | `WidgetFormatTest` (JVM), `WidgetWorkerTest` et `SharedStorageTest` (émulateur), `tests/e2e/widget.spec.ts` et tests unitaires de `src/widget/`                                |
-| CI                                       | `.github/workflows/android.yml` : build du web, tests JVM, APK de debug (artefact `releve-debug-apk`), essai sur émulateur API 34                                              |
+| Élément                                  | Fichiers                                                                                                                                                                                                                   |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contenu du widget, TypeScript pur, testé | `src/widget/payload.ts` (`WidgetPayload` v1), `src/widget/run.ts` (`runWidget`, `placeFromSearch`), `src/widget/main.ts`, `widget.html`                                                                                    |
+| Pont application vers widgets            | `src/pwa/androidApp.ts`, `useBackgroundWatch.ts` (les favoris sont recopiés dans IndexedDB, puis `ReleveAndroid.refreshWidgets()`)                                                                                         |
+| Coque Android                            | `android/` : `MainActivity` (l'application dans une WebView), `WebAssets` (WebViewAssetLoader), `WidgetPage`, `WidgetWorker`, `WidgetScheduler`, `WidgetStore`, `WidgetFormat`                                             |
+| Widgets Glance                           | `SmallWidget` (petit, 2 sur 2 : lieu, « AROME prévoit », température en grand, confiance, mise à jour), `MediumWidget` (moyen, 4 sur 2 : le bulletin, puis les heures à venir de trois en trois et la phrase « Sur 24 h ») |
+| Tests                                    | `WidgetFormatTest` (JVM), `WidgetWorkerTest` et `SharedStorageTest` (émulateur), `tests/e2e/widget.spec.ts` et tests unitaires de `src/widget/`                                                                            |
+| CI                                       | `.github/workflows/android.yml` : build du web, tests JVM, APK de debug (artefact `releve-debug-apk`), essai sur émulateur API 34                                                                                          |
+
+Un clic sur un widget ouvre l'application sur le lieu du widget (`link` du contenu, repris par `MainActivity`, y compris application déjà ouverte). Dans l'application, le réglage de veille dit que ce sont les widgets qui rechargent la prévision et propose de les mettre à jour tout de suite.
 
 Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l'ordre). Sans favori, un lieu peut être passé dans l'adresse de la page (essai, premier lancement).
 

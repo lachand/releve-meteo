@@ -27,6 +27,23 @@ class WidgetFormatTest {
     }
 
     @Test
+    fun theLeadNamesTheModelBeforeTheFigure() {
+        assertEquals("AROME prévoit", WidgetFormat.lead(now()))
+        assertEquals("ICON-D2 prévoit", WidgetFormat.lead(now(model = "icon_d2")))
+    }
+
+    @Test
+    fun aContentWithoutLinkStillReads() {
+        val old = parsePayload("""{"version":1,"generatedAtMs":1,"places":[{"id":"a","name":"Lyon"}]}""")
+        assertEquals("", old?.places?.single()?.link)
+        val linked =
+            parsePayload(
+                """{"version":1,"generatedAtMs":1,"places":[{"id":"a","name":"Lyon","link":"?lat=45.7&lon=4.8&nom=Lyon"}]}""",
+            )
+        assertEquals("?lat=45.7&lon=4.8&nom=Lyon", linked?.places?.single()?.link)
+    }
+
+    @Test
     fun theConfidenceIsSaidOrLeftOut() {
         assertEquals("confiance élevée", WidgetFormat.confidence(now(confidence = "high")))
         assertEquals("confiance moyenne", WidgetFormat.confidence(now(confidence = "medium")))

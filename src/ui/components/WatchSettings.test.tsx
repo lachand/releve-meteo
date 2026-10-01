@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
 import type { WatchStatus } from '../../pwa/backgroundWatch';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
@@ -37,6 +37,23 @@ describe('WatchSettings', () => {
   ])('dit ce que permet l etat %s', (status, text) => {
     render(<WatchSettings watch={watch(status)} />);
     expect(screen.getByRole('status')).toHaveTextContent(text);
+  });
+
+  describe('dans l application Android', () => {
+    afterEach(() => {
+      delete (window as unknown as { ReleveAndroid?: unknown }).ReleveAndroid;
+    });
+
+    it('dit ce que fait l application au lieu de renvoyer au navigateur', async () => {
+      const refreshWidgets = vi.fn();
+      (window as unknown as { ReleveAndroid?: unknown }).ReleveAndroid = { refreshWidgets };
+      render(<WatchSettings watch={watch('unsupported')} />);
+      expect(screen.getByRole('status')).toHaveTextContent(/widgets/);
+      expect(screen.getByRole('status')).not.toHaveTextContent(/Ce navigateur/);
+      expect(screen.queryByRole('button', { name: 'Activer la veille' })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Mettre à jour les widgets' }));
+      expect(refreshWidgets).toHaveBeenCalledOnce();
+    });
   });
 
   it('ne promet jamais le temps reel, sauf la ou rien n est possible', () => {

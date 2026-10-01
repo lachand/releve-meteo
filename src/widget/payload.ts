@@ -4,6 +4,7 @@ import { dayDigest } from '../domain/dayDigest';
 import type { ConfidenceLevel, LocalIsoHour, ModelId, WeatherVariable } from '../domain/types';
 import type { WatchEntry } from '../domain/watch';
 import type { EntryForecast } from '../pwa/watchRun';
+import { sharedPlaceSearch } from '../ui/sharedPlace';
 
 /*
  * Ce que le widget Android affiche, en donnees et non en phrases : le modele
@@ -50,6 +51,8 @@ export interface WidgetPlace {
   readonly id: string;
   /** Alias donne par l'utilisateur, sinon nom du lieu. */
   readonly name: string;
+  /** Chaine de recherche qui ouvre ce lieu dans l'application (`?lat=&lon=&nom=...`). */
+  readonly link: string;
   readonly now: WidgetNow | null;
   readonly hours: readonly WidgetHour[];
   readonly day: WidgetDay | null;
@@ -105,6 +108,7 @@ export function widgetPlace(input: {
   return {
     id: entry.place.id,
     name: entry.place.alias ?? entry.place.name,
+    link: sharedPlaceSearch(entry.place),
     now:
       nowPoint === null || briefing === null
         ? null
