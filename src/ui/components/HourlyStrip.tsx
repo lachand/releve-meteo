@@ -17,6 +17,7 @@ import { WindArrow } from '../symbols/WindArrow';
 import { weatherCodeLabel } from '../weatherCodePresentation';
 import { convertWindSpeed, windUnitLabel } from '../windUnit';
 import styles from './HourlyStrip.module.css';
+import { SwitchReasons } from './SwitchReasons';
 
 interface HourlyStripProps {
   readonly bundle: ForecastBundle;
@@ -85,6 +86,8 @@ export function HourlyStrip({
     return <p className={styles.empty}>Aucune échéance couverte par un modèle.</p>;
   }
   const unit = windUnitLabel(windUnit);
+  const firstShown = columns[0]?.index ?? 0;
+  const lastShown = columns.at(-1)?.index ?? 0;
   // La probabilite n'apporte rien quand elle reste partout sous 10 %.
   const showProbability = columns.some((c) => {
     const probability = c.point.precipitationProbability.value;
@@ -253,6 +256,13 @@ export function HourlyStrip({
         Vent en {unit}, rafales en petit. La flèche montre où va le vent, plus épaisse quand il
         forcit ; « du SO » dit d’où il vient. Un filet tireté marque chaque changement de modèle.
       </p>
+      <SwitchReasons
+        timeline={bundle.timeline}
+        switches={cascade.switches.filter(
+          (entry) => entry.index >= firstShown && entry.index <= lastShown,
+        )}
+        title="Pourquoi le modèle change ici"
+      />
     </div>
   );
 }

@@ -1,5 +1,10 @@
 import { MODEL_SPECS } from '../domain/models';
-import type { Criterion, IneligibilityReason, ModelRanking } from '../domain/modelSelection';
+import type {
+  Criterion,
+  IneligibilityReason,
+  ModelRanking,
+  SwitchReason,
+} from '../domain/modelSelection';
 import type { ModelVerification } from '../domain/reliability';
 import type { ModelId, TerrainKind, WeatherVariable } from '../domain/types';
 import { formatCompact, formatOneDecimal } from './format';
@@ -96,6 +101,63 @@ export function criterionSentence(model: ModelId, criterion: Criterion): string 
       return mae <= peerMae
         ? `Plus proche des mesures de la station que la moyenne des modèles à courte échéance\u00a0: ${figures}.`
         : `Moins proche des mesures de la station que la moyenne des modèles à courte échéance\u00a0: ${figures}.`;
+    }
+  }
+}
+
+/**
+ * La raison d'une bascule de la cascade en une phrase : celle du critere qui
+ * a le plus pese, avec ses chiffres, ou la limite de l'ancien modele.
+ */
+export function switchSentence(reason: SwitchReason): string {
+  const from = MODEL_LABELS[reason.from];
+  const to = MODEL_LABELS[reason.to];
+  const hours = `${formatCompact(Math.round(reason.leadHours))}\u00a0h`;
+  switch (reason.kind) {
+    case 'availability': {
+      const spec = MODEL_SPECS[reason.from];
+      const limit =
+        reason.cause === 'outOfRange'
+          ? `${from} ne couvre pas plus de ${formatCompact(spec.maxLeadHours)}\u00a0h d’échéance`
+          : reason.cause === 'outOfDomain'
+            ? `Ce lieu est hors du domaine de calcul de ${from}`
+            : reason.cause === 'unavailable'
+              ? `${from} est absent de la réponse du service pour ce lieu`
+              : `${from} n’a plus de valeur à partir de là`;
+      return `${limit}\u00a0: ${to} prend le relais.`;
+    }
+    case 'manual':
+      return `${to}, votre choix, couvre l’échéance à partir de là ; la sélection automatique aurait gardé ${from} jusqu’ici.`;
+    case 'resolution': {
+      const terrain = reason.toDetail?.terrain ?? 'plain';
+      return `À ${hours} d’échéance, ${to} (maille de ${formatCompact(MODEL_SPECS[reason.to].resolutionKm)}\u00a0km) convient mieux que ${from} (${formatCompact(MODEL_SPECS[reason.from].resolutionKm)}\u00a0km) sur un terrain ${TERRAIN_KIND_LABELS[terrain]}.`;
+    }
+    case 'mediumRange':
+      return `À ${hours} d’échéance, la maille compte moins : ${to} tient mieux la moyenne échéance que ${from}.`;
+    case 'localSkill': {
+      const { mae, variable, leadDays } = reason.toDetail ?? {};
+      if (mae === undefined || variable === undefined || leadDays === undefined) {
+        return `${to} a été plus juste que ${from} ici, sur les vérifications locales.`;
+      }
+      const unit = `\u00a0${VARIABLE_UNITS[variable]}`;
+      const versus =
+        reason.fromDetail?.mae !== undefined &&
+        reason.fromDetail.variable === variable &&
+        reason.fromDetail.leadDays === leadDays
+          ? `, contre ${formatOneDecimal(reason.fromDetail.mae)}${unit} pour ${from}`
+          : '';
+      return `${to} a été plus juste ici que ${from} sur ${VARIABLE_WITH_ARTICLE[variable]} : ${formatOneDecimal(mae)}${unit} d’erreur moyenne à J+${leadDays}${versus}.`;
+    }
+    case 'shortSkill': {
+      const { mae, bucket } = reason.toDetail ?? {};
+      if (mae === undefined || bucket === undefined) {
+        return `${to} a été plus proche des mesures de la station que ${from} à courte échéance.`;
+      }
+      const versus =
+        reason.fromDetail?.mae === undefined
+          ? ''
+          : `, contre ${formatOneDecimal(reason.fromDetail.mae)}\u00a0°C pour ${from}`;
+      return `${to} a été plus proche des mesures de la station que ${from} à ${bucket} d’échéance : ${formatOneDecimal(mae)}\u00a0°C d’erreur moyenne${versus}.`;
     }
   }
 }

@@ -44,4 +44,42 @@ describe('CascadeFrieze', () => {
     // Relais ecrit en toutes lettres, lisible meme quand un troncon est etroit.
     expect(screen.getByText(/^AROME jusqu’à .+, puis ARPEGE jusqu’à .+\.$/)).toBeInTheDocument();
   });
+
+  it('dit pourquoi le modele change : AROME n a plus de valeur, ARPEGE prend le relais', () => {
+    const timeline = buildHourlyTimeline('2026-08-17T00:00', 6);
+    const bundle = buildBundle({
+      timeline,
+      models: ['arome', 'arpege'],
+      values: (model, index) => (model === 'arome' && index >= 3 ? { temperature: null } : {}),
+    });
+    const cascade = computeCascadeView(
+      bundle,
+      { terrain: null, verification: [], preferred: null },
+      NOW,
+    );
+    expect(cascade.switches).toHaveLength(cascade.transitions.length);
+    expect(cascade.switches[0]).toMatchObject({
+      kind: 'availability',
+      cause: 'noData',
+      from: 'arome',
+      to: 'arpege',
+      index: 3,
+    });
+    render(<CascadeFrieze bundle={bundle} cascade={cascade} />);
+    expect(screen.getByRole('region', { name: 'Pourquoi ces changements ?' })).toBeInTheDocument();
+    expect(screen.getByText(/AROME n’a plus de valeur à partir de là/)).toBeInTheDocument();
+  });
+
+  it('n ajoute aucune explication quand le modele ne change pas', () => {
+    const timeline = buildHourlyTimeline('2026-08-17T00:00', 4);
+    const bundle = buildBundle({ timeline, models: ['arome'] });
+    const cascade = computeCascadeView(
+      bundle,
+      { terrain: null, verification: [], preferred: null },
+      NOW,
+    );
+    expect(cascade.switches).toEqual([]);
+    render(<CascadeFrieze bundle={bundle} cascade={cascade} />);
+    expect(screen.queryByText('Pourquoi ces changements ?')).not.toBeInTheDocument();
+  });
 });

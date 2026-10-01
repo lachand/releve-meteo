@@ -4,6 +4,7 @@ import { formatDayShort, formatHour } from '../format';
 import type { CascadeView } from '../hooks/useCascadeView';
 import { MODEL_LABELS, modelColorVar } from '../modelPresentation';
 import styles from './CascadeFrieze.module.css';
+import { SwitchReasons } from './SwitchReasons';
 
 interface CascadeFriezeProps {
   readonly bundle: ForecastBundle;
@@ -84,6 +85,11 @@ export function CascadeFrieze({ bundle, cascade }: CascadeFriezeProps) {
         ))}
       </div>
       <figcaption className={styles.relay}>{relay}.</figcaption>
+      <SwitchReasons
+        timeline={bundle.timeline}
+        switches={cascade.switches}
+        title="Pourquoi ces changements ?"
+      />
     </figure>
   );
 }

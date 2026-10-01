@@ -275,6 +275,90 @@ export function rankModels(context: SelectionContext, leadHours: number): readon
   });
 }
 
+export type SwitchKind = CriterionKind | 'availability' | 'manual';
+
+/** Pourquoi la cascade passe d'un modele a l'autre en un point de la timeline. */
+export interface SwitchReason {
+  readonly kind: SwitchKind;
+  readonly from: ModelId;
+  readonly to: ModelId;
+  readonly leadHours: number;
+  /** Points d'avance du modele rejoint sur le critere decisif ; 0 pour 'availability' et 'manual'. */
+  readonly gain: number;
+  /** Pourquoi l'ancien modele ne pouvait plus etre retenu ('availability' seulement). */
+  readonly cause: IneligibilityReason | 'noData' | null;
+  /** Detail du critere decisif pour chacun des deux modeles, pour la phrase. */
+  readonly fromDetail: Criterion['detail'] | null;
+  readonly toDetail: Criterion['detail'] | null;
+}
+
+const CRITERION_KINDS: readonly CriterionKind[] = [
+  'resolution',
+  'mediumRange',
+  'localSkill',
+  'shortSkill',
+];
+
+/** Points d'une famille de criteres (la mesure locale en compte un par variable). */
+function pointsOf(criteria: readonly Criterion[], kind: CriterionKind): number {
+  return criteria.filter((c) => c.kind === kind).reduce((sum, c) => sum + c.points, 0);
+}
+
+/** Detail du critere de cette famille qui pese le plus, ou null si le modele n'en a pas. */
+function detailOf(criteria: readonly Criterion[], kind: CriterionKind): Criterion['detail'] | null {
+  const [heaviest] = criteria
+    .filter((c) => c.kind === kind)
+    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points));
+  return heaviest?.detail ?? null;
+}
+
+/**
+ * Raison d'une bascule de la cascade, a partir des memes criteres chiffres
+ * que le classement : un modele qui n'a plus de valeurs, le choix manuel de
+ * l'utilisateur, ou sinon le critere sur lequel le modele rejoint a le plus
+ * gagne sur l'ancien a cette echeance.
+ */
+export function explainSwitch(input: {
+  readonly context: SelectionContext;
+  readonly from: ModelId;
+  readonly to: ModelId;
+  readonly leadHours: number;
+  readonly preferred?: ModelId | null;
+  /** Faux quand l'ancien modele n'a plus de valeur a ce point, malgre sa portee nominale. */
+  readonly fromHasData?: boolean;
+}): SwitchReason {
+  const { context, from, to, leadHours } = input;
+  const ranking = rankModels(context, leadHours);
+  const fromRanking = ranking.filter((r) => r.model === from);
+  const fromCriteria = fromRanking.flatMap((r) => r.criteria);
+  const toCriteria = ranking.filter((r) => r.model === to).flatMap((r) => r.criteria);
+  const base = { from, to, leadHours, fromDetail: null, toDetail: null };
+  const cause = fromRanking[0]?.ineligibility ?? (input.fromHasData === false ? 'noData' : null);
+  if (cause !== null) {
+    return { ...base, kind: 'availability', gain: 0, cause };
+  }
+  if (input.preferred === to) {
+    return { ...base, kind: 'manual', gain: 0, cause: null };
+  }
+  let kind: CriterionKind = 'resolution';
+  let gain = Number.NEGATIVE_INFINITY;
+  for (const candidate of CRITERION_KINDS) {
+    const difference = pointsOf(toCriteria, candidate) - pointsOf(fromCriteria, candidate);
+    if (difference > gain) {
+      kind = candidate;
+      gain = difference;
+    }
+  }
+  return {
+    ...base,
+    kind,
+    gain,
+    cause: null,
+    fromDetail: detailOf(fromCriteria, kind),
+    toDetail: detailOf(toCriteria, kind),
+  };
+}
+
 /** Meilleur modele eligible, ou null si aucun ne couvre l'echeance. */
 export function selectBestModel(context: SelectionContext, leadHours: number): ModelRanking | null {
   const best = rankModels(context, leadHours)[0];
