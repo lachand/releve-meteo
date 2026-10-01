@@ -331,6 +331,74 @@ describe('collectWatchNotifications', () => {
       );
     });
 
+    describe('foudre a proximite', () => {
+      const CAPABILITIES = 'https://view.eumetsat.int/geoserver/mtg_fd/li_afa/ows';
+      const capabilities = () =>
+        http.get(CAPABILITIES, () =>
+          HttpResponse.text('<Dimension name="time" default="2026-09-28T13:25:00Z">x</Dimension>'),
+        );
+      const settings = { lightning: true, mode: 'morning' } as const;
+      // Un pixel actif au centre de la zone, sur la derniere image seulement.
+      const centreMask = (active: boolean) => ({
+        width: 64,
+        height: 64,
+        active: Array.from({ length: 64 * 64 }, (_, i) => active && i === 32 * 64 + 32),
+      });
+
+      it('notifie des eclairs vus pres du lieu, meme en mode du matin, une fois par plage', async () => {
+        server.use(capabilities());
+        const urls: string[] = [];
+        const reader = async (url: string) => {
+          urls.push(url);
+          return centreMask(urls.length === 3);
+        };
+        const found = await collectWatchNotifications(
+          state([NO_RULES], {}, false, settings),
+          NOW,
+          reader,
+        );
+        expect(urls).toHaveLength(3);
+        expect(found).toHaveLength(1);
+        expect(found[0]).toMatchObject({
+          key: `foudre|${ID}|2026-09-28|5`,
+          title: 'Lyon · Éclairs à proximité',
+        });
+        expect(found[0]?.body).toMatch(
+          /^Éclairs vus par le satellite MTG sur place, à 15:25 \(1 zone de 2.km\)\./u,
+        );
+        const known = Object.fromEntries(found.map((n) => [n.key, NOW.getTime()]));
+        expect(
+          await collectWatchNotifications(
+            state([NO_RULES], known, false, settings),
+            NOW,
+            async () => centreMask(true),
+          ),
+        ).toEqual([]);
+      });
+
+      it('se tait sans eclair, sans la case cochee, ou quand le satellite ne repond pas', async () => {
+        server.use(capabilities());
+        expect(
+          await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW, async () =>
+            centreMask(false),
+          ),
+        ).toEqual([]);
+        expect(
+          await collectWatchNotifications(
+            state([NO_RULES], {}, false, { lightning: false }),
+            NOW,
+            async () => centreMask(true),
+          ),
+        ).toEqual([]);
+        server.use(http.get(CAPABILITIES, () => HttpResponse.error()));
+        expect(
+          await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW, async () =>
+            centreMask(true),
+          ),
+        ).toEqual([]);
+      });
+    });
+
     it('des la detection : un pollen eleve, une fois par jour, source nommee', async () => {
       server.use(http.get(AIR_URL, () => HttpResponse.json(pollenBody(150))));
       const settings = { pollen: true, mode: 'instant' } as const;

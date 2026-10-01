@@ -23,6 +23,7 @@ import {
 import type { WatchEntry, WatchState } from '../domain/watch';
 import {
   highPollen,
+  lightningKey,
   morningDue,
   pollenKey,
   rainAhead,
@@ -36,12 +37,15 @@ import { computeCascadeView } from '../ui/cascadeView';
 import type { CascadeView } from '../ui/cascadeView';
 import { digestBody } from '../ui/digestPresentation';
 import {
+  lightningSentence,
   pollenSentence,
   rainSentence,
   violentSentence,
   violentTitle,
 } from '../ui/noticePresentation';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
+import { loadLightningNear, readActiveMask } from './lightningWatch';
+import type { MaskReader } from './lightningWatch';
 import {
   VIGILANCE_LEVEL_WORDS,
   VIGILANCE_PHENOMENON_LABELS,
@@ -258,6 +262,7 @@ async function vigilanceNotifications(
 export async function collectWatchNotifications(
   state: WatchState,
   now: Date,
+  readMask: MaskReader = readActiveMask,
 ): Promise<readonly WatchNotification[]> {
   const seen = new Set(Object.keys(state.notified));
   const fresh: WatchNotification[] = [];
@@ -280,6 +285,8 @@ export async function collectWatchNotifications(
     const instantRisks = limited && !grouped && notify.risks;
     const instantRain = limited && !grouped && notify.rain;
     const instantPollen = limited && !grouped && notify.pollen;
+    // Une observation n'attend pas le matin : toujours des la detection.
+    const wantsLightning = limited && notify.lightning;
     const needsForecast =
       entry.rules.some((rule) => rule.enabled) ||
       (morningWanted && (state.digest || (grouped && (notify.risks || notify.rain)))) ||
@@ -313,6 +320,17 @@ export async function collectWatchNotifications(
         body: notices.pollen.sentence,
         url,
       });
+    }
+    if (wantsLightning) {
+      const near = await loadLightningNear(entry.place, readMask);
+      if (near !== null) {
+        found.push({
+          key: lightningKey(id, now),
+          title: `${placeLabel(entry)} · Éclairs à proximité`,
+          body: lightningSentence(near),
+          url,
+        });
+      }
     }
     if (morningWanted && morningKey !== null) {
       const parts = [

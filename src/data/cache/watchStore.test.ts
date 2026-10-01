@@ -93,7 +93,14 @@ describe('watchStore', () => {
 
   it('garde les notifications voulues sans toucher au reste, et relit un champ illisible comme rien', async () => {
     await saveWatchEntries([ENTRY], 'kmh', NOW);
-    const wanted = { risks: true, rain: false, pollen: true, mode: 'instant', hour: 6 } as const;
+    const wanted = {
+      risks: true,
+      rain: false,
+      pollen: true,
+      lightning: false,
+      mode: 'instant',
+      hour: 6,
+    } as const;
     await saveWatchNotify(wanted, NOW);
     expect(await readWatchState()).toMatchObject({ notify: wanted, entries: [ENTRY] });
     // Une recopie des lieux ne l'efface pas ; une ecriture identique n'ecrit rien.

@@ -17,6 +17,8 @@ export interface NotifyPrefs {
   readonly rain: boolean;
   /** Pollens a un niveau eleve. */
   readonly pollen: boolean;
+  /** Eclairs observes a proximite d'un favori, toujours des la detection. */
+  readonly lightning: boolean;
   /** 'morning' : une notification groupee a l'heure choisie ; 'instant' : des la detection. */
   readonly mode: 'morning' | 'instant';
   /** Heure visee du matin, 0 a 23 (heure de Paris). */
@@ -27,6 +29,7 @@ export const DEFAULT_NOTIFY: NotifyPrefs = {
   risks: false,
   rain: false,
   pollen: false,
+  lightning: false,
   mode: 'morning',
   hour: 7,
 };
@@ -39,6 +42,7 @@ export function normalizeNotify(raw: unknown): NotifyPrefs {
     risks: value.risks === true,
     rain: value.rain === true,
     pollen: value.pollen === true,
+    lightning: value.lightning === true,
     mode: value.mode === 'instant' ? 'instant' : 'morning',
     hour:
       typeof hour === 'number' && Number.isInteger(hour) && hour >= 0 && hour <= 23
@@ -183,4 +187,10 @@ export function highPollen(
 /** Les pollens eleves sont notifies une fois par jour et par lieu. */
 export function pollenKey(placeId: string, date: string): string {
   return `pollen|${placeId}|${date}`;
+}
+
+/** Des eclairs a proximite sont notifies une fois par lieu et par plage de trois heures. */
+export function lightningKey(placeId: string, now: Date): string {
+  const local = localIsoFromUtc(now.getTime());
+  return `foudre|${placeId}|${local.slice(0, 10)}|${Math.floor(Number(local.slice(11, 13)) / 3)}`;
 }

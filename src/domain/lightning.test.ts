@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { LIGHTNING, lightningArea, lightningFrameTimes, mercatorPoint } from './lightning';
+import {
+  LIGHTNING,
+  LIGHTNING_WATCH,
+  inverseMercator,
+  lightningArea,
+  lightningFrameTimes,
+  lightningNear,
+  mercatorPoint,
+} from './lightning';
+import type { ActiveMask } from './lightning';
 
 describe('lightningFrameTimes', () => {
   it('finit sur la derniere image publiee et remonte de 5 minutes en 5 minutes', () => {
@@ -54,5 +63,84 @@ describe('lightningArea', () => {
     // A l equateur, la zone est carree.
     expect(area.height).toBe(200);
     expect(area.mercator.minX).toBeCloseTo(-area.mercator.maxX, 6);
+  });
+});
+
+describe('inverseMercator', () => {
+  it('rend la position projetee par mercatorPoint', () => {
+    const { x, y } = mercatorPoint(45.49, 5.47);
+    const back = inverseMercator(x, y);
+    expect(back.latitude).toBeCloseTo(45.49, 8);
+    expect(back.longitude).toBeCloseTo(5.47, 8);
+  });
+});
+
+describe('lightningNear', () => {
+  const virieu = { latitude: 45.49, longitude: 5.47 };
+  const area = lightningArea(virieu, LIGHTNING_WATCH.halfExtentKm, LIGHTNING_WATCH.width);
+  const { width, height } = area;
+  const empty = (): boolean[] => Array.from({ length: width * height }, () => false);
+  const mask = (...cells: readonly (readonly [number, number])[]): ActiveMask => {
+    const active = empty();
+    cells.forEach(([row, col]) => {
+      active[row * width + col] = true;
+    });
+    return { width, height, active };
+  };
+  const middle = [Math.floor(height / 2), Math.floor(width / 2)] as const;
+  const T0 = Date.UTC(2026, 9, 1, 13, 10);
+
+  it('ne dit rien quand aucune image ne porte d eclair', () => {
+    expect(
+      lightningNear({ center: virieu, area, frames: [{ time: T0, mask: mask() }] }),
+    ).toBeNull();
+    expect(lightningNear({ center: virieu, area, frames: [] })).toBeNull();
+  });
+
+  it('situe un eclair au centre du lieu a quelques kilometres au plus', () => {
+    const near = lightningNear({
+      center: virieu,
+      area,
+      frames: [{ time: T0, mask: mask(middle) }],
+    });
+    expect(near?.cells).toBe(1);
+    expect(near?.nearestKm).toBeLessThan(2);
+    expect(near?.firstTime).toBe(T0);
+    expect(near?.lastTime).toBe(T0);
+  });
+
+  it('ecarte un eclair au dela du rayon, meme dans l image', () => {
+    // Coin nord-ouest : environ 45 km du centre pour une demi-zone de 32 km.
+    expect(
+      lightningNear({ center: virieu, area, frames: [{ time: T0, mask: mask([0, 0]) }] }),
+    ).toBeNull();
+  });
+
+  it('compte une fois un meme pixel vu sur plusieurs images, et borne la periode', () => {
+    const near = lightningNear({
+      center: virieu,
+      area,
+      frames: [
+        { time: T0, mask: mask(middle) },
+        { time: T0 + 300_000, mask: mask() },
+        { time: T0 + 600_000, mask: mask(middle, [middle[0] + 10, middle[1]]) },
+      ],
+    });
+    expect(near?.cells).toBe(2);
+    expect(near?.firstTime).toBe(T0);
+    expect(near?.lastTime).toBe(T0 + 600_000);
+    // Le plus proche est celui du centre, pas celui du pixel decale.
+    expect(near?.nearestKm).toBeLessThan(2);
+  });
+
+  it('suit un rayon choisi', () => {
+    const offset = mask([middle[0], middle[1] + 20]);
+    expect(
+      lightningNear({ center: virieu, area, frames: [{ time: T0, mask: offset }], radiusKm: 5 }),
+    ).toBeNull();
+    expect(
+      lightningNear({ center: virieu, area, frames: [{ time: T0, mask: offset }], radiusKm: 30 })
+        ?.cells,
+    ).toBe(1);
   });
 });

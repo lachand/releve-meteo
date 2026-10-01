@@ -87,6 +87,18 @@ function NoticeSettings({ watch }: { readonly watch: BackgroundWatch }) {
         />
         <span>Pollens à un niveau élevé (prévision CAMS Europe, 80 grains par m³ et plus).</span>
       </label>
+      <label className={styles.checkRow}>
+        <input
+          type="checkbox"
+          checked={notify.lightning}
+          onChange={(event) => setNotify({ lightning: event.target.checked })}
+        />
+        <span>
+          Foudre à proximité : éclairs vus par le satellite MTG à moins de 30 km d’un favori sur les
+          15 dernières minutes, à chaque veille, jamais groupés le matin. Une observation optique,
+          pas un impact localisé au sol.
+        </span>
+      </label>
       <div className={styles.timing} role="radiogroup" aria-label="Quand notifier">
         <label className={styles.checkRow}>
           <input
