@@ -1,6 +1,41 @@
 # Plan : un widget Android pour Relevé
 
-Statut : **plan seulement, rien n'est codé**. Il demande un habillage natif, donc un accord (voir « Décisions à prendre »).
+Statut : **étape 0 faite le 2026-10-01, elle échoue sur l'architecture approuvée : arrêt**. Rien n'est codé côté Android. Décisions de l'utilisateur : le widget se fait, en APK d'abord (Play Store plus tard), deux tailles, et on s'arrête si l'essai échoue. Voir « Résultat de l'étape 0 » et « Variante à décider ».
+
+## Résultat de l'étape 0 (2026-10-01)
+
+Question : le code que le service worker exécute déjà sans DOM (`watchRun.ts` et `src/domain/`) tourne-t-il dans le moteur du Background Runner de Capacitor ?
+
+Méthode : le plugin (`@capacitor/background-runner` 3.0.0) embarque QuickJS (version du 2025-04-26, vue dans la bibliothèque native). J'ai groupé `src/pwa/watchRun.ts` en un seul script (100 ko) et je l'ai exécuté dans QuickJS (`quickjs-emscripten`) avec les seules globales que le plugin annonce (`console`, `setTimeout`, `fetch`).
+
+Résultats :
+
+- **Le script ne se charge pas** : `ReferenceError: 'Intl' is not defined`, dès `domain/time.ts`, qui convertit l'heure de Paris avec `Intl.DateTimeFormat`.
+- Absents de QuickJS : `Intl`, `URL`, `URLSearchParams`, `AbortController`, `AbortSignal`, `Response`, `Headers`, `structuredClone`, `queueMicrotask`. `toLocaleString` ignore le fuseau horaire.
+- Le plugin documente un `fetch` réduit (seuls `method`, `headers` et `body`, pas d'objet `Request`), et un contexte détruit après chaque appel (aucun état conservé).
+- Notre code s'appuie sur ces absents partout : une dizaine de formes d'`Intl` (heure de Paris, nombres et noms de jours en français), `new URL` dans tous les clients, `AbortSignal.any` dans la couche HTTP, `Response` pour les fichiers compressés.
+
+Verdict : **l'essai échoue**. Le contourner demanderait de réécrire une demi-douzaine de polyfills, dont la conversion de l'heure de Paris, où une erreur silencieuse donnerait une « heure courante » fausse, et un `fetch` dont je ne peux pas tester la forme ici (pas d'émulateur dans l'environnement de développement). Ce serait précisément le risque de divergence que la règle 4 interdit. D'où l'arrêt, comme décidé.
+
+## Variante à décider (non engagée)
+
+Le même principe (une seule logique, en TypeScript) sans le Background Runner : **une WebView sans interface lancée par WorkManager**.
+
+```
+WorkManager (toutes les heures, au mieux)
+   crée une WebView (fil principal), sans l'afficher
+   charge /widget.html depuis les ressources de l'application (WebViewAssetLoader)
+        │  même origine que l'application : elle lit le même IndexedDB, où la page recopie déjà les lieux veillés
+        │  Intl, URL, fetch, CORS : un vrai navigateur, rien à réécrire
+        ▼
+widget.html exécute widgetPayload(...) et appelle Android.publish(json)
+        ▼
+Kotlin écrit le JSON (DataStore) et met à jour les widgets Glance
+```
+
+Ce qui change par rapport au plan : pas de Capacitor ni de Background Runner, une coque Android simple (une activité WebView plus le worker). Ce qui reste : `widgetPayload` en TypeScript pur, widgets Glance de deux tailles, règles 1 à 4.
+
+À vérifier avant de s'engager, sur émulateur (GitHub Actions peut en lancer un, pas cet environnement) : qu'une WebView créée dans un worker charge la page, lise l'IndexedDB partagé, fasse le `fetch` et rende la main en quelques secondes, application fermée. Coût et risques propres : une WebView en arrière-plan (mémoire de quelques dizaines de Mo, quelques secondes de calcul), et les limites habituelles d'Android (fréquence, économie de batterie).
 
 ## Pourquoi pas en PWA
 
