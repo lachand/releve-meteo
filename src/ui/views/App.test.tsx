@@ -280,7 +280,9 @@ describe('App', { timeout: 30000 }, () => {
 
     await user.click(screen.getByRole('tab', { name: 'Cartes' }));
     expect(
-      await screen.findByRole('heading', { name: 'Pluie et température selon AROME, 48 heures' }),
+      await screen.findByRole('heading', {
+        name: 'Pluie, température et orage selon AROME, 48 heures',
+      }),
     ).toBeInTheDocument();
     const slider = await screen.findByRole('slider', { name: 'Échéance de la carte' });
     // Grille reelle enregistree a 17 h : la carte commence a sa premiere heure.

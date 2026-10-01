@@ -25,6 +25,8 @@ function pointPayload(
       ...(precipitation === undefined ? {} : { precipitation }),
       wind_speed_10m: temperature.map(() => 12),
       wind_direction_10m: temperature.map(() => 200),
+      cape: temperature.map((_, i) => (i === 0 ? 850 : null)),
+      weather_code: temperature.map(() => 95),
     },
   };
 }
@@ -41,7 +43,7 @@ describe('buildForecastGridUrl', () => {
     expect(url.searchParams.get('models')).toBe('meteofrance_arome_france_hd');
     expect(url.searchParams.get('forecast_hours')).toBe(String(GRID_HOURS));
     expect(url.searchParams.get('hourly')).toBe(
-      'temperature_2m,precipitation,wind_speed_10m,wind_direction_10m',
+      'temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,cape,weather_code',
     );
     expect(url.searchParams.get('timezone')).toBe('Europe/Paris');
   });
@@ -64,6 +66,10 @@ describe('mapForecastGrid', () => {
     expect(grid.temperature[1]?.[8]).toBe(18);
     expect(grid.precipitation[0]?.[4]).toBe(1.2);
     expect(grid.windDirection[1]?.[0]).toBe(200);
+    // CAPE et code meteo suivent le meme rangement ; une CAPE absente reste null.
+    expect(grid.cape[0]?.[3]).toBe(850);
+    expect(grid.cape[1]?.[3]).toBeNull();
+    expect(grid.weatherCode[1]?.[8]).toBe(95);
   });
 
   it("aligne chaque point sur l'heure, et garde null pour une valeur ou une variable absente", () => {

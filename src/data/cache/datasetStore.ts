@@ -40,7 +40,8 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   // v3 : releve sur 60 h et previsions de la veille (hier, prevu contre reel).
   // v4 : instantanes horaires enregistres (echeances courtes).
   station: 4,
-  grid: 1,
+  // v2 : CAPE et code meteo (carte du potentiel d'orage).
+  grid: 2,
   vigilance: 1,
   watch: 1,
   // Instantanes horaires de prevision au point d'une station (echeances courtes).

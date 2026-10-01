@@ -1,9 +1,11 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { cellBounds, lastCoveredIndex, valueRange } from '../../domain/grid';
+import { cellBounds, lastCoveredIndex, thunderCells, valueRange } from '../../domain/grid';
 import type { ForecastGrid } from '../../domain/grid';
 import { MODEL_SPECS } from '../../domain/models';
+import { PHENOMENON_THRESHOLDS } from '../../domain/phenomena';
+import type { RiskLevel } from '../../domain/phenomena';
 import { hoursBetween, localIsoFromUtc } from '../../domain/time';
 import type { LocalIsoHour, ModelId, Place } from '../../domain/types';
 import { formatCompact, formatDayHour, formatTemperature } from '../format';
@@ -15,14 +17,23 @@ import {
   SPREAD_COLORS,
   SPREAD_THRESHOLDS,
   TEMPERATURE_GRADIENT,
+  THUNDER_COLORS,
   rainColor,
   spreadColor,
   temperatureColor,
+  thunderColor,
 } from '../mapScales';
 import { MODEL_LABELS, cssVar } from '../modelPresentation';
 import styles from './ForecastMap.module.css';
 
-type MapLayer = 'pluie' | 'temperature';
+type MapLayer = 'pluie' | 'temperature' | 'orage';
+
+const THUNDER_LABELS: Readonly<Record<RiskLevel, string>> = {
+  low: 'Orage possible',
+  moderate: 'Orage probable',
+  high: 'Orage fort',
+};
+const LEVEL_ORDER: readonly RiskLevel[] = ['low', 'moderate', 'high'];
 
 const CELL_OPACITY = 0.62;
 const FRAME_MS = 900;
@@ -76,6 +87,24 @@ function frameSummary(
     }
     const unit = layer === 'pluie' ? 'mm en une heure' : '°C';
     return `Écart maximal entre les modèles sur la zone : ${formatCompact(Math.round(Math.max(...known) * 10) / 10)} ${unit}.`;
+  }
+  if (layer === 'orage') {
+    const cells = thunderCells(grid, index);
+    if (cells.every((cell) => cell === null)) {
+      return 'Orage non fourni par le modèle à cette heure (ni CAPE ni code météo).';
+    }
+    const stormy = cells.flatMap((cell) => (cell === null || cell.risk === null ? [] : [cell]));
+    if (stormy.length === 0) {
+      return `Aucun orage prévu sur les ${total} cases.`;
+    }
+    const worst = Math.max(...stormy.map((cell) => LEVEL_ORDER.indexOf(cell.risk?.level ?? 'low')));
+    const capes = stormy.flatMap((cell) => (cell.cape === null ? [] : [cell.cape]));
+    const capeText =
+      capes.length === 0
+        ? ''
+        : `, CAPE jusqu’à ${formatCompact(Math.round(Math.max(...capes)))} J/kg`;
+    const label = THUNDER_LABELS[LEVEL_ORDER[worst] ?? 'low'].toLowerCase();
+    return `Orage prévu sur ${stormy.length} ${stormy.length > 1 ? 'cases' : 'case'} sur ${total}, niveau le plus élevé : ${label}${capeText}.`;
   }
   if (layer === 'pluie') {
     const values = (grid.precipitation[index] ?? []).filter((v): v is number => v !== null);
@@ -241,10 +270,12 @@ export function ForecastMap({ place, model, state, now, spread }: ForecastMapPro
     }
     const ink = cssVar('--encre') || '#1c2733';
     const values = (layer === 'pluie' ? grid.precipitation : grid.temperature)[index] ?? [];
+    const storms = layer === 'orage' ? thunderCells(grid, index) : [];
     cellsRef.current.forEach((cell, i) => {
       const point = grid.points[i];
+      const storm = storms[i] ?? null;
       const value = values[i] ?? null;
-      if (value === null) {
+      if (layer === 'orage' ? storm === null : value === null) {
         // Valeur absente : contour pointille, jamais une case peinte a zero.
         cell.rect.setStyle({
           stroke: true,
@@ -254,7 +285,14 @@ export function ForecastMap({ place, model, state, now, spread }: ForecastMapPro
           dashArray: '2 4',
           fillOpacity: 0,
         });
-      } else {
+      } else if (layer === 'orage') {
+        const fill = thunderColor(storm?.risk?.level ?? null);
+        cell.rect.setStyle({
+          stroke: false,
+          fillColor: fill ?? ink,
+          fillOpacity: fill === null ? 0 : CELL_OPACITY,
+        });
+      } else if (value !== null) {
         const fill = isSpread
           ? spreadColor(value, layer === 'pluie' ? 'rain' : 'temperature')
           : layer === 'pluie'
@@ -275,17 +313,25 @@ export function ForecastMap({ place, model, state, now, spread }: ForecastMapPro
         (dense && (point.row + point.col) % 2 === 1);
       const spreadFirst = SPREAD_THRESHOLDS[layer === 'pluie' ? 'rain' : 'temperature'][0];
       const text =
-        value === null || hidden
+        hidden || (layer === 'orage' ? storm === null : value === null)
           ? ''
-          : isSpread
-            ? value >= spreadFirst
-              ? formatCompact(Math.round(value * 10) / 10)
-              : ''
-            : layer === 'pluie'
-              ? value >= RAIN_MIN_MM
-                ? formatCompact(value)
-                : ''
-              : formatTemperature(value);
+          : layer === 'orage'
+            ? storm?.risk == null
+              ? ''
+              : storm.cape === null
+                ? 'orage'
+                : formatCompact(Math.round(storm.cape))
+            : value === null
+              ? ''
+              : isSpread
+                ? value >= spreadFirst
+                  ? formatCompact(Math.round(value * 10) / 10)
+                  : ''
+                : layer === 'pluie'
+                  ? value >= RAIN_MIN_MM
+                    ? formatCompact(value)
+                    : ''
+                  : formatTemperature(value);
       const element = cell.label.getElement();
       if (element !== undefined) {
         element.textContent = text;
@@ -328,6 +374,15 @@ export function ForecastMap({ place, model, state, now, spread }: ForecastMapPro
             >
               {isSpread ? 'Écart de température' : 'Température'}
             </button>
+            {!isSpread && (
+              <button
+                type="button"
+                aria-pressed={layer === 'orage'}
+                onClick={() => setChosenLayer('orage')}
+              >
+                Orage
+              </button>
+            )}
           </div>
           {time !== undefined && (
             <p className={styles.frameLabel} aria-live="polite">
@@ -415,6 +470,15 @@ export function ForecastMap({ place, model, state, now, spread }: ForecastMapPro
                 </li>
               ))}
             </ul>
+          ) : layer === 'orage' ? (
+            <ul className={styles.legend} aria-label="Légende du potentiel d’orage">
+              {LEVEL_ORDER.map((level) => (
+                <li key={level}>
+                  <span className={styles.swatch} style={{ background: THUNDER_COLORS[level] }} />
+                  {THUNDER_LABELS[level]}
+                </li>
+              ))}
+            </ul>
           ) : layer === 'pluie' ? (
             <ul className={styles.legend} aria-label="Légende de la pluie, mm en une heure">
               {RAIN_COLORS.map((color, i) => (
@@ -444,6 +508,19 @@ export function ForecastMap({ place, model, state, now, spread }: ForecastMapPro
                 une case où les modèles s’accordent ; une case pointillée, où moins de deux modèles
                 fournissent une valeur. Un grand écart dit où la prévision est incertaine, pas qui a
                 raison. Une case tous les {formatCompact(grid.stepKm)} km, sans lissage.
+              </>
+            ) : layer === 'orage' ? (
+              <>
+                Potentiel d’orage prévu par {modelLabel} : un orage est retenu quand le modèle le
+                code lui-même, ou que la CAPE (énergie d’instabilité, J/kg, écrite dans la case)
+                atteint {formatCompact(PHENOMENON_THRESHOLDS.thunderstorm.capeLow)} J/kg avec au
+                moins {formatCompact(PHENOMENON_THRESHOLDS.thunderstorm.precipMm)} mm de pluie dans
+                l’heure (probable dès{' '}
+                {formatCompact(PHENOMENON_THRESHOLDS.thunderstorm.capeModerate)}, fort dès{' '}
+                {formatCompact(PHENOMENON_THRESHOLDS.thunderstorm.capeHigh)}). C’est une prévision,
+                pas une mesure : elle ne dit ni où la foudre tombera ni si elle tombera. Une case
+                pointillée n’a ni CAPE ni code météo. Une case tous les {formatCompact(grid.stepKm)}{' '}
+                km, sans lissage.
               </>
             ) : (
               <>

@@ -102,3 +102,15 @@ export function spreadColor(value: number | null, variable: 'temperature' | 'rai
   });
   return klass === null ? null : (SPREAD_COLORS[klass] ?? null);
 }
+
+/** Carte d'orage : lavis violet, de l'orage possible a l'orage fort. */
+export const THUNDER_COLORS = {
+  low: '#d6c8e6',
+  moderate: '#9a78c9',
+  high: '#4a2a86',
+} as const;
+
+/** Couleur d'une case d'orage, ou null quand aucun orage n'est prevu. */
+export function thunderColor(level: 'low' | 'moderate' | 'high' | null): string | null {
+  return level === null ? null : THUNDER_COLORS[level];
+}

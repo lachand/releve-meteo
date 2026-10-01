@@ -18,6 +18,8 @@ const VARIABLE_KEYS = {
   precipitation: 'precipitation',
   windSpeed: 'wind_speed_10m',
   windDirection: 'wind_direction_10m',
+  cape: 'cape',
+  weatherCode: 'weather_code',
 } as const;
 
 type GridVariable = keyof typeof VARIABLE_KEYS;
@@ -89,6 +91,8 @@ export function mapForecastGrid(input: {
       precipitation: series('precipitation'),
       windSpeed: series('windSpeed'),
       windDirection: series('windDirection'),
+      cape: series('cape'),
+      weatherCode: series('weatherCode'),
     },
   };
 }

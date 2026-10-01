@@ -43,12 +43,13 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
       {model !== null && (
         <Section
           eyebrow="Prévision"
-          title={`Pluie et température selon ${MODEL_LABELS[model]}, 48 heures`}
+          title={`Pluie, température et orage selon ${MODEL_LABELS[model]}, 48 heures`}
         >
           <p className={styles.lede}>
             La suite du radar : ce que calcule le modèle retenu, heure par heure, sur cent
             kilomètres autour du lieu. Utile pour voir d’où vient une averse, où s’arrête une pluie,
-            ce que change le relief.
+            ce que change le relief. La couche « Orage » montre où le modèle prévoit de
+            l’instabilité, pas où la foudre frappe.
           </p>
           <ForecastMap key={vm.place.id} place={vm.place} model={model} state={grid} now={vm.now} />
         </Section>

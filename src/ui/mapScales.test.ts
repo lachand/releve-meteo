@@ -4,10 +4,12 @@ import {
   SPREAD_COLORS,
   SPREAD_THRESHOLDS,
   TEMPERATURE_GRADIENT,
+  THUNDER_COLORS,
   rainClass,
   rainColor,
   spreadColor,
   temperatureColor,
+  thunderColor,
 } from './mapScales';
 
 describe('rainClass', () => {
@@ -72,5 +74,13 @@ describe('spreadColor', () => {
     expect(spreadColor(0.5, 'rain')).toBe(SPREAD_COLORS[1]);
     expect(SPREAD_THRESHOLDS.temperature).toHaveLength(SPREAD_COLORS.length);
     expect(SPREAD_THRESHOLDS.rain).toHaveLength(SPREAD_COLORS.length);
+  });
+});
+
+describe('thunderColor', () => {
+  it('ne colore que les cases ou un orage est prevu', () => {
+    expect(thunderColor(null)).toBeNull();
+    expect(thunderColor('low')).toBe(THUNDER_COLORS.low);
+    expect(thunderColor('high')).toBe(THUNDER_COLORS.high);
   });
 });

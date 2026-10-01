@@ -53,18 +53,25 @@ const FREEZING_CODES = new Set([56, 57, 66, 67]);
 const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
 const FOG_CODES = new Set([45, 48]);
 
-interface HourlyRisk {
+export interface HourlyRisk {
   readonly level: RiskLevel;
   readonly value: number | null;
 }
 
 type Point = HourlyPoint & { readonly model?: ModelId };
 
-function thunderstormAt(p: Point): HourlyRisk | null {
+/**
+ * Niveau d'orage d'une heure prevue : le code meteo orage du modele, ou une
+ * CAPE elevee avec de la pluie. Partage par la detection d'episodes et la
+ * carte du potentiel d'orage. null : pas d'orage prevu (ou donnees absentes).
+ */
+export function thunderRiskOf(input: {
+  readonly cape: number | null;
+  readonly precipitation: number | null;
+  readonly weatherCode: number | null;
+}): HourlyRisk | null {
   const t = PHENOMENON_THRESHOLDS.thunderstorm;
-  const code = p.weatherCode;
-  const cape = p.cape.value;
-  const precip = p.precipitation.value;
+  const { cape, precipitation: precip, weatherCode: code } = input;
   if (code !== null && THUNDER_CODES.has(code)) {
     return {
       level: code === 95 && (cape === null || cape < t.capeHigh) ? 'moderate' : 'high',
@@ -84,6 +91,14 @@ function thunderstormAt(p: Point): HourlyRisk | null {
     return { level: 'low', value: cape };
   }
   return null;
+}
+
+function thunderstormAt(p: Point): HourlyRisk | null {
+  return thunderRiskOf({
+    cape: p.cape.value,
+    precipitation: p.precipitation.value,
+    weatherCode: p.weatherCode,
+  });
 }
 
 function heavyRainAt(p: Point): HourlyRisk | null {
