@@ -19,6 +19,8 @@ test('choix manuel d un modele puis retour a la selection automatique', async ({
   // "Modele retenu a chaque echeance" (CascadeFrieze), qui contiendrait
   // sinon aussi ce texte.
   await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible();
-  await expect(page.locator('[data-model]').first()).toHaveAttribute('data-model', 'arome');
-  await expect(page.getByText('AROME retenu pour ce lieu et cette échéance.')).toBeVisible();
+  // Les mesures enregistrees de Bron donnent ICON-D2 plus juste : la mesure locale
+  // l'emporte sur l'a priori de maille d'AROME.
+  await expect(page.locator('[data-model]').first()).toHaveAttribute('data-model', 'icon_d2');
+  await expect(page.getByText('ICON-D2 retenu pour ce lieu et cette échéance.')).toBeVisible();
 });
