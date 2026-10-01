@@ -14,7 +14,7 @@ import type { AlertHit } from '../../domain/alerts';
 import { evaluateSpreadAlerts } from '../../domain/spreadAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import { blendDaily } from '../../domain/dailyBlend';
-import { dailyEnsemble, rainOutlook } from '../../domain/ensemble';
+import { dailyEnsemble, rainOutlook, temperatureSpaghetti } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
 import { waveOutlook } from '../../domain/marine';
@@ -301,6 +301,8 @@ export function App() {
       days: blendDaily({ bundle, context: cascade.context, now, preferred }),
       ensembleDays: ensembleDays?.filter((day) => day.date >= today) ?? null,
       rainOutlook: ensembleValue === null ? null : rainOutlook({ ensemble: ensembleValue, now }),
+      temperatureSpaghetti:
+        ensembleValue === null ? null : temperatureSpaghetti({ ensemble: ensembleValue, now }),
       marine: coastal
         ? {
             state: marine,

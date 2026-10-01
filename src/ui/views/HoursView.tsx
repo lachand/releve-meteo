@@ -1,3 +1,4 @@
+import { EnsembleSpaghetti } from '../components/EnsembleSpaghetti';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { PrecipitationChart } from '../components/PrecipitationChart';
 import { PressureChart } from '../components/PressureChart';
@@ -17,6 +18,9 @@ export function HoursView({ vm }: { readonly vm: ForecastViewModel }) {
       </Section>
       <Section eyebrow="48 heures" title="Précipitations">
         <PrecipitationChart bundle={vm.bundle} cascade={vm.cascade} />
+      </Section>
+      <Section eyebrow="72 heures" title="Température : les trajectoires de l’ensemble">
+        <EnsembleSpaghetti spaghetti={vm.temperatureSpaghetti} />
       </Section>
       <Section eyebrow="72 heures" title="Probabilité de pluie, heure par heure">
         <RainOutlookChart hours={vm.rainOutlook} memberCount={vm.ensembleMembers} />

@@ -6,7 +6,7 @@ import type { AlertHit } from '../../domain/alerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
-import type { EnsembleDay, RainOutlookHour } from '../../domain/ensemble';
+import type { EnsembleDay, RainOutlookHour, TemperatureSpaghetti } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
 import type { MarineHourly, WaveOutlook } from '../../domain/marine';
 import type { DayNormal } from '../../domain/normals';
@@ -50,6 +50,8 @@ export interface ForecastViewModel {
   readonly ensembleDays: readonly EnsembleDay[] | null;
   /** Pluie probable heure par heure sur 72 h, d'après l'ensemble ; null sans ensemble. */
   readonly rainOutlook: readonly RainOutlookHour[] | null;
+  /** Trajectoires de temperature de l'ensemble sur 72 h ; null sans ensemble. */
+  readonly temperatureSpaghetti: TemperatureSpaghetti | null;
   /** Normale 1991-2020 du jour (estimation ERA5) ; null tant qu'elle n'est pas lue. */
   readonly todayNormal: DayNormal | null;
   /** Mer et houle ; null hors du littoral. */
