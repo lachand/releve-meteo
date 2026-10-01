@@ -12,8 +12,11 @@ import { addPaperBaseLayer, removeMap } from '../mapBase';
 import {
   RAIN_COLORS,
   RAIN_THRESHOLDS,
+  SPREAD_COLORS,
+  SPREAD_THRESHOLDS,
   TEMPERATURE_GRADIENT,
   rainColor,
+  spreadColor,
   temperatureColor,
 } from '../mapScales';
 import { MODEL_LABELS, cssVar } from '../modelPresentation';
@@ -38,6 +41,11 @@ interface ForecastMapProps {
   readonly model: ModelId;
   readonly state: DatasetState<ForecastGrid>;
   readonly now: Date;
+  /**
+   * Carte du desaccord : la grille porte des ecarts entre ces modeles, pas des
+   * valeurs. Couleurs et textes changent ; la mecanique reste celle de la carte.
+   */
+  readonly spread?: { readonly models: readonly ModelId[] };
 }
 
 function currentHourIso(now: Date): LocalIsoHour {
@@ -53,8 +61,22 @@ function relativeHours(from: LocalIsoHour, to: LocalIsoHour): string {
 }
 
 /** Resume textuel de l'image affichee : la carte ne doit pas etre le seul support. */
-function frameSummary(grid: ForecastGrid, index: number, layer: MapLayer): string {
+function frameSummary(
+  grid: ForecastGrid,
+  index: number,
+  layer: MapLayer,
+  isSpread: boolean,
+): string {
   const total = grid.points.length;
+  if (isSpread) {
+    const values = (layer === 'pluie' ? grid.precipitation : grid.temperature)[index] ?? [];
+    const known = values.filter((v): v is number => v !== null);
+    if (known.length === 0) {
+      return 'Écart non calculable à cette heure : moins de deux modèles fournissent une valeur.';
+    }
+    const unit = layer === 'pluie' ? 'mm en une heure' : '°C';
+    return `Écart maximal entre les modèles sur la zone : ${formatCompact(Math.round(Math.max(...known) * 10) / 10)} ${unit}.`;
+  }
   if (layer === 'pluie') {
     const values = (grid.precipitation[index] ?? []).filter((v): v is number => v !== null);
     const wet = values.filter((v) => v >= RAIN_MIN_MM);
@@ -79,7 +101,8 @@ function frameSummary(grid: ForecastGrid, index: number, layer: MapLayer): strin
  * App monte ce composant avec `key={place.id}` : changer de lieu recree
  * l'instance.
  */
-export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
+export function ForecastMap({ place, model, state, now, spread }: ForecastMapProps) {
+  const isSpread = spread !== undefined;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const cellsRef = useRef<Cell[]>([]);
@@ -232,8 +255,9 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
           fillOpacity: 0,
         });
       } else {
-        const fill =
-          layer === 'pluie'
+        const fill = isSpread
+          ? spreadColor(value, layer === 'pluie' ? 'rain' : 'temperature')
+          : layer === 'pluie'
             ? rainColor(value)
             : temperatureColor(value, temperatureRange ?? { min: value, max: value });
         cell.rect.setStyle({
@@ -249,20 +273,25 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
         point === undefined ||
         (point.row === half && point.col === half) ||
         (dense && (point.row + point.col) % 2 === 1);
+      const spreadFirst = SPREAD_THRESHOLDS[layer === 'pluie' ? 'rain' : 'temperature'][0];
       const text =
         value === null || hidden
           ? ''
-          : layer === 'pluie'
-            ? value >= RAIN_MIN_MM
-              ? formatCompact(value)
+          : isSpread
+            ? value >= spreadFirst
+              ? formatCompact(Math.round(value * 10) / 10)
               : ''
-            : formatTemperature(value);
+            : layer === 'pluie'
+              ? value >= RAIN_MIN_MM
+                ? formatCompact(value)
+                : ''
+              : formatTemperature(value);
       const element = cell.label.getElement();
       if (element !== undefined) {
         element.textContent = text;
       }
     });
-  }, [grid, index, layer, temperatureRange, dense]);
+  }, [grid, index, layer, temperatureRange, dense, isSpread]);
 
   // Lecture.
   useEffect(() => {
@@ -290,14 +319,14 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
               aria-pressed={layer === 'pluie'}
               onClick={() => setChosenLayer('pluie')}
             >
-              Pluie
+              {isSpread ? 'Écart de pluie' : 'Pluie'}
             </button>
             <button
               type="button"
               aria-pressed={layer === 'temperature'}
               onClick={() => setChosenLayer('temperature')}
             >
-              Température
+              {isSpread ? 'Écart de température' : 'Température'}
             </button>
           </div>
           {time !== undefined && (
@@ -313,18 +342,32 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
       <div
         ref={containerRef}
         className={styles.map}
-        aria-label={`Carte de prévision ${modelLabel} autour de ${place.name}`}
+        aria-label={
+          isSpread
+            ? `Carte du désaccord entre modèles autour de ${place.name}`
+            : `Carte de prévision ${modelLabel} autour de ${place.name}`
+        }
       />
 
       {state.status === 'loading' && (
-        <p className={styles.caption}>Chargement de la carte de prévision…</p>
+        <p className={styles.caption}>
+          {isSpread
+            ? 'Chargement des grilles de quatre modèles…'
+            : 'Chargement de la carte de prévision…'}
+        </p>
       )}
       {state.status === 'error' && (
-        <p className={styles.caption}>Carte de prévision indisponible pour l’instant.</p>
+        <p className={styles.caption}>
+          {isSpread
+            ? 'Carte du désaccord indisponible pour l’instant.'
+            : 'Carte de prévision indisponible pour l’instant.'}
+        </p>
       )}
       {grid !== null && covered < 0 && (
         <p className={styles.caption}>
-          {modelLabel} ne fournit aucune valeur pour cette zone en ce moment.
+          {isSpread
+            ? 'Aucun écart calculable pour cette zone en ce moment.'
+            : `${modelLabel} ne fournit aucune valeur pour cette zone en ce moment.`}
         </p>
       )}
 
@@ -354,9 +397,25 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
             />
           </div>
 
-          <p className={styles.summary}>{frameSummary(grid, index, layer)}</p>
+          <p className={styles.summary}>{frameSummary(grid, index, layer, isSpread)}</p>
 
-          {layer === 'pluie' ? (
+          {isSpread ? (
+            <ul
+              className={styles.legend}
+              aria-label={`Légende de l’écart entre modèles, ${layer === 'pluie' ? 'mm en une heure' : '°C'}`}
+            >
+              {SPREAD_COLORS.map((color, i) => (
+                <li key={color}>
+                  <span className={styles.swatch} style={{ background: color }} />
+                  {i === 0 ? 'dès ' : ''}
+                  {formatCompact(
+                    SPREAD_THRESHOLDS[layer === 'pluie' ? 'rain' : 'temperature'][i] ?? null,
+                  )}
+                  {i === SPREAD_COLORS.length - 1 ? ' et plus' : ''}
+                </li>
+              ))}
+            </ul>
+          ) : layer === 'pluie' ? (
             <ul className={styles.legend} aria-label="Légende de la pluie, mm en une heure">
               {RAIN_COLORS.map((color, i) => (
                 <li key={color}>
@@ -378,9 +437,22 @@ export function ForecastMap({ place, model, state, now }: ForecastMapProps) {
           )}
 
           <p className={styles.caption}>
-            Prévu par {modelLabel} (maille {formatCompact(MODEL_SPECS[model].resolutionKm)} km), une
-            case tous les {formatCompact(grid.stepKm)} km : la valeur calculée au centre de chaque
-            case, sans lissage. Échelle des températures propre à la carte, sur toute la période.
+            {spread !== undefined ? (
+              <>
+                Écart entre le modèle le plus haut et le plus bas à chaque case, parmi{' '}
+                {spread.models.map((m) => MODEL_LABELS[m]).join(', ')} : une case sans couleur est
+                une case où les modèles s’accordent ; une case pointillée, où moins de deux modèles
+                fournissent une valeur. Un grand écart dit où la prévision est incertaine, pas qui a
+                raison. Une case tous les {formatCompact(grid.stepKm)} km, sans lissage.
+              </>
+            ) : (
+              <>
+                Prévu par {modelLabel} (maille {formatCompact(MODEL_SPECS[model].resolutionKm)} km),
+                une case tous les {formatCompact(grid.stepKm)} km : la valeur calculée au centre de
+                chaque case, sans lissage. Échelle des températures propre à la carte, sur toute la
+                période.
+              </>
+            )}
             {coverageEnd !== undefined && covered < grid.times.length - 1 && (
               <>
                 {' '}

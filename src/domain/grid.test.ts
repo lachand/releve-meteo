@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { FORECAST_GRID, cellBounds, gridPoints, lastCoveredIndex, valueRange } from './grid';
+import {
+  FORECAST_GRID,
+  SPREAD_GRID_MODELS,
+  cellBounds,
+  gridPoints,
+  lastCoveredIndex,
+  spreadGrid,
+  valueRange,
+} from './grid';
 import type { ForecastGrid } from './grid';
 
 const LYON = { latitude: 45.7578, longitude: 4.832 };
@@ -96,5 +104,73 @@ describe('valueRange', () => {
 
   it('rend null sans aucune valeur', () => {
     expect(valueRange([[null], []])).toBeNull();
+  });
+});
+
+describe('spreadGrid', () => {
+  const points = gridPoints(LYON, 3, 10);
+  function grid(
+    model: ForecastGrid['model'],
+    temperature: (number | null)[][],
+    precipitation: (number | null)[][] = temperature.map((row) => row.map(() => 0)),
+  ): ForecastGrid {
+    return {
+      model,
+      provenance: 'forecast',
+      points,
+      stepKm: 10,
+      times: temperature.map((_, i) => `2026-09-28T${String(10 + i).padStart(2, '0')}:00`),
+      temperature,
+      precipitation,
+      windSpeed: temperature,
+      windDirection: temperature,
+    } as ForecastGrid;
+  }
+  const flat = (value: number | null) => Array.from({ length: 9 }, () => value);
+
+  it('donne, case par case et heure par heure, l ecart entre le modele le plus haut et le plus bas', () => {
+    const result = spreadGrid([
+      grid('arome_france', [flat(10), flat(12)]),
+      grid('arpege', [flat(13), flat(12.5)]),
+      grid('gfs', [flat(11), flat(9)]),
+    ]);
+    expect(result?.models).toEqual(['arome_france', 'arpege', 'gfs']);
+    expect(result?.grid.temperature[0]?.[0]).toBe(3);
+    expect(result?.grid.temperature[1]?.[4]).toBe(3.5);
+    expect(result?.grid.times).toHaveLength(2);
+    expect(result?.grid.points).toBe(points);
+  });
+
+  it('calcule l ecart de pluie sur ses propres valeurs', () => {
+    const result = spreadGrid([
+      grid('arome_france', [flat(10)], [flat(0)]),
+      grid('arpege', [flat(10)], [flat(2.5)]),
+    ]);
+    expect(result?.grid.precipitation[0]?.[0]).toBe(2.5);
+    expect(result?.grid.temperature[0]?.[0]).toBe(0);
+  });
+
+  it('laisse une case a null quand moins de deux modeles ont une valeur, jamais un ecart nul', () => {
+    const result = spreadGrid([
+      grid('arome_france', [[...flat(10).slice(0, 8), null]]),
+      grid('arpege', [[...flat(12).slice(0, 8), 14]]),
+      grid('gfs', [[...flat(11).slice(0, 8), null]]),
+    ]);
+    expect(result?.grid.temperature[0]?.[0]).toBe(2);
+    expect(result?.grid.temperature[0]?.[8]).toBeNull();
+  });
+
+  it('ne compare pas des grilles qui ne s alignent pas, et se tait sous deux modeles', () => {
+    expect(spreadGrid([grid('arpege', [flat(1)])])).toBeNull();
+    expect(spreadGrid([])).toBeNull();
+    const shifted = { ...grid('gfs', [flat(2)]), times: ['2026-09-28T11:00'] } as ForecastGrid;
+    const aligned = spreadGrid([grid('arpege', [flat(1)]), shifted]);
+    expect(aligned).toBeNull();
+    const fewer = { ...grid('gfs', [flat(2)]), points: points.slice(0, 4) } as ForecastGrid;
+    expect(spreadGrid([grid('arpege', [flat(1)]), fewer])).toBeNull();
+  });
+
+  it('retient les modeles qui couvrent la zone, ordre du catalogue d ecart', () => {
+    expect(SPREAD_GRID_MODELS.length).toBeGreaterThanOrEqual(3);
   });
 });

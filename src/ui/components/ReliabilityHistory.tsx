@@ -7,6 +7,7 @@ import { Chart, TOOLTIP_STYLE, axisX, axisY } from '../chartTheme';
 import { formatDayMonth, formatOneDecimal } from '../format';
 import { weeklySentence } from '../historyPresentation';
 import { MODEL_LABELS, modelColor } from '../modelPresentation';
+import { ReliabilityCalendar } from './ReliabilityCalendar';
 import styles from './ReliabilityPanel.module.css';
 
 interface Row {
@@ -101,6 +102,7 @@ export function ReliabilityHistory({ verification }: ReliabilityHistoryProps) {
         de mesures n’est pas tracé.
       </p>
       {days >= 2 && <DailyChart rows={rows} />}
+      <ReliabilityCalendar rows={rows} />
     </div>
   );
 }

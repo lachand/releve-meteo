@@ -31,7 +31,7 @@ function isPreferences(value: unknown): value is Preferences {
 
 const ALERT_VARIABLES: ReadonlySet<unknown> = new Set(['temperature', 'precipitation', 'wind']);
 
-function isAlertRule(value: unknown): value is AlertRule {
+export function isAlertRule(value: unknown): value is AlertRule {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -53,7 +53,7 @@ function isAlertRule(value: unknown): value is AlertRule {
 export const PEAK_KWP_MAX = 100;
 
 /** Puissance crete exploitable (arrondie au dixieme), ou null : jamais 0 ni une valeur absurde. */
-function validPeakKwp(value: unknown): number | null {
+export function validPeakKwp(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > PEAK_KWP_MAX) {
     return null;
   }

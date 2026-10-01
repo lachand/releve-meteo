@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { DIAGNOSTIC_SOURCES, readDiagnostics } from '../../data/cache/diagnostics';
-import { DIAGNOSTIC_LABELS, diagnosticSentences } from '../diagnosticPresentation';
+import {
+  DIAGNOSTIC_LABELS,
+  diagnosticReport,
+  diagnosticSentences,
+} from '../diagnosticPresentation';
 import styles from './Settings.module.css';
 
 /**
@@ -9,6 +13,23 @@ import styles from './Settings.module.css';
  */
 export function DiagnosticPanel() {
   const [diagnostics, setDiagnostics] = useState(readDiagnostics);
+  const [copied, setCopied] = useState<'copied' | 'failed' | null>(null);
+
+  const copyReport = async () => {
+    const report = diagnosticReport(diagnostics, {
+      now: new Date(),
+      userAgent: navigator.userAgent,
+      online: navigator.onLine,
+      installed: window.matchMedia('(display-mode: standalone)').matches,
+      language: navigator.language,
+    });
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopied('copied');
+    } catch {
+      setCopied('failed');
+    }
+  };
   return (
     <section className={styles.section} aria-labelledby="diagnostic-titre">
       <p className="eyebrow" id="diagnostic-titre">
@@ -36,7 +57,17 @@ export function DiagnosticPanel() {
         onClick={() => setDiagnostics(readDiagnostics())}
       >
         Actualiser
+      </button>{' '}
+      <button type="button" className={styles.purgeButton} onClick={() => void copyReport()}>
+        Copier le rapport
       </button>
+      {copied !== null && (
+        <p className={styles.status} role="status">
+          {copied === 'copied'
+            ? 'Rapport copié : collez-le dans votre message.'
+            : 'Copie impossible : le navigateur refuse l’accès au presse-papiers.'}
+        </p>
+      )}
     </section>
   );
 }

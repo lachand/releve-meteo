@@ -40,4 +40,8 @@ export const CACHE_TTL_MS = {
   nowcast: 10 * 60 * 1000,
   /** Meteostat publie les releves horaires avec quelques heures de retard. */
   station: 30 * 60 * 1000,
+  /** Les normales 1991-2020 ne changent pas : un mois suffit largement. */
+  normals: 30 * 24 * 60 * 60 * 1000,
+  /** Les modeles de vagues tournent toutes les 6 a 12 h. */
+  marine: 3 * 60 * 60 * 1000,
 } as const;

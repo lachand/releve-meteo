@@ -1,0 +1,54 @@
+.panel {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.panel p {
+  margin: 0;
+}
+
+.headline {
+  font-family: var(--font-titre);
+  font-size: var(--pas-m);
+}
+
+.muted,
+.caption {
+  margin: 0;
+  color: var(--encre-faible);
+}
+
+.caption {
+  max-width: 44rem;
+  font-size: var(--pas-s);
+}
+
+.scroller {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: var(--pas-s);
+}
+
+.table th,
+.table td {
+  padding: var(--esp-1) var(--esp-3);
+  text-align: right;
+  border-bottom: 1px dotted var(--grille);
+  white-space: nowrap;
+}
+
+.table th:first-child {
+  text-align: left;
+}
+
+.table thead th {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+  border-bottom: var(--filet-encre);
+}

@@ -1,3 +1,4 @@
+import { climateBody } from '../fixtures/climate';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -71,7 +72,14 @@ export async function stubApis(page: Page, options: StubOptions = {}): Promise<v
       : route.fulfill(json(fixture('previous-runs-bron.json'))),
   );
   await page.route('https://archive-api.open-meteo.com/**', (route) =>
-    route.fulfill(json(fixture('archive-lyon.json'))),
+    new URL(route.request().url()).searchParams.has('daily')
+      ? route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          headers: { 'access-control-allow-origin': '*' },
+          body: JSON.stringify(climateBody()),
+        })
+      : route.fulfill(json(fixture('archive-lyon.json'))),
   );
   await page.route('https://air-quality-api.open-meteo.com/**', (route) =>
     route.fulfill(json(fixture('air-quality-lyon.json'))),

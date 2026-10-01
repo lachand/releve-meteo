@@ -1,3 +1,4 @@
+import type { EnsembleHourly } from './ensemble';
 import { describe, expect, it } from 'vitest';
 import { buildHourlyTimeline } from '../../tests/factories';
 import {
@@ -8,6 +9,7 @@ import {
   hourlyRainProbability,
   quantile,
   quantiles,
+  rainOutlook,
 } from './ensemble';
 
 describe('quantile', () => {
@@ -158,5 +160,58 @@ describe('hourlyQuantiles et hourlyRainProbability', () => {
   it('calcule la probabilite horaire de pluie, seuil par defaut 0,1 mm', () => {
     expect(hourlyRainProbability(members, 3)).toEqual([1, 2 / 3, null]);
     expect(hourlyRainProbability(members, 2, 0.3)[1]).toBeCloseTo(1 / 3);
+  });
+});
+
+describe('rainOutlook', () => {
+  // 10 h 12 locales le 28 septembre 2026 : l'heure courante (10 h) est gardee.
+  const NOW = new Date('2026-09-28T08:12:00Z');
+  const timeline = Array.from(
+    { length: 6 },
+    (_, i) => `2026-09-28T${String(8 + i).padStart(2, '0')}:00`,
+  ) as EnsembleHourly['timeline'];
+  const members = [
+    [0, 0, 0.4, 2, 0, null],
+    [0, 0, 0, 3, 0, null],
+    [0, 0, 0.2, 1, 0, null],
+    [0, 0, 0, 0, 0, null],
+  ];
+  const ensemble: EnsembleHourly = {
+    timeline,
+    temperature: members,
+    precipitation: members,
+    windGust: [],
+  };
+
+  it('donne, heure par heure, la part des membres qui annoncent de la pluie et le cumul probable', () => {
+    const hours = rainOutlook({ ensemble, now: NOW });
+    // 8 h et 9 h sont passees de plus d'une heure : seules 10 h a 13 h restent.
+    expect(hours.map((h) => h.time)).toEqual([
+      '2026-09-28T10:00',
+      '2026-09-28T11:00',
+      '2026-09-28T12:00',
+      '2026-09-28T13:00',
+    ]);
+    expect(hours[0]).toMatchObject({ probability: 0.5, memberCount: 4 });
+    expect(hours[0]?.median).toBeCloseTo(0.1);
+    expect(hours[1]).toMatchObject({ probability: 0.75 });
+    expect(hours[1]?.p90).toBeCloseTo(2.7);
+    expect(hours[2]).toMatchObject({ probability: 0, median: 0, p90: 0 });
+  });
+
+  it('garde une heure sans aucune valeur a null, jamais a zero', () => {
+    const hours = rainOutlook({ ensemble, now: new Date('2026-09-28T11:30:00Z'), hours: 3 });
+    expect(hours.at(-1)).toEqual({
+      time: '2026-09-28T13:00',
+      probability: null,
+      median: null,
+      p90: null,
+      memberCount: 0,
+    });
+  });
+
+  it('respecte la fenetre demandee, et rend une liste vide sans membre', () => {
+    expect(rainOutlook({ ensemble, now: NOW, hours: 1 })).toHaveLength(2);
+    expect(rainOutlook({ ensemble: { ...ensemble, precipitation: [] }, now: NOW })).toEqual([]);
   });
 });

@@ -162,6 +162,52 @@ export function dailyErrors(pairs: readonly VerificationPair[]): readonly DailyE
   return days.length === 0 ? null : days;
 }
 
+export interface DayLeader {
+  readonly date: string;
+  readonly model: ModelId;
+  /** Erreur absolue moyenne de ce modele ce jour-la. */
+  readonly mae: number;
+  /** Avance sur le deuxieme modele, meme unite ; 0 en cas d'egalite. */
+  readonly lead: number;
+  /** Modeles compares ce jour-la. */
+  readonly compared: number;
+}
+
+/**
+ * Pour chaque jour, le modele dont l'erreur a ete la plus basse. Un jour avec
+ * un seul modele note n'a pas de plus juste : il est omis. Du plus ancien au
+ * plus recent.
+ */
+export function dailyLeaders(
+  rows: readonly { readonly model: ModelId; readonly daily: readonly DailyError[] }[],
+): readonly DayLeader[] {
+  const byDate = new Map<string, { model: ModelId; mae: number }[]>();
+  for (const { model, daily } of rows) {
+    for (const entry of daily) {
+      const list = byDate.get(entry.date) ?? [];
+      list.push({ model, mae: entry.mae });
+      byDate.set(entry.date, list);
+    }
+  }
+  const leaders: DayLeader[] = [];
+  for (const [date, list] of byDate) {
+    // Tri stable : a egalite, l'ordre des lignes (donc du catalogue) decide.
+    const [best, second] = [...list].sort((a, b) => a.mae - b.mae);
+    // Un jour avec un seul modele note n'a pas de plus juste.
+    if (best === undefined || second === undefined) {
+      continue;
+    }
+    leaders.push({
+      date,
+      model: best.model,
+      mae: best.mae,
+      lead: second.mae - best.mae,
+      compared: list.length,
+    });
+  }
+  return leaders.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
 export interface WeekLeader {
   readonly model: ModelId;
   readonly mae: number;

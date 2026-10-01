@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { Preferences } from '../../domain/types';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
+import { BackupPanel } from './BackupPanel';
 import { DiagnosticPanel } from './DiagnosticPanel';
+import { OfflineMapsPanel } from './OfflineMapsPanel';
 import styles from './Settings.module.css';
 import { WatchSettings } from './WatchSettings';
 
@@ -13,6 +15,8 @@ interface SettingsProps {
   readonly onSetQuickReading?: (quick: boolean) => void;
   /** Puissance crete solaire ; absente, la section n'est pas montree. */
   readonly onSetPeakKwp?: (peakKwp: number | null) => void;
+  /** Sauvegarde et restauration ; absente, la section n'est pas montrée. */
+  readonly onRestored?: () => void;
   readonly onPurge: () => Promise<void>;
   readonly onClose: () => void;
   /** Veille en arriere-plan ; absente, la section n'est pas montree. */
@@ -25,6 +29,7 @@ export function Settings({
   onSetTheme,
   onSetQuickReading,
   onSetPeakKwp,
+  onRestored,
   onPurge,
   onClose,
   watch,
@@ -125,6 +130,10 @@ export function Settings({
       )}
 
       {watch !== undefined && <WatchSettings watch={watch} />}
+
+      <OfflineMapsPanel favourites={preferences.favourites} />
+
+      {onRestored !== undefined && <BackupPanel onRestored={onRestored} />}
 
       <DiagnosticPanel />
 

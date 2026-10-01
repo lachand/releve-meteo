@@ -16,6 +16,8 @@ export const DIAGNOSTIC_SOURCES = [
   'airQuality',
   'nowcast',
   'grid',
+  'normals',
+  'marine',
 ] as const;
 
 export type DiagnosticSource = (typeof DIAGNOSTIC_SOURCES)[number];

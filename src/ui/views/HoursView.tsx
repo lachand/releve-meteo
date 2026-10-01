@@ -1,6 +1,7 @@
 import { HourlyStrip } from '../components/HourlyStrip';
 import { PrecipitationChart } from '../components/PrecipitationChart';
 import { PressureChart } from '../components/PressureChart';
+import { RainOutlookChart } from '../components/RainOutlookChart';
 import { SymbolLegend } from '../components/SymbolLegend';
 import { Timeline48h } from '../components/Timeline48h';
 import { WindRose } from '../components/WindRose';
@@ -16,6 +17,9 @@ export function HoursView({ vm }: { readonly vm: ForecastViewModel }) {
       </Section>
       <Section eyebrow="48 heures" title="Précipitations">
         <PrecipitationChart bundle={vm.bundle} cascade={vm.cascade} />
+      </Section>
+      <Section eyebrow="72 heures" title="Probabilité de pluie, heure par heure">
+        <RainOutlookChart hours={vm.rainOutlook} memberCount={vm.ensembleMembers} />
       </Section>
       <Section eyebrow="72 heures" title="Relevé horaire">
         <HourlyStrip

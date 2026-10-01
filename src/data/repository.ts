@@ -1,11 +1,15 @@
+import { fetchMarine } from './clients/marine';
+import type { MarineHourly } from '../domain/marine';
+import { fetchClimate } from './clients/climate';
+import type { ClimateDaily } from '../domain/normals';
 import { recordDiagnostic } from './cache/diagnostics';
 import type { DiagnosticSource } from './cache/diagnostics';
 import { CACHE_TTL_MS } from '../domain/constants';
 import { departmentAt } from '../domain/departments';
 import type { Department } from '../domain/departments';
 import type { EnsembleHourly } from '../domain/ensemble';
-import { FORECAST_GRID, gridPoints } from '../domain/grid';
-import type { ForecastGrid } from '../domain/grid';
+import { FORECAST_GRID, SPREAD_GRID_MODELS, gridPoints, spreadGrid } from '../domain/grid';
+import type { ForecastGrid, SpreadGrid } from '../domain/grid';
 import { takeSnapshot } from '../domain/leadScores';
 import type { ForecastSnapshot } from '../domain/leadScores';
 import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
@@ -244,6 +248,31 @@ export async function peekVerifications(
   return cached?.value ?? null;
 }
 
+/** Normales 1991-2020 du lieu (maxima et minima quotidiens, ERA5), gardees un mois. */
+export function getClimate(place: Place): Promise<HttpResult<DatasetResult<ClimateDaily>>> {
+  return throughCache({
+    kind: 'normals',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.normals,
+    fetcher: () =>
+      fetchClimate({
+        latitude: place.latitude,
+        longitude: place.longitude,
+        elevation: place.elevation,
+      }),
+  });
+}
+
+/** Vagues du lieu (heure par heure, 3 jours), pour le littoral. */
+export function getMarine(place: Place): Promise<HttpResult<DatasetResult<MarineHourly>>> {
+  return throughCache({
+    kind: 'marine',
+    placeId: place.id,
+    ttlMs: CACHE_TTL_MS.marine,
+    fetcher: () => fetchMarine(place.latitude, place.longitude),
+  });
+}
+
 export function getAirQuality(place: Place): Promise<HttpResult<DatasetResult<AirQualitySeries>>> {
   return throughCache({
     kind: 'airQuality',
@@ -388,6 +417,36 @@ export function getForecastGrid(
     ttlMs: CACHE_TTL_MS.forecast,
     fetcher: () => fetchForecastGrid({ points, model, stepKm: FORECAST_GRID.stepKm }),
   });
+}
+
+/**
+ * Carte du desaccord : les grilles des modeles de SPREAD_GRID_MODELS, puis
+ * l'ecart de chaque case. Un modele qui ne repond pas est ecarte ; sous deux
+ * grilles, la carte n'existe pas et l'echec est rendu tel quel.
+ */
+export async function getSpreadGrid(place: Place): Promise<HttpResult<DatasetResult<SpreadGrid>>> {
+  const results = await Promise.all(
+    SPREAD_GRID_MODELS.map((model) => getForecastGrid(place, model)),
+  );
+  const loaded = results.flatMap((result) => (result.ok ? [result.value] : []));
+  const spread = spreadGrid(loaded.map((result) => result.value));
+  if (spread === null) {
+    const failed = results.find((result) => !result.ok);
+    return failed !== undefined && !failed.ok
+      ? failed
+      : {
+          ok: false,
+          failure: { kind: 'malformed', detail: 'desaccord : moins de deux grilles comparables' },
+        };
+  }
+  return {
+    ok: true,
+    value: {
+      value: spread,
+      fetchedAt: Math.min(...loaded.map((result) => result.fetchedAt)),
+      stale: loaded.some((result) => result.stale),
+    },
+  };
 }
 
 let departmentsPromise: Promise<readonly Department[]> | null = null;
