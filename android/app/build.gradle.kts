@@ -18,6 +18,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Cle de debug du depot, publique par construction (mot de passe standard d'Android) : sans
+        // elle, chaque build de la CI genere sa propre cle et Android refuse la mise a jour d'un
+        // APK installe (« package en conflit avec un package existant »). Ce n'est pas une cle de
+        // publication : celle du Play Store sera un secret hors du depot.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
