@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import type { ReactNode, SyntheticEvent } from 'react';
+import { useEffect, useState } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import styles from './Section.module.css';
 
 interface CollapsibleProps {
@@ -43,17 +44,33 @@ export function Collapsible({
   children,
 }: CollapsibleProps) {
   const [open, setOpen] = useState(() => readOpen(id, defaultOpen));
+  const [printing, setPrinting] = useState(false);
 
-  function onToggle(event: SyntheticEvent<HTMLDetailsElement>): void {
-    const next = event.currentTarget.open;
-    setOpen(next);
-    writeOpen(id, next);
+  // Une feuille de registre ne cache rien : tout s'ouvre pendant l'impression,
+  // puis chaque feuillet revient a l'etat choisi. L'etat « impression » est
+  // distinct du choix de l'utilisateur, qui n'est jamais modifie.
+  useEffect(() => {
+    const start = () => flushSync(() => setPrinting(true));
+    const end = () => flushSync(() => setPrinting(false));
+    window.addEventListener('beforeprint', start);
+    window.addEventListener('afterprint', end);
+    return () => {
+      window.removeEventListener('beforeprint', start);
+      window.removeEventListener('afterprint', end);
+    };
+  }, []);
+
+  function onSummaryClick(event: MouseEvent<HTMLElement>): void {
+    // Etat entierement controle : le clic natif ne bascule rien tout seul.
+    event.preventDefault();
+    setOpen(!open);
+    writeOpen(id, !open);
   }
 
   return (
     <section className={styles.sheet}>
-      <details className={styles.collapsible} open={open} onToggle={onToggle}>
-        <summary className={styles.summary}>
+      <details className={styles.collapsible} open={open || printing}>
+        <summary className={styles.summary} onClick={onSummaryClick}>
           <span className={styles.summaryText}>
             <span className="eyebrow">{eyebrow}</span>
             <h2 className={styles.title}>{title}</h2>
