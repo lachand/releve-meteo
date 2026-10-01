@@ -1,3 +1,4 @@
+import { clearDiagnostics } from '../../data/cache/diagnostics';
 import { useCallback, useState } from 'react';
 import { clearAllLocalData } from '../../data/cache/db';
 import { clearModelChoices } from '../../data/cache/modelChoice';
@@ -11,6 +12,7 @@ import {
   reorderFavourites as reorderFavouritesInPrefs,
   setAlias as setAliasInPrefs,
   setPeakKwp as setPeakKwpInPrefs,
+  setQuickReading as setQuickReadingInPrefs,
   setTheme as setThemeInPrefs,
   setWindUnit as setWindUnitInPrefs,
   toggleAlert as toggleAlertInPrefs,
@@ -27,6 +29,7 @@ export interface PreferencesApi {
   readonly setAlias: (placeId: string, alias: string | null) => void;
   readonly setWindUnit: (wind: 'kmh' | 'kt') => void;
   readonly setTheme: (theme: Preferences['theme']) => void;
+  readonly setQuickReading: (quick: boolean) => void;
   readonly setPeakKwp: (peakKwp: number | null) => void;
   readonly addAlert: (rule: Omit<AlertRule, 'id'>) => void;
   readonly toggleAlert: (id: string) => void;
@@ -107,6 +110,14 @@ export function usePreferences(): PreferencesApi {
     });
   }, []);
 
+  const setQuickReading = useCallback((quick: boolean) => {
+    setPreferences((current) => {
+      const next = setQuickReadingInPrefs(current, quick);
+      writePreferences(next);
+      return next;
+    });
+  }, []);
+
   const update = useCallback((change: (current: Preferences) => Preferences) => {
     setPreferences((current) => {
       const next = change(current);
@@ -131,6 +142,7 @@ export function usePreferences(): PreferencesApi {
 
   const purgeLocalData = useCallback(async () => {
     await clearAllLocalData();
+    clearDiagnostics();
     clearModelChoices();
     const defaults = defaultPreferences();
     writePreferences(defaults);
@@ -145,6 +157,7 @@ export function usePreferences(): PreferencesApi {
     setAlias,
     setWindUnit,
     setTheme,
+    setQuickReading,
     setPeakKwp,
     addAlert,
     toggleAlert,

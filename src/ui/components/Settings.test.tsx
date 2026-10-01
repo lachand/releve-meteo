@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { defaultPreferences } from '../../data/cache/preferences';
+import { recordDiagnostic, resetDiagnosticsForTests } from '../../data/cache/diagnostics';
 import { Settings } from './Settings';
 
 describe('Settings', () => {
@@ -123,5 +124,53 @@ describe('Settings', () => {
       expect(screen.getByText(/une estimation, pas une mesure/)).toBeInTheDocument();
       expect(screen.getByText(/de l’orientation ni des masques/)).toBeInTheDocument();
     });
+  });
+
+  it('propose la lecture rapide, et dit ce qui reste affiche', async () => {
+    const onSetQuickReading = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Settings
+        preferences={defaultPreferences()}
+        onSetWindUnit={vi.fn()}
+        onSetTheme={vi.fn()}
+        onSetQuickReading={onSetQuickReading}
+        onPurge={vi.fn().mockResolvedValue(undefined)}
+        onClose={vi.fn()}
+      />,
+    );
+    const box = screen.getByRole('checkbox', { name: /Lecture rapide/ });
+    expect(box).not.toBeChecked();
+    expect(screen.getByText(/Les vigilances et vos alertes restent affichées/)).toBeInTheDocument();
+    await user.click(box);
+    expect(onSetQuickReading).toHaveBeenCalledWith(true);
+  });
+
+  it('montre le diagnostic local : derniere lecture reussie et dernier echec de chaque source', () => {
+    resetDiagnosticsForTests();
+    localStorage.clear();
+    recordDiagnostic('forecast', { ok: true, value: 1 }, Date.parse('2026-09-28T14:00:00Z'));
+    recordDiagnostic(
+      'station',
+      { ok: false, failure: { kind: 'rate_limited', retryAfterMs: 1000 } },
+      Date.parse('2026-09-28T09:00:00Z'),
+    );
+    render(
+      <Settings
+        preferences={defaultPreferences()}
+        onSetWindUnit={vi.fn()}
+        onSetTheme={vi.fn()}
+        onPurge={vi.fn().mockResolvedValue(undefined)}
+        onClose={vi.fn()}
+      />,
+    );
+    const diagnostic = screen.getByRole('region', { name: 'Diagnostic' });
+    expect(diagnostic).toHaveTextContent(
+      'Prévisions (Open-Meteo)Dernière lecture réussie : lundi 16h.',
+    );
+    expect(diagnostic).toHaveTextContent('Dernier échec : lundi 11h, quota du service atteint.');
+    expect(diagnostic).toHaveTextContent('Aucune lecture réussie notée sur cet appareil.');
+    localStorage.clear();
+    resetDiagnosticsForTests();
   });
 });

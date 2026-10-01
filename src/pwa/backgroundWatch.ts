@@ -44,14 +44,16 @@ async function syncManager(): Promise<{
   ) {
     return null;
   }
-  // Premiere visite : l'enregistrement du service worker suit le chargement
-  // de la page. On l'attend un temps, sans bloquer si le service worker est
-  // desactive (developpement), ou `ready` ne se resout jamais.
-  const registration = ((await navigator.serviceWorker.getRegistration()) ??
-    (await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), READY_WAIT_MS)),
-    ]))) as SyncRegistration | undefined;
+  // Premiere visite : le service worker s'enregistre apres le chargement de la
+  // page, puis s'installe. `getRegistration()` rendrait une inscription encore
+  // sans worker actif, dont `periodicSync.getTags()` leve InvalidStateError :
+  // on attend `ready`, qui ne se resout qu'une fois le worker actif, sans
+  // bloquer si le service worker est desactive (developpement), ou `ready` ne
+  // se resout jamais.
+  const registration = (await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), READY_WAIT_MS)),
+  ])) as SyncRegistration | undefined;
   const sync = registration?.periodicSync;
   return registration === undefined || sync === undefined ? null : { registration, sync };
 }

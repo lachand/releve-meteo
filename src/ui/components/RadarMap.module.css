@@ -77,3 +77,21 @@
 .forecast {
   font-style: italic;
 }
+
+/* Feuille de registre : la carte et sa legende s'impriment, pas ses commandes. */
+@media print {
+  .wrapper {
+    break-inside: avoid;
+  }
+
+  .map {
+    height: 90mm;
+    min-height: 0;
+  }
+
+  .controls,
+  .play,
+  .slider {
+    display: none;
+  }
+}

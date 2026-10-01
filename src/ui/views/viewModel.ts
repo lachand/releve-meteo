@@ -84,6 +84,8 @@ export interface ForecastViewModel {
   /** Ouvre le releve d'un autre lieu, dans la vue courante. */
   readonly openPlace: (place: Place) => void;
   /** Alertes personnelles de ce lieu, et celles que la prevision franchit. */
+  /** Lecture rapide : l'accueil ne garde que l'essentiel. */
+  readonly quick: boolean;
   readonly alertRules: readonly AlertRule[];
   readonly alertHits: readonly AlertHit[];
   readonly spreadHits: readonly SpreadHit[];

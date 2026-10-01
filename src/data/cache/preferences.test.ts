@@ -12,6 +12,7 @@ import {
   setAlias,
   setApiKey,
   setPeakKwp,
+  setQuickReading,
   setTheme,
   setWindUnit,
   toggleAlert,
@@ -244,5 +245,28 @@ describe('readPreferences, puissance crete', () => {
       JSON.stringify({ ...defaultPreferences(), solar: { peakKwp: 4.5 } }),
     );
     expect(readPreferences().solar).toEqual({ peakKwp: 4.5 });
+  });
+});
+
+describe('lecture rapide', () => {
+  it('est desactivee par defaut, et se regle sans toucher au reste', () => {
+    expect(defaultPreferences().display).toEqual({ quick: false });
+    const quick = setQuickReading(setTheme(defaultPreferences(), 'dark'), true);
+    expect(quick.display.quick).toBe(true);
+    expect(quick.theme).toBe('dark');
+    expect(setQuickReading(quick, false).display.quick).toBe(false);
+  });
+
+  it('se relit, et vaut lecture complete pour un enregistrement ancien ou illisible', () => {
+    localStorage.setItem(
+      'meteo-fr:prefs',
+      JSON.stringify(setQuickReading(defaultPreferences(), true)),
+    );
+    expect(readPreferences().display.quick).toBe(true);
+    const { display: _omitted, ...old } = defaultPreferences();
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(old));
+    expect(readPreferences().display.quick).toBe(false);
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify({ ...old, display: { quick: 'oui' } }));
+    expect(readPreferences().display.quick).toBe(false);
   });
 });

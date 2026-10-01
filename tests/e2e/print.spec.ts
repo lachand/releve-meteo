@@ -43,3 +43,28 @@ test("l'impression ouvre les feuillets replies, puis les referme", async ({ page
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
   await expect(airDetails).not.toHaveAttribute('open', '');
 });
+
+// Onglet Cartes : la carte, sa legende, son image radar horodatee et leurs
+// attributions s'impriment ; ni les commandes de zoom ni de lecture.
+test("l'impression des cartes garde la legende et l'attribution, sans les commandes", async ({
+  page,
+}) => {
+  await stubApis(page);
+  await openLyon(page);
+  await page.getByRole('tab', { name: 'Cartes' }).click();
+  const radar = page.getByRole('heading', { name: 'Pluie observée, deux dernières heures' });
+  await expect(radar).toBeVisible({ timeout: 15000 });
+  const zoom = page.locator('.leaflet-control-zoom').first();
+  const attribution = page.locator('.leaflet-control-attribution').first();
+  await expect(zoom).toBeVisible();
+  await expect(attribution).toBeVisible();
+
+  await page.emulateMedia({ media: 'print' });
+  await expect(zoom).toBeHidden();
+  await expect(page.locator('.leaflet-control-zoom:visible')).toHaveCount(0);
+  await expect(attribution).toBeVisible();
+  await expect(radar).toBeVisible();
+  // La carte garde une hauteur fixe de feuille, sans deborder de la page.
+  const box = await page.locator('.leaflet-container').first().boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThan(200);
+});

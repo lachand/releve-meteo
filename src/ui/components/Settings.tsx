@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Preferences } from '../../domain/types';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
+import { DiagnosticPanel } from './DiagnosticPanel';
 import styles from './Settings.module.css';
 import { WatchSettings } from './WatchSettings';
 
@@ -8,6 +9,8 @@ interface SettingsProps {
   readonly preferences: Preferences;
   readonly onSetWindUnit: (wind: Preferences['units']['wind']) => void;
   readonly onSetTheme: (theme: Preferences['theme']) => void;
+  /** Lecture rapide ; absente, la case n'est pas montree. */
+  readonly onSetQuickReading?: (quick: boolean) => void;
   /** Puissance crete solaire ; absente, la section n'est pas montree. */
   readonly onSetPeakKwp?: (peakKwp: number | null) => void;
   readonly onPurge: () => Promise<void>;
@@ -20,6 +23,7 @@ export function Settings({
   preferences,
   onSetWindUnit,
   onSetTheme,
+  onSetQuickReading,
   onSetPeakKwp,
   onPurge,
   onClose,
@@ -77,6 +81,24 @@ export function Settings({
         </label>
       </section>
 
+      {onSetQuickReading !== undefined && (
+        <section className={styles.section}>
+          <p className="eyebrow">Lecture</p>
+          <label className={styles.checkRow}>
+            <input
+              type="checkbox"
+              checked={preferences.display.quick}
+              onChange={(event) => onSetQuickReading(event.target.checked)}
+            />
+            <span>
+              Lecture rapide : l’accueil ne garde que le bulletin du moment, la pluie au quart
+              d’heure et le créneau sec, en grand. Les vigilances et vos alertes restent affichées,
+              et toutes les autres vues restent à un onglet.
+            </span>
+          </label>
+        </section>
+      )}
+
       {onSetPeakKwp !== undefined && (
         <section className={styles.section}>
           <p className="eyebrow">Solaire (facultatif)</p>
@@ -103,6 +125,8 @@ export function Settings({
       )}
 
       {watch !== undefined && <WatchSettings watch={watch} />}
+
+      <DiagnosticPanel />
 
       <section className={styles.section}>
         <p className="eyebrow">Données locales</p>
