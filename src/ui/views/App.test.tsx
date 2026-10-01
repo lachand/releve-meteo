@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -194,7 +194,58 @@ describe('App', { timeout: 30000 }, () => {
       await screen.findByText('Prévision indisponible.', {}, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+    // Une panne n'est pas un quota : rien n'est dit du quota.
+    expect(screen.queryByText(/quota/)).not.toBeInTheDocument();
   });
+
+  it('dit le quota atteint et l heure de reprise, sans parler de panne de connexion', async () => {
+    server.use(
+      http.get(
+        'https://api.open-meteo.com/v1/forecast',
+        () => new HttpResponse(null, { status: 429, headers: { 'Retry-After': '2100' } }),
+      ),
+      ...liveHandlers(),
+    );
+    await openLyon();
+
+    // 15 h 27 locales, plus 35 minutes annoncees par le serveur.
+    expect(
+      await screen.findByText(
+        /Le quota gratuit d’Open-Meteo est atteint\. Réessayez vers 16h02/,
+        {},
+        { timeout: 4000 },
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Vérifiez la connexion/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+  });
+
+  it('rafraichit tout seul le releve hors ligne des que le reseau revient', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    cleanup();
+
+    // Trois jours plus tard, sans reseau : la copie perimee est servie, dite hors ligne.
+    vi.setSystemTime(new Date(FIXTURE_NOW.getTime() + 3 * 24 * 60 * 60 * 1000));
+    server.use(...liveHandlers({ failForecast: true }));
+    render(<App />);
+    expect(
+      await screen.findByText(/Hors ligne · Relevé du/, {}, { timeout: 6000 }),
+    ).toHaveTextContent('se met à jour dès que le réseau revient');
+
+    // Le reseau revient : le releve est relu, sans geste de l'utilisateur.
+    server.use(...liveHandlers());
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+    await waitFor(
+      () => expect(screen.queryByText(/Hors ligne · Relevé du/)).not.toBeInTheDocument(),
+      {
+        timeout: 6000,
+      },
+    );
+  }, 30000);
 
   it('navigue entre les onglets et memorise la vue dans l URL', async () => {
     server.use(...liveHandlers());
@@ -387,19 +438,12 @@ describe('App', { timeout: 30000 }, () => {
     expect(await screen.findByText(/Relevé de 12h, il y a 3 h 27/)).toBeInTheDocument();
   }, 20000);
 
-  it('juge velo, randonnee, linge et jardinage avec leurs criteres, sur le modele retenu', async () => {
+  it('ne rend aucun verdict d usage (velo, randonnee, linge, jardinage) : trop subjectif', async () => {
     server.use(...liveHandlers());
-    const user = await openLyon();
-    const heading = await screen.findByRole('heading', { name: 'Vélo, randonnée, linge, jardin' });
-    const section = heading.closest('section') as HTMLElement;
-    for (const name of ['Vélo', 'Randonnée', 'Linge qui sèche', 'Jardinage']) {
-      expect(within(section).getByText(name)).toBeInTheDocument();
-    }
-    expect(
-      within(section).getByText(/Jugé sur les heures de jour d’aujourd’hui/),
-    ).toBeInTheDocument();
-    await user.click(within(section).getByText('Vélo'));
-    expect(within(section).getAllByText(/Rafale maximale : /).length).toBeGreaterThan(0);
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    expect(screen.queryByText('Au quotidien')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Vélo|Randonnée|Linge qui sèche|Jardinage/)).not.toBeInTheDocument();
   }, 20000);
 
   it('estime la production solaire des que la puissance crete est saisie, et jamais avant', async () => {

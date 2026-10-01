@@ -47,10 +47,10 @@ la provenance**. L'application ne dit jamais « il fera 14 °C ». Elle dit
   elle-même (« en collecte » tant qu'il manque des heures comparables, donc
   seulement quand elle est ouverte) ; et le biais de chaque modèle la nuit,
   le matin, l'après-midi et le soir, dit sans jamais corriger les valeurs.
-- **Au quotidien** : meilleur créneau sans pluie, verdicts vélo, randonnée,
-  linge et jardinage avec leurs critères et seuils, production solaire
-  estimée si vous saisissez la puissance crête (une estimation, sans
-  orientation ni masques), feuille de registre imprimable.
+- **Pratique** : meilleur créneau sans pluie, production solaire estimée
+  si vous saisissez la puissance crête (une estimation, sans orientation ni
+  masques), feuille de registre imprimable. Pas de verdicts d'usage (vélo,
+  linge...) : trop subjectifs.
 - **Alertes personnelles** : un seuil par lieu (gel, chaleur, pluie,
   rafales), vérifié à chaque ouverture sur 72 h, avec le modèle qui le
   franchit.
