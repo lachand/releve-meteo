@@ -27,6 +27,8 @@ interface FakeBrowser {
   withSync: boolean;
   /** Service worker pas encore enregistre au premier appel (premiere visite). */
   lateRegistration: boolean;
+  /** Premiere visite : l'inscription existe mais son worker n'est pas encore actif. */
+  installing: boolean;
 }
 
 const posted: unknown[] = [];
@@ -41,6 +43,7 @@ function install(overrides: Partial<FakeBrowser> = {}) {
     registerFails: false,
     withSync: true,
     lateRegistration: false,
+    installing: false,
     tagsFail: false,
     ...overrides,
   };
@@ -79,7 +82,19 @@ function install(overrides: Partial<FakeBrowser> = {}) {
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
     value: {
-      getRegistration: () => Promise.resolve(browser.lateRegistration ? undefined : registration),
+      getRegistration: () =>
+        Promise.resolve(
+          browser.lateRegistration
+            ? undefined
+            : browser.installing
+              ? {
+                  periodicSync: {
+                    getTags: () =>
+                      Promise.reject(new DOMException('worker inactif', 'InvalidStateError')),
+                  },
+                }
+              : registration,
+        ),
       ready: Promise.resolve(registration),
     },
   });
@@ -117,6 +132,11 @@ describe('readWatchStatus', () => {
 
   it('attend l enregistrement du service worker a la premiere visite', async () => {
     install({ lateRegistration: true });
+    expect(await readWatchStatus()).toBe('off');
+  });
+
+  it('attend le worker actif plutot que de lire une inscription encore en installation', async () => {
+    install({ installing: true });
     expect(await readWatchStatus()).toBe('off');
   });
 
