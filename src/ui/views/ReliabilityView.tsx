@@ -1,3 +1,4 @@
+import { JournalPanel } from '../components/JournalPanel';
 import { LeadScoresPanel } from '../components/LeadScoresPanel';
 import { RainCheckPanel } from '../components/RainCheckPanel';
 import { ReliabilityPanel } from '../components/ReliabilityPanel';
@@ -36,6 +37,14 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
           state={vm.station}
           review={vm.yesterday}
           activeModel={vm.cascade.activeModel}
+        />
+      </Section>
+      <Section eyebrow="Carnet de bord" title="Journal des prévisions">
+        <JournalPanel
+          placeId={vm.place.id}
+          refreshKey={
+            vm.station.status === 'ready' ? String(vm.station.fetchedAt) : vm.station.status
+          }
         />
       </Section>
       <Section eyebrow="Échéances courtes" title="De 1 à 12 heures avant">

@@ -10,10 +10,12 @@ import type { Department } from '../domain/departments';
 import type { EnsembleHourly } from '../domain/ensemble';
 import { FORECAST_GRID, SPREAD_GRID_MODELS, gridPoints, spreadGrid } from '../domain/grid';
 import type { ForecastGrid, SpreadGrid } from '../domain/grid';
+import { journalEntryFrom } from '../domain/journal';
 import { takeSnapshot } from '../domain/leadScores';
 import type { ForecastSnapshot } from '../domain/leadScores';
 import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import type { StationMatch } from '../domain/stations';
+import { yesterdayReview } from '../domain/yesterdayReview';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
 import type { VigilanceBulletin } from '../domain/vigilance';
 import { fetchAirQuality } from './clients/airQuality';
@@ -40,6 +42,7 @@ import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
 import { getCachedPlaces, normalizeQuery, setCachedPlaces } from './cache/geocodingStore';
 import { getCachedForecast, setCachedForecast } from './cache/forecastStore';
+import { recordJournal } from './cache/journalStore';
 import { loadSnapshots, recordSnapshot } from './cache/snapshotStore';
 import { mapNowcast } from './mappers/nowcastMapper';
 import type { Nowcast } from './mappers/nowcastMapper';
@@ -388,6 +391,16 @@ export async function getStationReport(
           : await recordSnapshot(match.station.id, snapshot, new Date(now));
       if (failure !== null && records.length === 0) {
         return failure;
+      }
+      // Le bilan d'hier entre au journal de l'appareil : il survit a la fenetre de
+      // 30 jours de la verification. Un jour sans bilan ne laisse rien.
+      const review = yesterdayReview({
+        records,
+        forecasts: ofYesterday.ok ? ofYesterday.value : null,
+        now: new Date(now),
+      });
+      if (review !== null) {
+        await recordJournal(place.id, journalEntryFrom(review, match.station.name), new Date(now));
       }
       return {
         ok: true,
