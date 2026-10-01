@@ -108,6 +108,8 @@ export interface Preferences {
   readonly favourites: readonly Place[]; // ordre significatif
   readonly units: { readonly temperature: 'C'; readonly wind: 'kmh' | 'kt' };
   readonly theme: 'auto' | 'light' | 'dark';
+  /** Affichage : `quick` ne garde de l'accueil que l'essentiel, en grand. */
+  readonly display: { readonly quick: boolean };
   readonly solar: { readonly peakKwp: number | null };
   readonly apiKeys: { readonly vigilance: string | null; readonly infoclimat: string | null };
   readonly alerts: readonly AlertRule[];

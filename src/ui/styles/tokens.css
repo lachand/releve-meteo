@@ -151,6 +151,16 @@
 }
 
 /*
+ * Lecture rapide (réglage) : l'accueil ne garde que l'essentiel, et le corps
+ * de texte grandit d'un cran pour se lire d'un coup d'oeil.
+ */
+:root[data-lecture='rapide'] {
+  --pas-s: 1.0625rem; /* 17px */
+  --pas-m: 1.25rem; /* 20px */
+  --pas-l: 1.75rem; /* 28px */
+}
+
+/*
  * Thème « auto » (par défaut, aucun attribut) suit prefers-color-scheme.
  * Le réglage manuel pose data-theme sur <html> : :not([data-theme='light'])
  * laisse l'auto sombre l'emporter tant que rien ne force le clair, et le

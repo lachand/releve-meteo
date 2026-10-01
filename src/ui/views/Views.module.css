@@ -112,3 +112,11 @@
   color: var(--encre);
   max-width: 48rem;
 }
+
+.quickNote {
+  margin: 0;
+  max-width: 44rem;
+  font-family: var(--font-titre);
+  font-style: italic;
+  color: var(--encre-faible);
+}

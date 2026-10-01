@@ -124,4 +124,24 @@ describe('Settings', () => {
       expect(screen.getByText(/de l’orientation ni des masques/)).toBeInTheDocument();
     });
   });
+
+  it('propose la lecture rapide, et dit ce qui reste affiche', async () => {
+    const onSetQuickReading = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Settings
+        preferences={defaultPreferences()}
+        onSetWindUnit={vi.fn()}
+        onSetTheme={vi.fn()}
+        onSetQuickReading={onSetQuickReading}
+        onPurge={vi.fn().mockResolvedValue(undefined)}
+        onClose={vi.fn()}
+      />,
+    );
+    const box = screen.getByRole('checkbox', { name: /Lecture rapide/ });
+    expect(box).not.toBeChecked();
+    expect(screen.getByText(/Les vigilances et vos alertes restent affichées/)).toBeInTheDocument();
+    await user.click(box);
+    expect(onSetQuickReading).toHaveBeenCalledWith(true);
+  });
 });

@@ -34,6 +34,7 @@ import { UpdateBanner } from '../components/UpdateBanner';
 import { forecastFailureSentence } from '../failurePresentation';
 import { formatCompact, formatLongDate } from '../format';
 import { PrintIcon } from '../tabIcons';
+import { useAppliedReading } from '../hooks/useAppliedReading';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
 import { useCascadeView } from '../hooks/useCascadeView';
 import { useConfidenceView } from '../hooks/useConfidenceView';
@@ -215,6 +216,7 @@ export function App() {
   const confidence = useConfidenceView(bundle, terrain);
 
   useAppliedTheme(preferences.preferences.theme);
+  useAppliedReading(preferences.preferences.display.quick);
 
   // Raccourci « Ma position » du manifeste : `?geo=1` localise au demarrage.
   const { locate } = geolocation;
@@ -333,6 +335,7 @@ export function App() {
       navigate,
       favourites: preferences.preferences.favourites,
       openPlace: setPlace,
+      quick: preferences.preferences.display.quick,
       alertRules: preferences.preferences.alerts.filter((rule) => rule.placeId === place.id),
       alertHits: evaluateAlerts({
         rules: preferences.preferences.alerts,
@@ -370,6 +373,7 @@ export function App() {
     navigate,
     preferences.preferences.favourites,
     preferences.preferences.alerts,
+    preferences.preferences.display.quick,
     preferences.addAlert,
     preferences.toggleAlert,
     preferences.removeAlert,
@@ -506,6 +510,7 @@ export function App() {
           preferences={preferences.preferences}
           onSetWindUnit={preferences.setWindUnit}
           onSetTheme={preferences.setTheme}
+          onSetQuickReading={preferences.setQuickReading}
           onSetPeakKwp={preferences.setPeakKwp}
           onPurge={preferences.purgeLocalData}
           onClose={() => setSettingsOpen(false)}

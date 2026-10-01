@@ -8,6 +8,7 @@ export function defaultPreferences(): Preferences {
     favourites: [],
     units: { temperature: 'C', wind: 'kmh' },
     theme: 'auto',
+    display: { quick: false },
     solar: { peakKwp: null },
     apiKeys: { vigilance: null, infoclimat: null },
     alerts: [],
@@ -65,6 +66,8 @@ function normalize(preferences: Preferences): Preferences {
   const solar = (preferences as { solar?: { peakKwp?: unknown } }).solar;
   return {
     ...preferences,
+    // Un enregistrement d'avant la lecture rapide n'a pas de `display` : lecture complete.
+    display: { quick: (preferences as { display?: { quick?: unknown } }).display?.quick === true },
     alerts: Array.isArray(alerts) ? alerts.filter(isAlertRule) : [],
     solar: { peakKwp: validPeakKwp(solar?.peakKwp) },
   };
@@ -161,6 +164,10 @@ export function setWindUnit(preferences: Preferences, wind: 'kmh' | 'kt'): Prefe
 
 export function setTheme(preferences: Preferences, theme: Preferences['theme']): Preferences {
   return { ...preferences, theme };
+}
+
+export function setQuickReading(preferences: Preferences, quick: boolean): Preferences {
+  return { ...preferences, display: { quick } };
 }
 
 export function setPeakKwp(preferences: Preferences, peakKwp: number | null): Preferences {

@@ -12,3 +12,17 @@
 :global(:root[data-theme='dark']) .fond {
   filter: grayscale(1) invert(0.9) sepia(0.2) contrast(0.85) brightness(0.85);
 }
+
+/*
+ * Impression : pas de commandes de zoom, fond clair quel que soit le theme ;
+ * l'attribution (OpenStreetMap, RainViewer) reste, c'est la provenance.
+ */
+@media print {
+  :global(.leaflet-control-zoom) {
+    display: none;
+  }
+
+  .fond {
+    filter: grayscale(1) sepia(0.28) contrast(0.92) brightness(1.03) !important;
+  }
+}

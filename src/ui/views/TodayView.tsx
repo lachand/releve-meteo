@@ -85,15 +85,21 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
         </NowPanel>
       </Section>
 
-      <div className={styles.twoColumns}>
+      {vm.quick ? (
         <Section eyebrow="Deux prochaines heures" title="Pluie au quart d’heure">
           <NowcastPanel state={vm.nowcast} now={vm.now} />
         </Section>
-        <Section eyebrow={`${PHENOMENA_HORIZON_HOURS} heures`} title="Phénomènes à surveiller">
-          <PhenomenaPanel episodes={vm.episodes} horizonHours={PHENOMENA_HORIZON_HOURS} />
-          <VigilanceLine state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
-        </Section>
-      </div>
+      ) : (
+        <div className={styles.twoColumns}>
+          <Section eyebrow="Deux prochaines heures" title="Pluie au quart d’heure">
+            <NowcastPanel state={vm.nowcast} now={vm.now} />
+          </Section>
+          <Section eyebrow={`${PHENOMENA_HORIZON_HOURS} heures`} title="Phénomènes à surveiller">
+            <PhenomenaPanel episodes={vm.episodes} horizonHours={PHENOMENA_HORIZON_HOURS} />
+            <VigilanceLine state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
+          </Section>
+        </div>
+      )}
 
       {!(dryWindow.status === 'none' && dryWindow.reason === 'night') && (
         <Section eyebrow="Aujourd’hui" title="Sortir sans pluie">
@@ -101,89 +107,100 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
         </Section>
       )}
 
-      <Section
-        eyebrow="Heure par heure"
-        title="Les 24 prochaines heures"
-        aside={
-          <button type="button" className={styles.link} onClick={() => vm.navigate('heures')}>
-            Détail sur 72 h
-          </button>
-        }
-      >
-        <HourlyStrip
-          bundle={vm.bundle}
-          cascade={cascade}
-          hours={24}
-          windUnit={vm.windUnit}
-          caption="Prévision heure par heure sur 24 heures"
-        />
-      </Section>
-
-      <Section
-        eyebrow="Jours suivants"
-        title="Tendance"
-        aside={
-          <button type="button" className={styles.link} onClick={() => vm.navigate('jours')}>
-            Voir 15 jours
-          </button>
-        }
-      >
-        <DailyList
-          days={vm.days.slice(0, 5)}
-          ensemble={vm.ensembleDays}
-          windUnit={vm.windUnit}
-          today={vm.today}
-        />
-      </Section>
-
-      {solar !== null && vm.peakKwp !== null && (
-        <Collapsible
-          id="solar"
-          eyebrow="Estimation"
-          title="Production solaire sur 48 heures"
-          defaultOpen
-        >
-          <Suspense fallback={<p className="note">Chargement de l’estimation…</p>}>
-            <SolarPanel outlook={solar} peakKwp={vm.peakKwp} today={vm.today} />
-          </Suspense>
-        </Collapsible>
+      {vm.quick && (
+        <p className={styles.quickNote}>
+          Lecture rapide : les heures, les jours, les modèles et la fiabilité restent dans les
+          onglets ci-dessus.
+        </p>
       )}
 
-      {mountain !== null &&
-        shouldShowMountain({
-          kind: vm.terrain?.kind ?? null,
-          elevation: vm.place.elevation,
-          outlook: mountain,
-        }) && (
-          <Collapsible
-            id="mountain"
-            eyebrow="72 heures"
-            title="Neige et isotherme 0 °C"
-            defaultOpen
+      {!vm.quick && (
+        <>
+          <Section
+            eyebrow="Heure par heure"
+            title="Les 24 prochaines heures"
+            aside={
+              <button type="button" className={styles.link} onClick={() => vm.navigate('heures')}>
+                Détail sur 72 h
+              </button>
+            }
           >
-            <MountainPanel outlook={mountain} />
+            <HourlyStrip
+              bundle={vm.bundle}
+              cascade={cascade}
+              hours={24}
+              windUnit={vm.windUnit}
+              caption="Prévision heure par heure sur 24 heures"
+            />
+          </Section>
+
+          <Section
+            eyebrow="Jours suivants"
+            title="Tendance"
+            aside={
+              <button type="button" className={styles.link} onClick={() => vm.navigate('jours')}>
+                Voir 15 jours
+              </button>
+            }
+          >
+            <DailyList
+              days={vm.days.slice(0, 5)}
+              ensemble={vm.ensembleDays}
+              windUnit={vm.windUnit}
+              today={vm.today}
+            />
+          </Section>
+
+          {solar !== null && vm.peakKwp !== null && (
+            <Collapsible
+              id="solar"
+              eyebrow="Estimation"
+              title="Production solaire sur 48 heures"
+              defaultOpen
+            >
+              <Suspense fallback={<p className="note">Chargement de l’estimation…</p>}>
+                <SolarPanel outlook={solar} peakKwp={vm.peakKwp} today={vm.today} />
+              </Suspense>
+            </Collapsible>
+          )}
+
+          {mountain !== null &&
+            shouldShowMountain({
+              kind: vm.terrain?.kind ?? null,
+              elevation: vm.place.elevation,
+              outlook: mountain,
+            }) && (
+              <Collapsible
+                id="mountain"
+                eyebrow="72 heures"
+                title="Neige et isotherme 0 °C"
+                defaultOpen
+              >
+                <MountainPanel outlook={mountain} />
+              </Collapsible>
+            )}
+
+          <Collapsible id="conditions" eyebrow="Repères du jour" title="Soleil, rosée, gel">
+            <ConditionsPanel nowPoint={nowPoint} today={vm.days[0] ?? null} />
           </Collapsible>
-        )}
 
-      <Collapsible id="conditions" eyebrow="Repères du jour" title="Soleil, rosée, gel">
-        <ConditionsPanel nowPoint={nowPoint} today={vm.days[0] ?? null} />
-      </Collapsible>
+          <Collapsible id="air" eyebrow="Air" title="Qualité de l’air et pollens">
+            <AirQualityPanel state={vm.airQuality} hour={vm.currentHour} />
+          </Collapsible>
 
-      <Collapsible id="air" eyebrow="Air" title="Qualité de l’air et pollens">
-        <AirQualityPanel state={vm.airQuality} hour={vm.currentHour} />
-      </Collapsible>
-
-      <Collapsible id="alerts" eyebrow="Alertes personnelles" title="Me signaler, pour ce lieu">
-        <AlertRulesEditor
-          placeId={vm.place.id}
-          placeName={vm.place.alias ?? vm.place.name}
-          rules={vm.alertRules}
-          windUnit={vm.windUnit}
-          onAdd={vm.addAlert}
-          onToggle={vm.toggleAlert}
-          onRemove={vm.removeAlert}
-        />
-      </Collapsible>
+          <Collapsible id="alerts" eyebrow="Alertes personnelles" title="Me signaler, pour ce lieu">
+            <AlertRulesEditor
+              placeId={vm.place.id}
+              placeName={vm.place.alias ?? vm.place.name}
+              rules={vm.alertRules}
+              windUnit={vm.windUnit}
+              onAdd={vm.addAlert}
+              onToggle={vm.toggleAlert}
+              onRemove={vm.removeAlert}
+            />
+          </Collapsible>
+        </>
+      )}
     </div>
   );
 }
