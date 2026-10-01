@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accessibilité : Relevé</title>
+    <meta
+      name="description"
+      content="Ce qui est vérifié, ce qui ne l'est pas, et comment signaler un problème d'accessibilité de Relevé."
+    />
+    <style>
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-600.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        src: url('/fonts/plex-mono-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/garamond-600-normal.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/garamond-400-italic.woff2') format('woff2');
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
+      :root {
+        --papier: #f2ede2;
+        --papier-haut: #fbf8f1;
+        --grille: #d6ccb8;
+        --encre: #1c2733;
+        --encre-faible: #5b6570;
+        --marge: #ac4336;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --papier: #131920;
+          --papier-haut: #1a222b;
+          --grille: #2f3a45;
+          --encre: #e8e1d2;
+          --encre-faible: #a39a8b;
+          --marge: #e0715f;
+        }
+      }
+      body {
+        margin: 0;
+        background-color: var(--papier);
+        background-image:
+          repeating-linear-gradient(
+            0deg,
+            color-mix(in srgb, var(--grille) 45%, transparent) 0 1px,
+            transparent 1px 40px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--grille) 45%, transparent) 0 1px,
+            transparent 1px 40px
+          );
+        color: var(--encre);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 720px;
+        margin: 32px auto 80px;
+        padding: 40px 28px 56px;
+        background: var(--papier-haut);
+        border: 1px solid var(--grille);
+        border-left: 2px solid var(--marge);
+      }
+      h1,
+      h2 {
+        font-family: 'EB Garamond', Georgia, serif;
+        font-weight: 600;
+        line-height: 1.15;
+      }
+      h1 {
+        font-size: 2.4rem;
+        margin: 0;
+      }
+      p.lead {
+        font-family: 'EB Garamond', Georgia, serif;
+        font-style: italic;
+        font-size: 1.15rem;
+        color: var(--encre-faible);
+        margin-top: 6px;
+      }
+      section {
+        margin-top: 40px;
+      }
+      h2 {
+        font-size: 1.45rem;
+        border-bottom: 1px solid var(--encre);
+        padding-bottom: 6px;
+      }
+      dl {
+        margin: 0;
+      }
+      dt {
+        font-weight: 600;
+        margin-top: 16px;
+      }
+      dd {
+        margin: 4px 0 0;
+        color: var(--encre-faible);
+      }
+      ol li,
+      ul li {
+        margin-top: 8px;
+      }
+      code {
+        font-family: 'IBM Plex Mono', ui-monospace, monospace;
+        font-size: 0.9em;
+      }
+      a {
+        color: var(--encre);
+        text-decoration-color: var(--marge);
+        text-underline-offset: 0.2em;
+      }
+      .retour {
+        display: inline-block;
+        margin-top: 48px;
+        font-size: 0.9rem;
+      }
+      @media (max-width: 640px) {
+        main {
+          margin: 0;
+          border: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Accessibilité</h1>
+      <p class="lead">Ce qui est vérifié, ce qui ne l’est pas, et comment signaler un problème.</p>
+
+      <section>
+        <h2>État</h2>
+        <p>
+          Relevé n’a pas fait l’objet d’un audit par un tiers, et ne se déclare pas conforme au
+          RGAA. Voici ce qui est contrôlé, et ce qui ne l’est pas.
+        </p>
+      </section>
+
+      <section>
+        <h2>Ce qui est vérifié</h2>
+        <ul>
+          <li>
+            <strong>Contrôles automatiques</strong> (axe-core, critères WCAG 2.0 et 2.1, niveaux A
+            et AA) sur chaque onglet, en thème clair et en thème sombre, sur un écran étroit (380
+            px) et sur un écran de bureau, à chaque modification du code. Une règle enfreinte fait
+            échouer la vérification.
+          </li>
+          <li>
+            <strong>Clavier</strong> : un lien d’évitement mène au contenu, les onglets et les
+            commandes se parcourent au clavier.
+          </li>
+          <li>
+            <strong>Cibles tactiles</strong> d’au moins 44 pixels sur l’accueil à 380 px, contrôlées
+            automatiquement.
+          </li>
+          <li>
+            <strong>La couleur ne porte jamais seule l’information</strong> : la confiance se lit
+            dans la texture du trait, la provenance dans une pastille, les niveaux de risque et de
+            vigilance dans un mot.
+          </li>
+          <li>
+            <strong>Mouvement</strong> : les animations et transitions sont neutralisées quand votre
+            système demande de réduire les animations ; les boucles de cartes ne démarrent pas
+            seules dans ce cas.
+          </li>
+          <li>
+            <strong>Thèmes et lecture</strong> : thème clair et sombre suivant le système, et une
+            lecture rapide aux caractères agrandis dans les Réglages.
+          </li>
+          <li>
+            <strong>Alternatives textuelles</strong> : les graphiques et les cartes ont un nom
+            accessible et une phrase de synthèse, et les pictogrammes de temps portent leur
+            étiquette.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Ce qui ne l’est pas</h2>
+        <ul>
+          <li>
+            <strong>Aucun test avec des lecteurs d’écran</strong> n’a été mené par des personnes qui
+            les utilisent au quotidien : les contrôles automatiques ne trouvent qu’une partie des
+            problèmes.
+          </li>
+          <li>
+            <strong>Les cartes</strong> (radar, éclairs, prévision) sont des images interactives :
+            on peut zoomer au clavier, mais leur contenu n’est décrit que par une phrase de synthèse
+            et la légende, pas case par case.
+          </li>
+          <li>
+            <strong>Les graphiques</strong> sont des images avec un nom accessible : leurs valeurs
+            détaillées se trouvent dans les tableaux horaires de l’onglet « Heure par heure », pas
+            toujours sous une forme équivalente à chaque graphique.
+          </li>
+          <li>
+            <strong>La lecture vocale</strong> du bulletin dépend des voix de votre navigateur, dont
+            la qualité varie.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Signaler un problème</h2>
+        <p>
+          Si un écran vous est difficile ou impossible à utiliser, écrivez-le sur
+          <a href="https://github.com/lachand/releve-meteo/issues"
+            >la page des signalements du projet</a
+          >
+          en précisant l’écran, votre navigateur et la technologie d’assistance utilisée. Une
+          correction d’accessibilité passe avant une nouveauté.
+        </p>
+      </section>
+      <a class="retour" href="/">Retour au relevé</a>
+    </main>
+  </body>
+</html>

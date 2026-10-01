@@ -59,6 +59,22 @@ describe('fetchLightningFrames', () => {
     expect(result.value.frames.at(-1)?.imageUrl).toContain('time=2026-10-01T11%3A30%3A00Z');
   });
 
+  it('lit une zone, une largeur et un nombre d images choisis', async () => {
+    server.use(http.get(CAPABILITIES_URL, () => HttpResponse.text(CAPABILITIES)));
+    const result = await fetchLightningFrames(LYON, undefined, {
+      halfExtentKm: 32,
+      width: 64,
+      count: 3,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.value.frames).toHaveLength(3);
+    expect(result.value.area.width).toBe(64);
+    expect(new URL(result.value.frames[0]?.imageUrl ?? '').searchParams.get('width')).toBe('64');
+  });
+
   it('dit une reponse sans instant, et propage un echec reseau', async () => {
     server.use(http.get(CAPABILITIES_URL, () => HttpResponse.text('<WMS_Capabilities/>')));
     const malformed = await fetchLightningFrames(LYON);

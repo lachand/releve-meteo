@@ -1,4 +1,4 @@
-import { ALERT_HORIZON_HOURS } from './alerts';
+import { ALERT_HORIZON_HOURS, isWeatherRule } from './alerts';
 import { MODEL_ORDER } from './models';
 import { leadHoursFrom } from './time';
 import type {
@@ -7,6 +7,7 @@ import type {
   HourlyPoint,
   LocalIsoHour,
   ModelId,
+  WeatherAlertRule,
   WeatherVariable,
 } from './types';
 
@@ -73,7 +74,7 @@ export interface SpreadCrossing extends ModelSpread {
 }
 
 export interface SpreadHit {
-  readonly rule: AlertRule;
+  readonly rule: WeatherAlertRule;
   /** Premiere heure ou l'ecart depasse le seuil. */
   readonly first: SpreadCrossing;
   /** Heure du plus grand ecart sur l'horizon. */
@@ -98,6 +99,7 @@ export function evaluateSpreadAlerts(input: {
     return lead >= 0 && lead <= ALERT_HORIZON_HOURS ? [{ time, index }] : [];
   });
   return input.rules
+    .filter(isWeatherRule)
     .filter((rule) => rule.enabled && rule.kind === 'spread' && rule.placeId === bundle.place.id)
     .flatMap((rule): SpreadHit[] => {
       const crossings = upcoming.flatMap(({ time, index }): SpreadCrossing[] => {

@@ -60,6 +60,12 @@ export function buildLightningImageUrl(input: {
 export async function fetchLightningFrames(
   center: { readonly latitude: number; readonly longitude: number },
   signal?: AbortSignal,
+  options: {
+    readonly halfExtentKm?: number;
+    readonly width?: number;
+    /** Nombre d'images, les plus recentes. */
+    readonly count?: number;
+  } = {},
 ): Promise<HttpResult<LightningFrames>> {
   const result = await requestText(CAPABILITIES_URL, { signal, retries: 1 });
   if (!result.ok) {
@@ -72,12 +78,12 @@ export async function fetchLightningFrames(
       failure: { kind: 'malformed', detail: 'foudre : instant de la derniere image absent' },
     };
   }
-  const area = lightningArea(center, LIGHTNING.halfExtentKm);
+  const area = lightningArea(center, options.halfExtentKm ?? LIGHTNING.halfExtentKm, options.width);
   return {
     ok: true,
     value: {
       area,
-      frames: lightningFrameTimes(latest).map((time) => ({
+      frames: lightningFrameTimes(latest, options.count).map((time) => ({
         time,
         imageUrl: buildLightningImageUrl({ time, area }),
       })),

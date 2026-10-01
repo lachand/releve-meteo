@@ -1,4 +1,5 @@
 import type { PhenomenonEpisode } from '../domain/phenomena';
+import type { LightningNear } from '../domain/lightning';
 import type { PollenPeak, RainAhead } from '../domain/weatherNotices';
 import { POLLEN_LABELS } from './airQualityPresentation';
 import { formatDayHour, formatInteger, formatOneDecimal } from './format';
@@ -34,6 +35,27 @@ export function violentSentence(episode: PhenomenonEpisode): string {
 /** « Pluie attendue dès lundi 13h selon AROME : 3,2 mm sur 24 h. » */
 export function rainSentence(rain: RainAhead): string {
   return `Pluie attendue dès ${formatDayHour(rain.start)} selon ${MODEL_LABELS[rain.model]}\u00a0: ${formatOneDecimal(rain.totalMm)}\u00a0mm sur 24\u00a0h.`;
+}
+
+const lightningTime = new Intl.DateTimeFormat('fr-FR', {
+  timeZone: 'Europe/Paris',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+/**
+ * « Éclairs vus par le satellite MTG à environ 15 km, entre 15:10 et 15:20
+ * (4 zones de 2 km). Observation optique : pas un impact au sol. »
+ */
+export function lightningSentence(near: LightningNear): string {
+  const distance =
+    near.nearestKm < 3 ? 'sur place' : `à environ ${Math.round(near.nearestKm)}\u00a0km`;
+  const period =
+    near.firstTime === near.lastTime
+      ? `à ${lightningTime.format(new Date(near.firstTime))}`
+      : `entre ${lightningTime.format(new Date(near.firstTime))} et ${lightningTime.format(new Date(near.lastTime))}`;
+  const zones = near.cells > 1 ? `${near.cells} zones de 2\u00a0km` : '1 zone de 2\u00a0km';
+  return `Éclairs vus par le satellite MTG ${distance}, ${period} (${zones}). Observation optique, pas un impact localisé au sol.`;
 }
 
 function pollenName(kind: string): string {

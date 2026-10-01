@@ -1,6 +1,14 @@
+import type { AirHit } from '../domain/airAlerts';
 import type { AlertHit } from '../domain/alerts';
 import type { SpreadHit } from '../domain/spreadAlerts';
-import type { AlertRule, Preferences, WeatherVariable } from '../domain/types';
+import type {
+  AirAlertRule,
+  AirVariable,
+  AlertRule,
+  Preferences,
+  WeatherVariable,
+} from '../domain/types';
+import { POLLEN_LABELS } from './airQualityPresentation';
 import { formatCompact, formatDayHour } from './format';
 import { MODEL_LABELS } from './modelLabels';
 import { convertWindSpeed, windUnitLabel } from './windUnit';
@@ -47,8 +55,55 @@ const SPREAD_SUBJECTS: Readonly<Record<WeatherVariable, string>> = {
   wind: 'les rafales',
 };
 
+export const AIR_VARIABLE_LABELS: Readonly<Record<AirVariable, string>> = {
+  uv: 'Indice UV',
+  aqi: 'Indice européen de qualité de l’air',
+  pm25: 'Particules fines PM2,5',
+  pollen: 'Pollens',
+};
+
+/** Unite d'une grandeur d'air ; vide pour les indices, qui n'en ont pas. */
+export const AIR_UNITS: Readonly<Record<AirVariable, string>> = {
+  uv: '',
+  aqi: '',
+  pm25: 'µg/m³',
+  pollen: 'grains/m³',
+};
+
+function airDisplay(variable: AirVariable, value: number): string {
+  const unit = AIR_UNITS[variable];
+  const text = formatCompact(Math.round(value * 10) / 10);
+  return unit === '' ? text : `${text}\u00a0${unit}`;
+}
+
+function pollenName(kind: string): string {
+  return ((POLLEN_LABELS as Readonly<Record<string, string>>)[kind] ?? kind).toLowerCase();
+}
+
+/**
+ * « dès mardi 11h, jusqu'à 8 mardi 13h (bouleau), 3 h au total, prévision CAMS
+ * Europe » : la source est nommee, il n'y a pas de cascade de modeles.
+ */
+export function airHitSentence(hit: AirHit): string {
+  const { rule, first, extreme } = hit;
+  const who = (pollen: string | null) => (pollen === null ? '' : ` (${pollenName(pollen)})`);
+  const peak =
+    extreme.time === first.time
+      ? `${airDisplay(rule.variable, extreme.value)}${who(extreme.pollen)}`
+      : `jusqu’à ${airDisplay(rule.variable, extreme.value)} ${formatDayHour(extreme.time)}${who(extreme.pollen)}`;
+  const duration = hit.hours === 1 ? 'une heure' : `${hit.hours}\u00a0h au total`;
+  return `dès ${formatDayHour(first.time)}, ${peak}, ${duration}, prévision CAMS Europe`;
+}
+
+function airRuleSentence(rule: AirAlertRule): string {
+  return `${AIR_VARIABLE_LABELS[rule.variable]} au-dessus de ${airDisplay(rule.variable, rule.threshold)}`;
+}
+
 /** « Rafales au-dessus de 60 km/h », ou « Modèles en désaccord de plus de 3 °C sur la température ». */
 export function ruleSentence(rule: AlertRule, windUnit: WindUnit): string {
+  if (rule.kind === 'air') {
+    return airRuleSentence(rule);
+  }
   if (rule.kind === 'spread') {
     return `Modèles en désaccord de plus de ${display(rule.variable, rule.threshold, windUnit)} sur ${SPREAD_SUBJECTS[rule.variable]}`;
   }

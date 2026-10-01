@@ -1,5 +1,12 @@
 import { leadHoursFrom } from './time';
-import type { AlertRule, HourlyPoint, LocalIsoHour, ModelId, WeatherVariable } from './types';
+import type {
+  AlertRule,
+  HourlyPoint,
+  LocalIsoHour,
+  ModelId,
+  WeatherAlertRule,
+  WeatherVariable,
+} from './types';
 
 /*
  * Alertes personnelles : des seuils choisis par l'utilisateur pour un lieu
@@ -27,7 +34,7 @@ export interface AlertCrossing {
 }
 
 export interface AlertHit {
-  readonly rule: AlertRule;
+  readonly rule: WeatherAlertRule;
   /** Premiere heure ou le seuil est franchi. */
   readonly first: AlertCrossing;
   /** Valeur la plus extreme au-dela du seuil sur l'horizon. */
@@ -43,7 +50,12 @@ const FIELD: Readonly<Record<WeatherVariable, 'temperature' | 'precipitation' | 
   wind: 'windGust',
 };
 
-function crosses(value: number, rule: AlertRule): boolean {
+/** Regle sur une grandeur de prevision des modeles (pas sur l'air, les pollens ou l'UV). */
+export function isWeatherRule(rule: AlertRule): rule is WeatherAlertRule {
+  return rule.kind !== 'air';
+}
+
+function crosses(value: number, rule: WeatherAlertRule): boolean {
   return rule.comparator === 'lt' ? value < rule.threshold : value > rule.threshold;
 }
 
@@ -63,6 +75,7 @@ export function evaluateAlerts(input: {
     return lead >= 0 && lead <= ALERT_HORIZON_HOURS;
   });
   return input.rules
+    .filter(isWeatherRule)
     .filter((rule) => rule.enabled && rule.placeId === input.placeId && rule.kind !== 'spread')
     .flatMap((rule): AlertHit[] => {
       const field = FIELD[rule.variable];

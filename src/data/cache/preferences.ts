@@ -30,6 +30,7 @@ function isPreferences(value: unknown): value is Preferences {
 }
 
 const ALERT_VARIABLES: ReadonlySet<unknown> = new Set(['temperature', 'precipitation', 'wind']);
+const AIR_ALERT_VARIABLES: ReadonlySet<unknown> = new Set(['uv', 'aqi', 'pm25', 'pollen']);
 
 export function isAlertRule(value: unknown): value is AlertRule {
   if (typeof value !== 'object' || value === null) {
@@ -39,13 +40,16 @@ export function isAlertRule(value: unknown): value is AlertRule {
   return (
     typeof rule.id === 'string' &&
     typeof rule.placeId === 'string' &&
-    ALERT_VARIABLES.has(rule.variable) &&
-    (rule.comparator === 'lt' || rule.comparator === 'gt') &&
     typeof rule.threshold === 'number' &&
     Number.isFinite(rule.threshold) &&
     typeof rule.enabled === 'boolean' &&
-    // Les regles enregistrees avant l'alerte d'ecart n'ont pas de `kind`.
-    (rule.kind === undefined || rule.kind === 'value' || rule.kind === 'spread')
+    (rule.kind === 'air'
+      ? // L'air, les pollens et l'UV : toujours « au-dessus de », grandeurs propres.
+        AIR_ALERT_VARIABLES.has(rule.variable) && rule.comparator === 'gt'
+      : ALERT_VARIABLES.has(rule.variable) &&
+        (rule.comparator === 'lt' || rule.comparator === 'gt') &&
+        // Les regles enregistrees avant l'alerte d'ecart n'ont pas de `kind`.
+        (rule.kind === undefined || rule.kind === 'value' || rule.kind === 'spread'))
   );
 }
 

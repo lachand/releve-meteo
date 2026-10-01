@@ -10,6 +10,7 @@ import {
   quantile,
   quantiles,
   rainOutlook,
+  temperatureSpaghetti,
 } from './ensemble';
 
 describe('quantile', () => {
@@ -213,5 +214,61 @@ describe('rainOutlook', () => {
   it('respecte la fenetre demandee, et rend une liste vide sans membre', () => {
     expect(rainOutlook({ ensemble, now: NOW, hours: 1 })).toHaveLength(2);
     expect(rainOutlook({ ensemble: { ...ensemble, precipitation: [] }, now: NOW })).toEqual([]);
+  });
+});
+
+describe('temperatureSpaghetti', () => {
+  // 10 h 12 locales le 28 septembre 2026.
+  const NOW = new Date('2026-09-28T08:12:00Z');
+  const timeline = Array.from(
+    { length: 5 },
+    (_, i) => `2026-09-28T${String(9 + i).padStart(2, '0')}:00`,
+  ) as EnsembleHourly['timeline'];
+  const temperature = [
+    [10, 11, 12, 13, null],
+    [10, 12, 14, 16, null],
+    [10, 13, 16, 19, null],
+    [10, 14, 18, 22, null],
+    [10, 15, 20, 25, null],
+  ];
+  const ensemble: EnsembleHourly = { timeline, temperature, precipitation: [], windGust: [] };
+
+  it('trace chaque membre, sa mediane et le fuseau de neuf membres sur dix, de l heure courante', () => {
+    const result = temperatureSpaghetti({ ensemble, now: NOW });
+    // 9 h est passee de plus d'une heure : 10 h a 13 h restent.
+    expect(result?.times).toEqual([
+      '2026-09-28T10:00',
+      '2026-09-28T11:00',
+      '2026-09-28T12:00',
+      '2026-09-28T13:00',
+    ]);
+    expect(result?.members).toHaveLength(5);
+    expect(result?.members[0]).toEqual([11, 12, 13, null]);
+    expect(result?.median).toEqual([13, 16, 19, null]);
+    expect(result?.p10[0]).toBeCloseTo(11.4);
+    expect(result?.p90[0]).toBeCloseTo(14.6);
+  });
+
+  it('dit l etalement a l heure la plus lointaine qui a des valeurs, jamais une heure vide', () => {
+    const result = temperatureSpaghetti({ ensemble, now: NOW });
+    expect(result?.widest?.time).toBe('2026-09-28T12:00');
+    expect(result?.widest?.p90).toBeGreaterThan(result?.widest?.p10 ?? Infinity);
+  });
+
+  it('rend null sans membre ni heure dans la fenetre, et garde le vide a null', () => {
+    expect(
+      temperatureSpaghetti({ ensemble: { ...ensemble, temperature: [] }, now: NOW }),
+    ).toBeNull();
+    expect(temperatureSpaghetti({ ensemble, now: new Date('2026-10-05T08:00:00Z') })).toBeNull();
+    const empty = temperatureSpaghetti({
+      ensemble: { ...ensemble, temperature: [[null, null, null, null, null]] },
+      now: NOW,
+    });
+    expect(empty?.widest).toBeNull();
+    expect(empty?.median).toEqual([null, null, null, null]);
+  });
+
+  it('respecte la fenetre demandee', () => {
+    expect(temperatureSpaghetti({ ensemble, now: NOW, hours: 1 })?.times).toHaveLength(2);
   });
 });

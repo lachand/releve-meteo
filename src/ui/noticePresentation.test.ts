@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { PhenomenonEpisode } from '../domain/phenomena';
-import { pollenSentence, rainSentence, violentSentence, violentTitle } from './noticePresentation';
+import {
+  lightningSentence,
+  pollenSentence,
+  rainSentence,
+  violentSentence,
+  violentTitle,
+} from './noticePresentation';
 
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, ' ');
 
@@ -51,5 +57,23 @@ describe('pollenSentence', () => {
 
   it('garde le nom brut d un pollen inconnu', () => {
     expect(plain(pollenSentence([{ kind: 'cypres', peak: 90 }]))).toContain('cypres (90');
+  });
+});
+
+describe('lightningSentence', () => {
+  const T = Date.UTC(2026, 9, 1, 13, 10);
+
+  it('dit la distance, la periode en heure de Paris, la taille des zones et la nature optique', () => {
+    const text = plain(
+      lightningSentence({ cells: 4, nearestKm: 14.6, firstTime: T, lastTime: T + 600_000 }),
+    );
+    expect(text).toBe(
+      'Éclairs vus par le satellite MTG à environ 15 km, entre 15:10 et 15:20 (4 zones de 2 km). Observation optique, pas un impact localisé au sol.',
+    );
+  });
+
+  it('dit « sur place » tout pres, une heure unique et une seule zone', () => {
+    const text = plain(lightningSentence({ cells: 1, nearestKm: 1.2, firstTime: T, lastTime: T }));
+    expect(text).toContain('MTG sur place, à 15:10 (1 zone de 2 km)');
   });
 });

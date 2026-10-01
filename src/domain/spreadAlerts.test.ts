@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { TEST_PLACE, buildBundle, buildHourlyTimeline } from '../../tests/factories';
 import type { HourlyValues } from '../../tests/factories';
 import { evaluateSpreadAlerts, modelSpreadAt } from './spreadAlerts';
-import type { AlertRule, ModelId } from './types';
+import type { ModelId, WeatherAlertRule } from './types';
 
 // 15 h 27 locale le 28 septembre 2026 ; timeline horaire des 6 heures suivantes.
 const NOW = new Date('2026-09-28T13:27:00Z');
 const TIMELINE = buildHourlyTimeline('2026-09-28T15:00', 6);
 
-function rule(overrides: Partial<AlertRule> = {}): AlertRule {
+function rule(overrides: Partial<WeatherAlertRule> = {}): WeatherAlertRule {
   return {
     id: 'ecart1',
     placeId: TEST_PLACE.id,

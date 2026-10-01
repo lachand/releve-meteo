@@ -253,3 +253,65 @@ export function rainOutlook(input: {
     ];
   });
 }
+
+/** Fenetre des trajectoires de temperature de l'ensemble, heures. */
+export const SPAGHETTI_HOURS = 72;
+
+export interface TemperatureSpaghetti {
+  readonly times: readonly LocalIsoHour[];
+  /** `members[m][i]` : membre m, heure `times[i]`, °C ; null sans valeur. */
+  readonly members: readonly (readonly (number | null)[])[];
+  /** Mediane des membres a chaque heure, °C ; null sans membre. */
+  readonly median: readonly (number | null)[];
+  /** Neuf membres sur dix sont entre ces deux courbes, °C. */
+  readonly p10: readonly (number | null)[];
+  readonly p90: readonly (number | null)[];
+  /** Heure la plus lointaine ou la dispersion est connue, avec son etalement p10-p90 ; null sans donnee. */
+  readonly widest: {
+    readonly time: LocalIsoHour;
+    readonly p10: number;
+    readonly p90: number;
+  } | null;
+}
+
+/**
+ * Trajectoires de temperature de chaque membre de l'ensemble sur les
+ * prochaines heures, avec leur mediane et le fuseau qui contient neuf membres
+ * sur dix. Une heure sans valeur reste vide (null) : jamais une trajectoire
+ * qui retombe a zero.
+ */
+export function temperatureSpaghetti(input: {
+  readonly ensemble: EnsembleHourly;
+  readonly now: Date;
+  readonly hours?: number;
+}): TemperatureSpaghetti | null {
+  const { ensemble } = input;
+  const horizon = input.hours ?? SPAGHETTI_HOURS;
+  const indexes = ensemble.timeline.flatMap((time, index) => {
+    const lead = leadHoursFrom(input.now, time);
+    return lead >= -1 && lead <= horizon ? [index] : [];
+  });
+  if (ensemble.temperature.length === 0 || indexes.length === 0) {
+    return null;
+  }
+  const times = indexes.map((index) => ensemble.timeline[index] as LocalIsoHour);
+  const members = ensemble.temperature.map((member) =>
+    indexes.map((index) => member[index] ?? null),
+  );
+  const spread = indexes.map((index) =>
+    quantiles(ensemble.temperature.map((member) => member[index] ?? null)),
+  );
+  const lastKnown = spread.reduce((found, q, index) => (q === null ? found : index), -1);
+  const last = lastKnown === -1 ? null : spread[lastKnown];
+  return {
+    times,
+    members,
+    median: spread.map((q) => q?.median ?? null),
+    p10: spread.map((q) => q?.p10 ?? null),
+    p90: spread.map((q) => q?.p90 ?? null),
+    widest:
+      last === null || last === undefined
+        ? null
+        : { time: times[lastKnown] as LocalIsoHour, p10: last.p10, p90: last.p90 },
+  };
+}

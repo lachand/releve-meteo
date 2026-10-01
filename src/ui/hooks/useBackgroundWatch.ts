@@ -12,6 +12,7 @@ import type { AlertHit } from '../../domain/alerts';
 import { departmentAt } from '../../domain/departments';
 import { MODEL_ORDER } from '../../domain/models';
 import type { ModelVerification } from '../../domain/reliability';
+import type { AirHit } from '../../domain/airAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
 import type { NotifyPrefs } from '../../domain/weatherNotices';
@@ -19,6 +20,7 @@ import type { AlertRule, ModelId, Place, Preferences, TerrainProfile } from '../
 import type { VigilanceSummary } from '../../domain/vigilance';
 import {
   WATCH_VIGILANCE_MIN_LEVEL,
+  airKey,
   alertKey,
   spreadKey,
   vigilanceKey,
@@ -75,6 +77,8 @@ export interface WatchMirrorInputs {
   readonly windUnit: Preferences['units']['wind'];
   readonly alertHits: readonly AlertHit[];
   readonly spreadHits: readonly SpreadHit[];
+  /** Regles d'air, de pollens et d'UV depassees, montrees dans la page. */
+  readonly airHits?: readonly AirHit[];
   readonly vigilance: { readonly department: string; readonly summary: VigilanceSummary } | null;
 }
 
@@ -208,6 +212,7 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   const seenKeys = [
     ...inputs.alertHits.map(alertKey),
     ...inputs.spreadHits.map(spreadKey),
+    ...(inputs.airHits ?? []).map(airKey),
     ...(vigilance === null
       ? []
       : vigilance.summary.warnings

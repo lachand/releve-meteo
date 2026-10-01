@@ -38,6 +38,19 @@ describe('criterionSentence', () => {
     );
   });
 
+  it('dit que l a priori de maille pese moins quand des mesures locales existent', () => {
+    const faded: Criterion = {
+      kind: 'resolution',
+      points: 4,
+      detail: { resolutionKm: 2.2, terrain: 'plateau', priorFactor: 0.6 },
+    };
+    expect(criterionSentence('icon_d2', faded)).toContain(
+      'Cet a priori pèse moins depuis que des mesures locales existent.',
+    );
+    const intact: Criterion = { ...faded, detail: { ...faded.detail, priorFactor: 1 } };
+    expect(criterionSentence('icon_d2', intact)).not.toContain('Cet a priori');
+  });
+
   it('retourne null pour une resolution a contribution negligeable', () => {
     const criterion: Criterion = { kind: 'resolution', points: 0.5, detail: {} };
     expect(criterionSentence('arome', criterion)).toBeNull();

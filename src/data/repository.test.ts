@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../tests/msw';
 import { deleteDbForTests } from './cache/db';
 import { resetMemoryDatasetStore, setDataset } from './cache/datasetStore';
+import { loadJournal } from './cache/journalStore';
 import { readDiagnostics, resetDiagnosticsForTests } from './cache/diagnostics';
 import { resetMemoryForecastStore, setCachedForecast } from './cache/forecastStore';
 import { resetMemoryGeocodingStore } from './cache/geocodingStore';
@@ -570,6 +571,62 @@ describe('getStationReport', () => {
     expect(previousRequests[0]?.searchParams.get('latitude')).toBe('45.5');
     expect(previousRequests[0]?.searchParams.get('elevation')).toBe('450');
     expect(report.previousDay?.temperature.arome).toEqual([21.5]);
+  });
+
+  it('garde le bilan d hier au journal du lieu, et rien quand la station manque de mesures', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    // Hier 27 septembre, heures locales 2 h a 23 h : 22 mesures et autant de previsions de la veille.
+    const day = Array.from({ length: 22 }, (_, i) => i);
+    const times = day.map((i) => `2026-09-27T${String(2 + i).padStart(2, '0')}:00`);
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time: ['2026-09-28T11:00'], temperature_2m: [24] } }),
+      ),
+      http.get('https://previous-runs-api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({
+          hourly: { time: times, temperature_2m_previous_day1: day.map((i) => 15 + i / 2) },
+        }),
+      ),
+      http.get('https://data.meteostat.net/hourly/2026/07480.csv.gz', async () => {
+        const rows = day.map((i) => `2026,9,27,${i},${(14 + i / 2).toFixed(1)},metar,70,metar`);
+        return new HttpResponse(await gzip([HEADER, ...rows].join('\n')));
+      }),
+    );
+    expect(await loadJournal(place.id)).toEqual([]);
+    const result = await getStationReport(place, ['arome']);
+    expect(result.ok).toBe(true);
+    const journal = await loadJournal(place.id);
+    expect(journal).toHaveLength(1);
+    expect(journal[0]).toMatchObject({
+      date: '2026-09-27',
+      stationName: 'Lyon / Bron',
+      hours: 22,
+      observedMin: 14,
+    });
+    expect(journal[0]?.models[0]?.model).toBe('arome');
+    // Une prevision de la veille vaut une mesure de plus d'un degre ici : l'ecart est dit, pas lisse.
+    expect(journal[0]?.models[0]?.mae).toBeCloseTo(1, 5);
+  });
+
+  it('ne laisse rien au journal quand les mesures d hier manquent', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-28T13:27:00Z'));
+    server.use(
+      http.get(STATIONS_URL, () => HttpResponse.json([nearby])),
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ hourly: { time: ['2026-09-28T11:00'], temperature_2m: [24] } }),
+      ),
+      http.get(
+        'https://data.meteostat.net/hourly/2026/07480.csv.gz',
+        async () =>
+          new HttpResponse(await gzip([HEADER, '2026,9,28,10,26.0,metar,37,metar'].join('\n'))),
+      ),
+    );
+    const result = await getStationReport(place, ['arome']);
+    expect(result.ok).toBe(true);
+    expect(await loadJournal(place.id)).toEqual([]);
   });
 
   it('enregistre un instantane des 12 heures a venir a chaque lecture, sans en empiler deux pour une meme heure', async () => {

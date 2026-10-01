@@ -413,8 +413,10 @@ describe('App', { timeout: 30000 }, () => {
     expect(screen.getByText('ARPEGE, choisi manuellement.')).toBeInTheDocument();
 
     await user.click(within(chooser).getByRole('radio', { name: /Automatique/ }));
+    // Les mesures de Bron enregistrees dans les fixtures donnent ICON-D2 plus juste :
+    // la mesure locale l'emporte alors sur l'a priori de maille d'AROME.
     expect(
-      await screen.findByText('AROME retenu pour ce lieu et cette échéance.'),
+      await screen.findByText('ICON-D2 retenu pour ce lieu et cette échéance.'),
     ).toBeInTheDocument();
   });
 
@@ -623,7 +625,7 @@ describe('App', { timeout: 30000 }, () => {
   it('fait entrer les notes courtes dans le choix du modele, et le dit dans l onglet Modeles', async () => {
     server.use(...liveHandlers());
     // Dix relevees horaires de la matinee (2 h a 11 h), chacune avec les 12 heures
-    // suivantes : AROME colle a 25 °C, ARPEGE s'en ecarte de 6 °C.
+    // suivantes : AROME et ICON-D2 collent a 25 °C, ARPEGE s'en ecarte de 6 °C.
     for (let issued = 2; issued <= 11; issued += 1) {
       const timeline = Array.from(
         { length: 12 },
@@ -632,7 +634,11 @@ describe('App', { timeout: 30000 }, () => {
       const snapshot: ForecastSnapshot = {
         issuedAt: `2026-09-28T${String(issued).padStart(2, '0')}:00` as LocalIsoHour,
         timeline,
-        temperature: { arome: timeline.map(() => 25), arpege: timeline.map(() => 31) },
+        temperature: {
+          arome: timeline.map(() => 25),
+          icon_d2: timeline.map(() => 25),
+          arpege: timeline.map(() => 31),
+        },
       };
       await recordSnapshot('07480', snapshot, new Date());
     }
@@ -699,10 +705,11 @@ describe('App', { timeout: 30000 }, () => {
 
     const line = await screen.findByText(/Mesuré à/, {}, { timeout: 12000 });
     expect(line).toHaveTextContent('Mesuré à Lyon / Bron à 12h : 26 °C (il y a 3 h 27).');
-    // Station a station : la valeur d'AROME lue au point de la station
-    // (24,8 °C, tests/fixtures/stationPoint.ts), pas celle du lieu.
+    // Station a station : la valeur du modele retenu (ICON-D2, plus juste ici que la
+    // maille d'AROME) lue au point de la station (25,9 °C,
+    // tests/fixtures/stationPoint.ts), pas celle du lieu.
     expect(line).toHaveTextContent(
-      'AROME donnait 24,8 °C au même endroit à la même heure (écart −1,2 °C).',
+      'ICON-D2 donnait 25,9 °C au même endroit à la même heure (écart −0,1 °C).',
     );
     expect(
       screen.getByRole('button', { name: 'Tous les modèles face à la mesure' }),

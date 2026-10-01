@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { deflateSync } from 'node:zlib';
 import { expect } from '@playwright/test';
 import type { BrowserContext, Page, Worker } from '@playwright/test';
 import { test } from './fixtures';
@@ -63,8 +64,8 @@ async function stubWorkerApis(context: BrowserContext, days: number): Promise<vo
 }
 
 /** Etat de veille ecrit comme la page le recopierait. */
-async function seedWatch(page: Page): Promise<void> {
-  await page.evaluate(async () => {
+async function seedWatch(page: Page, notify?: Record<string, unknown>): Promise<void> {
+  await page.evaluate(async (wanted) => {
     const place = {
       id: '45.7578:4.8320',
       name: 'Lyon',
@@ -97,6 +98,7 @@ async function seedWatch(page: Page): Promise<void> {
       windUnit: 'kmh',
       notified: {},
       lastRunUtcMs: null,
+      ...(wanted === undefined ? {} : { notify: wanted }),
     };
     await new Promise<void>((resolve, reject) => {
       const open = indexedDB.open('meteo-fr');
@@ -113,7 +115,49 @@ async function seedWatch(page: Page): Promise<void> {
         tx.onerror = () => reject(tx.error ?? new Error('ecriture'));
       };
     });
-  });
+  }, notify);
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k += 1) {
+    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  }
+  return c >>> 0;
+});
+
+function crc32(bytes: Buffer): number {
+  let c = 0xffffffff;
+  for (const byte of bytes) {
+    c = (CRC_TABLE[(c ^ byte) & 255] ?? 0) ^ (c >>> 8);
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+/** PNG RGBA transparent, avec un seul pixel orange opaque au centre : un eclair. */
+function lightningPng(width: number, height: number): Buffer {
+  const rows = Buffer.alloc((width * 4 + 1) * height);
+  const centre = Math.floor(height / 2) * (width * 4 + 1) + 1 + Math.floor(width / 2) * 4;
+  rows.set([255, 140, 0, 255], centre);
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', deflateSync(rows)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 async function dispatchPeriodicSync(page: Page, tag: string): Promise<void> {
@@ -366,4 +410,63 @@ test('les reglages se corrigent quand le service worker s active tard', async ({
   await expect(status).toContainText('n’accorde la veille qu’aux applications installées', {
     timeout: 40000,
   });
+});
+
+test('la veille notifie des eclairs vus pres d un favori, sans permission groupee le matin', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'Periodic Background Sync et DevTools : Chromium seul');
+  const days = Math.floor((Date.now() - FIXTURE_DAY) / DAY_MS);
+  await stubApis(page);
+  await stubWorkerApis(context, days);
+  const requested: string[] = [];
+  const cors = { 'access-control-allow-origin': '*' };
+  // Le service worker lit les images du satellite : un eclair au centre de chacune.
+  await context.route('https://view.eumetsat.int/**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('request') === 'GetCapabilities') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/xml',
+        headers: cors,
+        body: `<Dimension name="time" default="${new Date(Date.now() - 4 * 60_000).toISOString().slice(0, 16)}:00Z">x</Dimension>`,
+      });
+    }
+    requested.push(url.search);
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: cors,
+      body: lightningPng(
+        Number(url.searchParams.get('width')),
+        Number(url.searchParams.get('height')),
+      ),
+    });
+  });
+  await context.grantPermissions(['notifications']);
+  await page.goto(LYON_URL);
+  await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible({ timeout: 15000 });
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await seedWatch(page, { lightning: true, mode: 'morning' });
+  const worker = await spyOnNotifications(context);
+
+  await expect
+    .poll(
+      async () => {
+        await dispatchPeriodicSync(page, 'releve-veille');
+        return (await shownNotifications(worker)).map((n) => n.title);
+      },
+      { timeout: 30000, intervals: [2000] },
+    )
+    .toContain('Lyon · Éclairs à proximité');
+  const lightning = (await shownNotifications(worker)).find((n) =>
+    n.title.endsWith('Éclairs à proximité'),
+  );
+  expect(lightning?.body).toMatch(
+    /^Éclairs vus par le satellite MTG sur place, entre \d\d:\d\d et \d\d:\d\d/u,
+  );
+  expect(lightning?.body).toContain('pas un impact localisé au sol');
+  expect(requested.length).toBeGreaterThanOrEqual(3);
 });

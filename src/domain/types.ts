@@ -115,18 +115,36 @@ export interface Preferences {
   readonly alerts: readonly AlertRule[];
 }
 
-export interface AlertRule {
+interface AlertRuleBase {
   readonly id: string;
-  /**
-   * 'value' (defaut, regles enregistrees avant l'existence du champ) : la
-   * valeur du modele retenu franchit le seuil. 'spread' : les modeles
-   * s'ecartent de plus que le seuil, dans l'unite de la grandeur ; le sens
-   * est alors toujours 'gt'.
-   */
-  readonly kind?: 'value' | 'spread';
   readonly placeId: string;
-  readonly variable: WeatherVariable;
   readonly comparator: 'lt' | 'gt';
   readonly threshold: number;
   readonly enabled: boolean;
 }
+
+/**
+ * Regle sur une grandeur de prevision. 'value' (defaut, regles enregistrees
+ * avant l'existence du champ) : la valeur du modele retenu franchit le seuil.
+ * 'spread' : les modeles s'ecartent de plus que le seuil, dans l'unite de la
+ * grandeur ; le sens est alors toujours 'gt'.
+ */
+export interface WeatherAlertRule extends AlertRuleBase {
+  readonly kind?: 'value' | 'spread';
+  readonly variable: WeatherVariable;
+}
+
+/** Grandeurs de qualite de l'air, de pollens et d'UV (CAMS Europe, prevues). */
+export type AirVariable = 'uv' | 'aqi' | 'pm25' | 'pollen';
+
+/** Regle sur l'air, les pollens ou l'UV : toujours « au-dessus de », sur 72 h. */
+export interface AirAlertRule extends AlertRuleBase {
+  readonly kind: 'air';
+  readonly variable: AirVariable;
+  readonly comparator: 'gt';
+}
+
+export type AlertRule = WeatherAlertRule | AirAlertRule;
+
+/** Une regle a creer : l'identifiant est donne a l'enregistrement. */
+export type NewAlertRule = Omit<WeatherAlertRule, 'id'> | Omit<AirAlertRule, 'id'>;

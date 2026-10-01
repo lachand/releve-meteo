@@ -122,6 +122,8 @@ describe('WatchSettings', () => {
     expect(on.setNotify).toHaveBeenLastCalledWith({ rain: true });
     await userEvent.click(screen.getByRole('checkbox', { name: /Pollens à un niveau élevé/ }));
     expect(on.setNotify).toHaveBeenLastCalledWith({ pollen: true });
+    await userEvent.click(screen.getByRole('checkbox', { name: /Foudre à proximité/ }));
+    expect(on.setNotify).toHaveBeenLastCalledWith({ lightning: true });
   });
 
   it('laisse choisir le matin a une heure precise, ou des la detection', async () => {

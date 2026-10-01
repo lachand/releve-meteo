@@ -7,6 +7,7 @@ import {
   MORNING_GRACE_HOURS,
   POLLEN_THRESHOLDS,
   highPollen,
+  lightningKey,
   morningDue,
   normalizeNotify,
   pollenKey,
@@ -22,8 +23,22 @@ const NOW = new Date('2026-09-28T08:12:00Z');
 describe('normalizeNotify', () => {
   it('relit des preferences completes', () => {
     expect(
-      normalizeNotify({ risks: true, rain: true, pollen: false, mode: 'instant', hour: 6 }),
-    ).toEqual({ risks: true, rain: true, pollen: false, mode: 'instant', hour: 6 });
+      normalizeNotify({
+        risks: true,
+        rain: true,
+        pollen: false,
+        lightning: true,
+        mode: 'instant',
+        hour: 6,
+      }),
+    ).toEqual({
+      risks: true,
+      rain: true,
+      pollen: false,
+      lightning: true,
+      mode: 'instant',
+      hour: 6,
+    });
   });
 
   it('tolere l absence, un type errone ou une heure hors plage', () => {
@@ -38,7 +53,12 @@ describe('normalizeNotify', () => {
   });
 
   it('ne notifie rien par defaut', () => {
-    expect(DEFAULT_NOTIFY).toMatchObject({ risks: false, rain: false, pollen: false });
+    expect(DEFAULT_NOTIFY).toMatchObject({
+      risks: false,
+      rain: false,
+      pollen: false,
+      lightning: false,
+    });
   });
 });
 
@@ -217,5 +237,15 @@ describe('highPollen', () => {
 
   it('une cle par lieu et par jour', () => {
     expect(pollenKey('lyon', '2026-09-28')).toBe('pollen|lyon|2026-09-28');
+  });
+});
+
+describe('lightningKey', () => {
+  it('est unique par lieu et par plage de trois heures, en heure de Paris', () => {
+    // 10 h 12 et 11 h 59 locales : meme plage (9 h a 12 h).
+    expect(lightningKey('lyon', NOW)).toBe('foudre|lyon|2026-09-28|3');
+    expect(lightningKey('lyon', new Date('2026-09-28T09:59:00Z'))).toBe('foudre|lyon|2026-09-28|3');
+    // 12 h locales : plage suivante.
+    expect(lightningKey('lyon', new Date('2026-09-28T10:00:00Z'))).toBe('foudre|lyon|2026-09-28|4');
   });
 });
