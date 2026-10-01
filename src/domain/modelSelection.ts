@@ -50,6 +50,8 @@ export interface Criterion {
     readonly leadDays?: number;
     /** Classe d'echeance courte (« 3 h ») d'un critere shortSkill. */
     readonly bucket?: string;
+    /** Part de l'a priori de maille conservee (1 sans mesure locale), pour la phrase. */
+    readonly priorFactor?: number;
   };
 }
 
@@ -67,18 +69,79 @@ export interface ModelRanking {
 export const SELECTION_WEIGHTS = {
   resolution: 10,
   mediumRange: 10,
-  localSkill: 6,
+  localSkill: 8,
   /**
    * Performance mesuree a 12 h ou moins, sur la temperature seule : elle
-   * remplace alors le volet temperature de la mesure locale (3 points au
+   * remplace alors le volet temperature de la mesure locale (4 points au
    * plus), un peu plus lourd parce que plus precis a ces echeances.
    */
-  shortSkill: 4,
+  shortSkill: 5,
   /** Echelle de decroissance du poids de la maille avec l'echeance, heures. */
   resolutionDecayHours: 60,
-  /** Nombre d'echantillons pour lequel la mesure locale pese a moitie. */
-  shrinkageSamples: 15,
+  /**
+   * Jours de mesures pour lesquels la mesure locale pese a moitie : l'echantillon
+   * se compte en jours, pas en heures, les heures d'une meme journee se
+   * ressemblant trop pour valoir autant d'observations independantes.
+   */
+  evidenceHalfDays: 7,
+  /**
+   * Part de l'a priori de maille qui s'efface quand les mesures locales sont
+   * abondantes : la maille est une hypothese, les mesures sont des faits.
+   */
+  priorFade: 0.5,
 } as const;
+
+/** Heures de mesure par jour : un echantillon horaire vaut 1/24 de jour. */
+const HOURS_PER_DAY = 24;
+
+/** Poids de la mesure locale dans [0, 1[ pour `pairs` heures de mesures. */
+export function evidenceWeight(pairs: number): number {
+  const days = Math.max(0, pairs) / HOURS_PER_DAY;
+  return days / (days + SELECTION_WEIGHTS.evidenceHalfDays);
+}
+
+/**
+ * Part de l'a priori de maille conservee, dans ]0, 1] : 1 sans mesure, la
+ * moitie apres de longues mesures. Commune a tous les modeles, pour ne jamais
+ * favoriser un modele sans mesure sur ceux qui en ont.
+ */
+export function priorFactor(verification: readonly ModelVerification[], leadHours: number): number {
+  const targetDays = leadDaysFor(leadHours);
+  const perModel = new Map<ModelId, ScoredVerification>();
+  for (const v of verification) {
+    if (v.variable !== 'temperature' || v.stats === null) {
+      continue;
+    }
+    const known = perModel.get(v.model);
+    if (
+      known === undefined ||
+      Math.abs(v.leadDays - targetDays) < Math.abs(known.leadDays - targetDays)
+    ) {
+      perModel.set(v.model, v as ScoredVerification);
+    }
+  }
+  const counts = [...perModel.values()].map((v) => v.sampleCount).sort((a, b) => a - b);
+  if (counts.length === 0) {
+    return 1;
+  }
+  const median =
+    counts.length % 2 === 1
+      ? (counts[(counts.length - 1) / 2] ?? 0)
+      : ((counts[counts.length / 2 - 1] ?? 0) + (counts[counts.length / 2] ?? 0)) / 2;
+  return 1 - SELECTION_WEIGHTS.priorFade * evidenceWeight(median);
+}
+
+/**
+ * Avantage d'un modele sur la moyenne de ses pairs, dans [-1, 1], a l'echelle
+ * des rapports d'erreur : une erreur deux fois plus faible vaut le maximum, deux
+ * fois plus forte le minimum. Une erreur nulle vaut le maximum.
+ */
+function relativeSkill(ownMae: number, peerMae: number): number {
+  if (ownMae <= 0) {
+    return 1;
+  }
+  return Math.max(-1, Math.min(1, Math.log(peerMae / ownMae) / Math.LN2));
+}
 
 /**
  * Qualite a priori en moyenne echeance (au-dela de 3 jours), d'apres les
@@ -164,8 +227,8 @@ function localSkillCriteria(
     if (peerMae <= 0) {
       continue;
     }
-    const relative = Math.max(-1, Math.min(1, (peerMae - own.stats.mae) / peerMae));
-    const shrink = own.sampleCount / (own.sampleCount + SELECTION_WEIGHTS.shrinkageSamples);
+    const relative = relativeSkill(own.stats.mae, peerMae);
+    const shrink = evidenceWeight(own.sampleCount);
     const points = relative * shrink * SELECTION_WEIGHTS.localSkill * VARIABLE_WEIGHTS[variable];
     criteria.push({
       kind: 'localSkill',
@@ -213,8 +276,8 @@ function shortSkillCriterion(
   if (peerMae <= 0) {
     return null;
   }
-  const relative = Math.max(-1, Math.min(1, (peerMae - own.mae) / peerMae));
-  const shrink = own.pairs / (own.pairs + SELECTION_WEIGHTS.shrinkageSamples);
+  const relative = relativeSkill(own.mae, peerMae);
+  const shrink = evidenceWeight(own.pairs);
   return {
     kind: 'shortSkill',
     points: relative * shrink * SELECTION_WEIGHTS.shortSkill,
@@ -231,6 +294,7 @@ function shortSkillCriterion(
 
 /** Classement complet des modeles pour une echeance, du meilleur au moins bon. */
 export function rankModels(context: SelectionContext, leadHours: number): readonly ModelRanking[] {
+  const prior = priorFactor(context.verification, leadHours);
   const rankings = MODEL_ORDER.map((model): ModelRanking => {
     const ineligibility = eligibility(model, leadHours, context);
     const weight = resolutionWeight(leadHours);
@@ -244,8 +308,13 @@ export function rankModels(context: SelectionContext, leadHours: number): readon
     const criteria: Criterion[] = [
       {
         kind: 'resolution',
-        points: SELECTION_WEIGHTS.resolution * weight * terrainFit(model, context.terrain),
-        detail: { resolutionKm: spec.resolutionKm, terrain: context.terrain, leadHours },
+        points: SELECTION_WEIGHTS.resolution * weight * terrainFit(model, context.terrain) * prior,
+        detail: {
+          resolutionKm: spec.resolutionKm,
+          terrain: context.terrain,
+          leadHours,
+          priorFactor: prior,
+        },
       },
       {
         kind: 'mediumRange',

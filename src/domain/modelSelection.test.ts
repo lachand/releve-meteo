@@ -3,8 +3,10 @@ import { buildHourlyTimeline } from '../../tests/factories';
 import {
   SELECTION_WEIGHTS,
   buildSelectedCascade,
+  evidenceWeight,
   explainSwitch,
   leadDaysFor,
+  priorFactor,
   rankModels,
   resolutionWeight,
   selectBestModel,
@@ -56,6 +58,51 @@ describe('resolutionWeight', () => {
     expect(resolutionWeight(0)).toBe(1);
     expect(resolutionWeight(-5)).toBe(1);
     expect(resolutionWeight(60)).toBeCloseTo(Math.exp(-1));
+  });
+});
+
+describe('evidenceWeight', () => {
+  it('compte l echantillon en jours : nul sans mesure, la moitie a sept jours, jamais 1', () => {
+    expect(evidenceWeight(0)).toBe(0);
+    expect(evidenceWeight(-12)).toBe(0);
+    expect(evidenceWeight(7 * 24)).toBeCloseTo(0.5);
+    expect(evidenceWeight(30 * 24)).toBeCloseTo(30 / 37);
+    expect(evidenceWeight(10_000)).toBeLessThan(1);
+  });
+});
+
+describe('priorFactor', () => {
+  it('garde tout l a priori de maille sans mesure locale exploitable', () => {
+    expect(priorFactor([], 24)).toBe(1);
+    expect(priorFactor([verification('arome', null)], 24)).toBe(1);
+    // La pluie et le vent ne comptent pas : l'a priori est celui de la maille.
+    expect(priorFactor([verification('arome', 1, { variable: 'wind', count: 700 })], 24)).toBe(1);
+  });
+
+  it('efface jusqu a la moitie de l a priori quand les mesures sont longues', () => {
+    const month = ALL.map((model) => verification(model, 1.2, { leadDays: 1, count: 720 }));
+    expect(priorFactor(month, 24)).toBeCloseTo(1 - 0.5 * (30 / 37));
+    const few = ALL.map((model) => verification(model, 1.2, { leadDays: 1, count: 24 }));
+    expect(priorFactor(few, 24)).toBeCloseTo(1 - 0.5 * evidenceWeight(24));
+    expect(priorFactor(few, 24)).toBeGreaterThan(0.93);
+  });
+
+  it('prend la mediane des modeles, pour qu aucun n en soit avantage, et l echeance la plus proche', () => {
+    const odd = [
+      verification('arome', 1, { leadDays: 1, count: 24 }),
+      verification('icon_d2', 1, { leadDays: 1, count: 240 }),
+      verification('arpege', 1, { leadDays: 1, count: 2400 }),
+    ];
+    expect(priorFactor(odd, 24)).toBeCloseTo(1 - 0.5 * evidenceWeight(240));
+    const even = [odd[0], odd[1]].filter((v): v is ModelVerification => v !== undefined);
+    expect(priorFactor(even, 24)).toBeCloseTo(1 - 0.5 * evidenceWeight(132));
+    // Un modele verifie a J+1 et J+5 : a 120 h, c'est J+5 qui compte.
+    const leads = [
+      verification('arome', 1, { leadDays: 1, count: 24 }),
+      verification('arome', 1, { leadDays: 5, count: 720 }),
+    ];
+    expect(priorFactor(leads, 120)).toBeCloseTo(1 - 0.5 * evidenceWeight(720));
+    expect(priorFactor(leads, 24)).toBeCloseTo(1 - 0.5 * evidenceWeight(24));
   });
 });
 
@@ -232,14 +279,12 @@ describe('rankModels, notes courtes (shortSkill)', () => {
     const base = rankModels(lyon, 3)[0]?.model;
     expect(base).toBe('arome');
     const context = withShort(
-      shortScores('3 h', {
-        arome: 3,
-        arome_france: 3,
-        icon_d2: 3,
-        arpege: 0.2,
-        icon_eu: 3,
-        gfs: 3,
-      }),
+      // Deux semaines de mesures (336 heures) : assez pour que l'ecart pese.
+      shortScores(
+        '3 h',
+        { arome: 3, arome_france: 3, icon_d2: 3, arpege: 0.2, icon_eu: 3, gfs: 3 },
+        336,
+      ),
     );
     const ranked = rankModels(context, 3);
     const aromeShort = ranked
@@ -491,5 +536,67 @@ describe('explainSwitch', () => {
       leadHours: 3,
     });
     expect(reason.gain).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('rankModels, la mesure locale l emporte sur la maille', () => {
+  // Plateau comme Virieu (468 m) ; un mois de mesures de temperature a J+1.
+  const plateau: SelectionContext = { ...lyon, terrain: 'plateau' };
+  const month = (maes: Partial<Record<ModelId, number>>): readonly ModelVerification[] =>
+    (Object.entries(maes) as [ModelId, number][]).map(([model, mae]) =>
+      verification(model, mae, { leadDays: 1, count: 720 }),
+    );
+  // Erreurs lues sur un calendrier reel : ICON-D2 le plus juste, ARPEGE le moins.
+  const measured = month({
+    arome: 1.45,
+    arome_france: 1.4,
+    icon_d2: 1.2,
+    arpege: 2.2,
+    icon_eu: 1.45,
+    gfs: 1.6,
+  });
+
+  it('garde AROME sans mesure, a priori de maille seul', () => {
+    for (const lead of [0, 24, 48]) {
+      expect(rankModels(plateau, lead)[0]?.model).toBe('arome');
+    }
+  });
+
+  it('retient ICON-D2 des 12 h quand un mois de mesures le donne plus juste, AROME restant juste derriere', () => {
+    const context = { ...plateau, verification: measured };
+    for (const lead of [12, 24, 36, 48]) {
+      const ranking = rankModels(context, lead);
+      expect(ranking[0]?.model).toBe('icon_d2');
+      expect(ranking[1]?.model).toBe('arome');
+    }
+    // A l'instant meme, la maille d'AROME garde une courte avance, sous l'hysteresis
+    // de la cascade (0,5 point) : le modele deja retenu n'est pas change pour si peu.
+    const [first, second] = rankModels(context, 0);
+    expect(first?.model).toBe('arome');
+    expect(second?.model).toBe('icon_d2');
+    expect((first?.score ?? 0) - (second?.score ?? 0)).toBeLessThan(0.5);
+  });
+
+  it('ne retourne pas la selection sur un ecart negligeable', () => {
+    const tie = month({ arome: 1.2, arome_france: 1.2, icon_d2: 1.2, arpege: 1.2, icon_eu: 1.2 });
+    expect(rankModels({ ...plateau, verification: tie }, 0)[0]?.model).toBe('arome');
+  });
+
+  it('dit combien de l a priori de maille reste, pour la justification', () => {
+    const ranking = rankModels({ ...plateau, verification: measured }, 24);
+    const resolution = ranking[0]?.criteria.find((c) => c.kind === 'resolution');
+    expect(resolution?.detail.priorFactor).toBeCloseTo(1 - 0.5 * (30 / 37));
+    const without = rankModels(plateau, 24)[0]?.criteria.find((c) => c.kind === 'resolution');
+    expect(without?.detail.priorFactor).toBe(1);
+  });
+
+  it('donne le maximum a une erreur nulle, sans diviser par zero', () => {
+    const perfect = month({ arome: 0, icon_d2: 1.2, arpege: 2 });
+    const skill = rankModels({ ...plateau, verification: perfect }, 0)
+      .find((r) => r.model === 'arome')
+      ?.criteria.find((c) => c.kind === 'localSkill');
+    expect(skill?.points).toBeCloseTo(
+      SELECTION_WEIGHTS.localSkill * 0.5 * (720 / 24 / (720 / 24 + 7)),
+    );
   });
 });

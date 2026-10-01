@@ -56,7 +56,12 @@ export function criterionSentence(model: ModelId, criterion: Criterion): string 
         return null;
       }
       const terrain = criterion.detail.terrain ?? 'plain';
-      return `Maille de ${formatCompact(spec.resolutionKm)}\u00a0km\u00a0: ${TERRAIN_REASON[terrain]} (terrain ${TERRAIN_KIND_LABELS[terrain]}).`;
+      // Des mesures locales existent : l'a priori de maille pese moins, et la phrase le dit.
+      const faded =
+        criterion.detail.priorFactor !== undefined && criterion.detail.priorFactor < 0.9
+          ? ' Cet a priori pèse moins depuis que des mesures locales existent.'
+          : '';
+      return `Maille de ${formatCompact(spec.resolutionKm)}\u00a0km\u00a0: ${TERRAIN_REASON[terrain]} (terrain ${TERRAIN_KIND_LABELS[terrain]}).${faded}`;
     }
     case 'mediumRange': {
       if (criterion.points < 1) {
