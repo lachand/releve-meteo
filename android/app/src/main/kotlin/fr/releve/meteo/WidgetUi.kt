@@ -28,6 +28,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import java.util.Locale
 
+/* Le type d'une couleur claire et sombre ; `androidx.glance.color.ColorProvider` en est la fabrique. */
+typealias Ink = androidx.glance.unit.ColorProvider
+
 /* Les couleurs du carnet (DESIGN.md) : papier et encre, clair et sombre. */
 val PAPER = ColorProvider(day = Color(0xFFF2EDE2), night = Color(0xFF131920))
 val INK = ColorProvider(day = Color(0xFF1C2733), night = Color(0xFFE8E1D2))
@@ -68,7 +71,7 @@ fun WidgetFrame(link: String, content: @Composable () -> Unit) {
 fun Label(
     text: String,
     size: TextUnit,
-    color: ColorProvider = INK_FAINT,
+    color: Ink = INK_FAINT,
     bold: Boolean = false,
     italic: Boolean = false,
     maxLines: Int = 1,
