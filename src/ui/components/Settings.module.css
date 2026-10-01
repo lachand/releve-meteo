@@ -99,3 +99,25 @@
   color: var(--encre-faible);
   font-size: var(--pas-s);
 }
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--esp-3);
+  min-height: 44px;
+  max-width: 44rem;
+  margin-bottom: var(--esp-3);
+  font-size: var(--pas-s);
+  cursor: pointer;
+}
+
+.checkRow input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+
+.hint {
+  color: var(--encre-faible);
+}

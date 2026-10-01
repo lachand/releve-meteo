@@ -182,6 +182,19 @@ describe('useBackgroundWatch', () => {
     expect(result.current.busy).toBe(false);
   });
 
+  it('garde le resume du matin voulu, relu a la prochaine ouverture', async () => {
+    const { result, unmount } = renderHook(() => useBackgroundWatch(inputs()));
+    await waitFor(() => expect(result.current.status).toBe('on'));
+    expect(result.current.digest).toBe(false);
+    act(() => result.current.setDigest(true));
+    expect(result.current.digest).toBe(true);
+    await waitFor(async () => expect((await readWatchState()).digest).toBe(true));
+    unmount();
+
+    const again = renderHook(() => useBackgroundWatch(inputs()));
+    await waitFor(() => expect(again.result.current.digest).toBe(true));
+  });
+
   it('arrete la veille', async () => {
     mocked.disableWatch.mockResolvedValue('off');
     const { result } = renderHook(() => useBackgroundWatch(inputs()));

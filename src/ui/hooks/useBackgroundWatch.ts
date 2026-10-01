@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { readModelChoice } from '../../data/cache/modelChoice';
-import { markNotified, readWatchState, saveWatchEntries } from '../../data/cache/watchStore';
+import {
+  markNotified,
+  readWatchState,
+  saveWatchDigest,
+  saveWatchEntries,
+} from '../../data/cache/watchStore';
 import { loadDepartments, peekVerifications } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
 import { departmentAt } from '../../domain/departments';
@@ -49,6 +54,9 @@ export interface BackgroundWatch {
   /** Demande la permission de notifier sur une collecte deja active. */
   readonly allow: () => void;
   readonly disable: () => void;
+  /** Resume du matin voulu : une notification par favori, a la premiere veille de la matinee. */
+  readonly digest: boolean;
+  readonly setDigest: (wanted: boolean) => void;
 }
 
 export interface WatchMirrorInputs {
@@ -102,6 +110,7 @@ export async function buildWatchEntries(
 export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   const [status, setStatus] = useState<WatchStatus | null>(null);
   const [lastRunUtcMs, setLastRun] = useState<number | null>(null);
+  const [digest, setDigestState] = useState(false);
   const [busy, setBusy] = useState(false);
   // Premiere veille demandee a l'activation, lancee apres la recopie.
   const runAfterMirror = useRef(false);
@@ -110,6 +119,7 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
     void Promise.all([readWatchStatus(), readWatchState()]).then(([next, state]) => {
       setStatus(next);
       setLastRun(state.lastRunUtcMs);
+      setDigestState(state.digest);
     });
   }, []);
 
@@ -119,6 +129,8 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
       if (!cancelled) {
         setStatus(next);
         setLastRun(state.lastRunUtcMs);
+        setDigestState(state.digest);
+        setDigestState(state.digest);
       }
     });
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
@@ -218,8 +230,12 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   );
   const allow = useCallback(() => run(allowNotifications), [run]);
   const disable = useCallback(() => run(disableWatch), [run]);
+  const setDigest = useCallback((wanted: boolean) => {
+    setDigestState(wanted);
+    void saveWatchDigest(wanted, new Date());
+  }, []);
   return useMemo(
-    () => ({ status, lastRunUtcMs, busy, enable, collect, allow, disable }),
-    [status, lastRunUtcMs, busy, enable, collect, allow, disable],
+    () => ({ status, lastRunUtcMs, busy, enable, collect, allow, disable, digest, setDigest }),
+    [status, lastRunUtcMs, busy, enable, collect, allow, disable, digest, setDigest],
   );
 }

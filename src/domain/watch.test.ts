@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { AlertHit } from './alerts';
 import type { AlertRule, Place } from './types';
 import {
+  DIGEST_WINDOW,
   NOTIFIED_RETENTION_HOURS,
   alertKey,
+  digestDue,
+  digestKey,
   emptyWatchState,
   pruneNotified,
   spreadKey,
@@ -118,6 +121,35 @@ describe('pruneNotified', () => {
       windUnit: 'kmh',
       notified: {},
       lastRunUtcMs: null,
+      digest: false,
     });
+  });
+});
+
+describe('digestDue', () => {
+  // Heure de Paris : ete UTC+2 (septembre), hiver UTC+1 (janvier).
+  it('rend la date locale pendant la matinee, de 6 h a midi exclu', () => {
+    expect(digestDue(new Date('2026-09-28T04:00:00Z'))).toBe('2026-09-28'); // 6 h
+    expect(digestDue(new Date('2026-09-28T09:59:00Z'))).toBe('2026-09-28'); // 11 h 59
+    expect(DIGEST_WINDOW).toEqual({ fromHour: 6, toHour: 12 });
+  });
+
+  it('rend null la nuit et l apres-midi, selon l heure de Paris et non UTC', () => {
+    expect(digestDue(new Date('2026-09-28T03:59:00Z'))).toBeNull(); // 5 h 59
+    expect(digestDue(new Date('2026-09-28T10:00:00Z'))).toBeNull(); // midi
+    expect(digestDue(new Date('2026-09-28T22:30:00Z'))).toBeNull(); // 0 h 30 le 29
+    // En hiver, 5 h UTC est 6 h a Paris : deja dans la matinee.
+    expect(digestDue(new Date('2027-01-12T05:00:00Z'))).toBe('2027-01-12');
+  });
+
+  it('prend la date de Paris, meme quand elle differe de la date UTC', () => {
+    // 23 h 30 UTC le 27 est 1 h 30 le 28 a Paris : hors matinee, mais la date locale compte.
+    expect(digestDue(new Date('2026-09-27T23:30:00Z'))).toBeNull();
+  });
+});
+
+describe('digestKey', () => {
+  it('un resume par jour et par lieu', () => {
+    expect(digestKey('2026-09-28', 'lyon')).toBe('resume|2026-09-28|lyon');
   });
 });

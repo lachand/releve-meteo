@@ -26,6 +26,7 @@ const SNAPSHOTS: readonly FavouriteSnapshot[] = [
   {
     place: LYON,
     status: 'ready',
+    hours: [],
     model: 'arome',
     manual: false,
     digest: { tempMin: 12, tempMax: 22, rainMm: 4.2, gustMax: 48 },
@@ -38,6 +39,7 @@ const SNAPSHOTS: readonly FavouriteSnapshot[] = [
   {
     place: BREST,
     status: 'ready',
+    hours: [],
     model: 'ecmwf',
     manual: true,
     digest: { tempMin: 11, tempMax: 16, rainMm: 0, gustMax: 71 },

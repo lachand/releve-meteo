@@ -1,6 +1,7 @@
 import type { AlertHit } from './alerts';
 import type { ModelVerification } from './reliability';
 import type { SpreadHit } from './spreadAlerts';
+import { localIsoFromUtc } from './time';
 import type { AlertRule, ModelId, Place, Preferences, TerrainProfile } from './types';
 import type { VigilanceWarning } from './vigilance';
 
@@ -35,6 +36,8 @@ export interface WatchState {
   readonly notified: Readonly<Record<string, number>>;
   /** Derniere veille menee a bien, epoch ms. */
   readonly lastRunUtcMs: number | null;
+  /** Resume du matin : choix de l'utilisateur, desactive par defaut. */
+  readonly digest: boolean;
 }
 
 /** Seules les vigilances orange et rouge meritent une notification. */
@@ -46,7 +49,7 @@ export const NOTIFIED_RETENTION_HOURS = 96;
 const HOUR_MS = 60 * 60 * 1000;
 
 export function emptyWatchState(): WatchState {
-  return { entries: [], windUnit: 'kmh', notified: {}, lastRunUtcMs: null };
+  return { entries: [], windUnit: 'kmh', notified: {}, lastRunUtcMs: null, digest: false };
 }
 
 /**
@@ -72,6 +75,28 @@ export function watchedPlaces(input: {
 /** Une alerte est notifiee une fois par regle et par premiere heure franchie. */
 export function alertKey(hit: AlertHit): string {
   return `alerte|${hit.rule.id}|${hit.first.time}`;
+}
+
+/** Matinee du resume, heures locales de Paris : de `fromHour` inclus a `toHour` exclu. */
+export const DIGEST_WINDOW = { fromHour: 6, toHour: 12 } as const;
+
+/** Lieux resumes par veille, favoris d'abord : une notification chacun. */
+export const DIGEST_MAX_PLACES = 3;
+
+/**
+ * Date locale (AAAA-MM-JJ) si `now` tombe dans la matinee du resume, sinon
+ * null. Le navigateur choisit l'heure de la veille : le resume part a la
+ * premiere veille de la matinee, pas a une heure precise.
+ */
+export function digestDue(now: Date): string | null {
+  const local = localIsoFromUtc(now.getTime());
+  const hour = Number(local.slice(11, 13));
+  return hour >= DIGEST_WINDOW.fromHour && hour < DIGEST_WINDOW.toHour ? local.slice(0, 10) : null;
+}
+
+/** Un resume par jour et par lieu. */
+export function digestKey(date: string, placeId: string): string {
+  return `resume|${date}|${placeId}`;
 }
 
 /** Un desaccord entre modeles est notifie une fois par regle et par premiere heure depassee. */

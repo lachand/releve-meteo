@@ -1,4 +1,5 @@
 import { LeadScoresPanel } from '../components/LeadScoresPanel';
+import { RainCheckPanel } from '../components/RainCheckPanel';
 import { ReliabilityPanel } from '../components/ReliabilityPanel';
 import { StationCheckPanel } from '../components/StationCheck';
 import { StationTraceChart } from '../components/StationTraceChart';
@@ -27,6 +28,9 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
           />
         </Section>
       )}
+      <Section eyebrow="Pluie" title="Pluie réellement tombée, 24 heures">
+        <RainCheckPanel state={vm.station} check={vm.rainCheck} />
+      </Section>
       <Section eyebrow="Carnet d’hier" title="Hier, prévu contre réel">
         <YesterdayPanel
           state={vm.station}

@@ -80,6 +80,23 @@ export function WatchSettings({ watch }: { readonly watch: BackgroundWatch }) {
           Autoriser les notifications
         </button>
       )}
+      {watch.status === 'on' && (
+        <label className={styles.checkRow}>
+          <input
+            type="checkbox"
+            checked={watch.digest}
+            onChange={(event) => watch.setDigest(event.target.checked)}
+          />
+          <span>
+            Résumé du matin : une notification par favori (trois au plus), avec le bulletin du
+            moment et les 24 heures à venir.{' '}
+            <span className={styles.hint}>
+              Elle part à la première veille entre 6 h et midi : l’heure exacte dépend du
+              navigateur, qui peut aussi ne pas se réveiller ce jour-là.
+            </span>
+          </span>
+        </label>
+      )}
       {(watch.status === 'on' || watch.status === 'collecting') && (
         <button
           type="button"

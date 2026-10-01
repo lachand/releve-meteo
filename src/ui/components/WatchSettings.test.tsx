@@ -14,6 +14,8 @@ function watch(status: WatchStatus | null, overrides: Partial<BackgroundWatch> =
     collect: vi.fn(),
     allow: vi.fn(),
     disable: vi.fn(),
+    digest: false,
+    setDigest: vi.fn(),
     ...overrides,
   } satisfies BackgroundWatch;
 }
@@ -93,5 +95,32 @@ describe('WatchSettings', () => {
     expect(screen.queryByRole('button', { name: 'Collecter sans notification' })).toBeNull();
     rerender(<WatchSettings watch={watch('needs-install')} />);
     expect(screen.queryByRole('button', { name: 'Collecter sans notification' })).toBeNull();
+  });
+
+  it('propose le resume du matin quand la veille notifie, en disant que l heure n est pas garantie', async () => {
+    const on = watch('on');
+    const { rerender } = render(<WatchSettings watch={on} />);
+    const box = screen.getByRole('checkbox', { name: /Résumé du matin/ });
+    expect(box).not.toBeChecked();
+    expect(screen.getByText(/l’heure exacte dépend du navigateur/)).toBeInTheDocument();
+    await userEvent.click(box);
+    expect(on.setDigest).toHaveBeenCalledWith(true);
+
+    rerender(<WatchSettings watch={watch('on', { digest: true })} />);
+    expect(screen.getByRole('checkbox', { name: /Résumé du matin/ })).toBeChecked();
+  });
+
+  it('ne propose pas le resume sans notification possible', () => {
+    for (const status of [
+      'off',
+      'collecting',
+      'blocked',
+      'unsupported',
+      'needs-install',
+    ] as const) {
+      const { unmount } = render(<WatchSettings watch={watch(status)} />);
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });

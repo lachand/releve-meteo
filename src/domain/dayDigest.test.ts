@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildHourlyTimeline, hourlyPoint } from '../../tests/factories';
 import type { AlertPoint } from './alerts';
-import { DIGEST_HOURS, dayDigest } from './dayDigest';
+import { COMPARISON_HOURS, DIGEST_HOURS, comparisonHours, dayDigest } from './dayDigest';
 
 // Lundi 28 septembre 2026, 10 h 12 locales.
 const NOW = new Date('2026-09-28T08:12:00Z');
@@ -68,5 +68,37 @@ describe('dayDigest', () => {
 
   it('ne rend rien sans point a venir', () => {
     expect(dayDigest({ points: [], now: NOW })).toBeNull();
+  });
+});
+
+describe('comparisonHours', () => {
+  it('rend les 48 prochaines heures, de l heure courante a +48 h, avec le modele de chacune', () => {
+    const series = points((i) => ({ temperature: i, rain: i === 12 ? 0.6 : 0 }));
+    const hours = comparisonHours({ points: series, now: NOW });
+    // 10 h 12 : l'heure courante (10 h) est gardee, jusqu'a +48 h (10 h le 30).
+    expect(hours[0]).toEqual({
+      time: '2026-09-28T10:00',
+      temperature: 10,
+      precipitation: 0,
+      model: 'arome',
+    });
+    expect(hours.at(-1)?.time).toBe('2026-09-30T10:00');
+    expect(hours).toHaveLength(COMPARISON_HOURS + 1);
+    expect(hours.find((h) => h.time === '2026-09-28T12:00')?.precipitation).toBe(0.6);
+  });
+
+  it('garde une valeur absente a null, jamais a zero', () => {
+    const series = points((i) => ({
+      temperature: i === 11 ? null : 12,
+      rain: i === 12 ? null : 0,
+    }));
+    const hours = comparisonHours({ points: series, now: NOW });
+    expect(hours.find((h) => h.time === '2026-09-28T11:00')?.temperature).toBeNull();
+    expect(hours.find((h) => h.time === '2026-09-28T12:00')?.precipitation).toBeNull();
+  });
+
+  it('accepte une fenetre plus courte, et rend une liste vide sans heure a venir', () => {
+    expect(comparisonHours({ points: points(() => ({})), now: NOW, hours: 6 })).toHaveLength(7);
+    expect(comparisonHours({ points: [], now: NOW })).toEqual([]);
   });
 });

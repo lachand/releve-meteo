@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSharedPlace, sharedPlaceSearch } from './sharedPlace';
+import { parseSharedPlace, sharedModel, sharedPlaceSearch } from './sharedPlace';
 
 // Vannes, tete du Golfe du Morbihan, cf. BACKLOG.md "Ecarts constates" du
 // 2026-08-18 : les coordonnees `?lat=47.57&lon=-2.80` de TESTING.md 5.5
@@ -36,5 +36,33 @@ describe('sharedPlaceSearch', () => {
     }
     const search = sharedPlaceSearch(place);
     expect(parseSharedPlace(search)?.id).toBe(place.id);
+  });
+});
+
+describe('modele partage', () => {
+  const place = parseSharedPlace('?lat=47.6559&lon=-2.7603');
+
+  it('ajoute le modele choisi au lien, apres la vue', () => {
+    expect(place).not.toBeNull();
+    if (place === null) {
+      return;
+    }
+    const search = sharedPlaceSearch(place, 'heures', 'arpege');
+    expect(new URLSearchParams(search).get('modele')).toBe('arpege');
+    expect(new URLSearchParams(search).get('vue')).toBe('heures');
+    expect(sharedModel(search)).toBe('arpege');
+    // La selection automatique ne laisse aucun parametre.
+    expect(new URLSearchParams(sharedPlaceSearch(place, undefined, null)).has('modele')).toBe(
+      false,
+    );
+    expect(new URLSearchParams(sharedPlaceSearch(place)).has('modele')).toBe(false);
+  });
+
+  it('ne lit que les identifiants de modeles connus', () => {
+    expect(sharedModel('?modele=ecmwf')).toBe('ecmwf');
+    expect(sharedModel('?modele=gfs&lat=1')).toBe('gfs');
+    expect(sharedModel('?modele=meteo-fantaisie')).toBeNull();
+    expect(sharedModel('?modele=')).toBeNull();
+    expect(sharedModel('?lat=45')).toBeNull();
   });
 });

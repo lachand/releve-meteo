@@ -28,6 +28,7 @@ function ready(
   return {
     place: place(name, alias),
     status: 'ready',
+    hours: [],
     model,
     manual: false,
     digest,

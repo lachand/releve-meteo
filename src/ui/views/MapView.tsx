@@ -3,6 +3,7 @@ import type { ModelId } from '../../domain/types';
 import { FavouritesMap } from '../components/FavouritesMap';
 import { FavouritesTable } from '../components/FavouritesTable';
 import { ForecastMap } from '../components/ForecastMap';
+import { PlaceComparison } from '../components/PlaceComparison';
 import { RadarMap } from '../components/RadarMap';
 import { useDataset } from '../hooks/useDataset';
 import { useFavouriteSnapshots } from '../hooks/useFavouriteSnapshots';
@@ -57,6 +58,11 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
             windUnit={vm.windUnit}
             onOpen={vm.openPlace}
           />
+        </Section>
+      )}
+      {favourites.length > 1 && (
+        <Section eyebrow="Favoris" title="Comparer deux lieux, 48 heures">
+          <PlaceComparison snapshots={favourites} activePlaceId={vm.place.id} />
         </Section>
       )}
     </div>

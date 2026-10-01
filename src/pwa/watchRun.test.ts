@@ -7,6 +7,8 @@ import type { WatchEntry, WatchState } from '../domain/watch';
 import { collectWatchNotifications } from './watchRun';
 
 const NOW = new Date('2026-09-28T13:27:00Z');
+// 9 h 12 a Paris le meme jour : dans la matinee du resume.
+const MORNING = new Date('2026-09-28T07:12:00Z');
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const VIGILANCE_URL =
   'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/weatherref-france-vigilance-meteo-departement/records';
@@ -37,8 +39,12 @@ const LYON: WatchEntry = {
   preferred: null,
 };
 
-function state(entries: readonly WatchEntry[], notified: Record<string, number> = {}): WatchState {
-  return { entries, windUnit: 'kmh', notified, lastRunUtcMs: null };
+function state(
+  entries: readonly WatchEntry[],
+  notified: Record<string, number> = {},
+  digest = false,
+): WatchState {
+  return { entries, windUnit: 'kmh', notified, lastRunUtcMs: null, digest };
 }
 
 /** Bulletin du Rhone ou les orages du jour passent a `level`. */
@@ -113,6 +119,87 @@ describe('collectWatchNotifications', () => {
     expect(await collectWatchNotifications(state([spreadRule(0.5)], known), NOW)).toEqual([]);
     // Un seuil que les modeles n'atteignent pas : rien.
     expect(await collectWatchNotifications(state([spreadRule(60)]), NOW)).toEqual([]);
+  });
+
+  describe('resume du matin', () => {
+    const NO_RULES: WatchEntry = { ...LYON, department: null, rules: [] };
+    const BREST: WatchEntry = {
+      ...NO_RULES,
+      place: { ...LYON.place, id: 'brest', name: 'Brest', alias: 'Chez nous' },
+    };
+
+    it('envoie le bulletin du moment et les 24 heures, a la premiere veille de la matinee', async () => {
+      server.use(http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)));
+      const found = await collectWatchNotifications(state([NO_RULES], {}, true), MORNING);
+      expect(found).toHaveLength(1);
+      const digest = found[0];
+      expect(digest?.key).toBe('resume|2026-09-28|45.7578:4.8320');
+      expect(digest?.title).toBe('Lyon · Résumé du matin');
+      // Le modele est nomme, l'ecart des autres chiffre, puis les 24 heures.
+      expect(digest?.body).toMatch(/^[A-Z][\w -]+ prévoit \d+\u00a0?°C\./u);
+      expect(digest?.body).toContain('autres modèles s’en écartent');
+      expect(digest?.body).toMatch(/Sur 24\u00a0h\u00a0: de .* à .*°C/u);
+      expect(digest?.url).toBe('/?lat=45.7578&lon=4.832&nom=Lyon&alt=170&dep=Rh%C3%B4ne');
+    });
+
+    it('ne part qu une fois par jour et par lieu', async () => {
+      server.use(http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)));
+      const first = await collectWatchNotifications(state([NO_RULES], {}, true), MORNING);
+      const known = Object.fromEntries(first.map((n) => [n.key, MORNING.getTime()]));
+      expect(await collectWatchNotifications(state([NO_RULES], known, true), MORNING)).toEqual([]);
+      // Le lendemain matin, un nouveau resume.
+      const tomorrow = new Date(MORNING.getTime() + 24 * 3600 * 1000);
+      const next = await collectWatchNotifications(state([NO_RULES], known, true), tomorrow);
+      expect(next.map((n) => n.key)).toEqual(['resume|2026-09-29|45.7578:4.8320']);
+    });
+
+    it('reste muet sans l accord de l utilisateur, hors matinee, ou sans prevision', async () => {
+      let calls = 0;
+      server.use(
+        http.get(FORECAST_URL, () => {
+          calls += 1;
+          return HttpResponse.json(forecastLyon);
+        }),
+      );
+      expect(await collectWatchNotifications(state([NO_RULES], {}, false), MORNING)).toEqual([]);
+      expect(await collectWatchNotifications(state([NO_RULES], {}, true), NOW)).toEqual([]);
+      // Aucune requete inutile : ni regle ni resume du moment.
+      expect(calls).toBe(0);
+      server.use(http.get(FORECAST_URL, () => new HttpResponse(null, { status: 500 })));
+      expect(await collectWatchNotifications(state([NO_RULES], {}, true), MORNING)).toEqual([]);
+    });
+
+    it('se limite aux premiers lieux, un resume chacun, avec le nom choisi par l utilisateur', async () => {
+      server.use(http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)));
+      const places = ['a', 'b', 'c', 'd'].map((id) => ({
+        ...BREST,
+        place: { ...BREST.place, id, name: id, alias: null },
+      }));
+      const found = await collectWatchNotifications(state(places, {}, true), MORNING);
+      expect(found.map((n) => n.key)).toEqual([
+        'resume|2026-09-28|a',
+        'resume|2026-09-28|b',
+        'resume|2026-09-28|c',
+      ]);
+      const alias = await collectWatchNotifications(state([BREST], {}, true), MORNING);
+      expect(alias[0]?.title).toBe('Chez nous · Résumé du matin');
+    });
+
+    it('annonce la confiance quand le terrain est connu', async () => {
+      server.use(http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)));
+      const withTerrain: WatchEntry = {
+        ...NO_RULES,
+        terrain: { kind: 'plain', elevation: 170, distanceToCoastKm: 200 },
+      };
+      const found = await collectWatchNotifications(state([withTerrain], {}, true), MORNING);
+      expect(found[0]?.body).toMatch(/confiance (élevée|moyenne|faible)/);
+    });
+
+    it('n annonce pas de confiance sans terrain connu', async () => {
+      server.use(http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)));
+      const found = await collectWatchNotifications(state([NO_RULES], {}, true), MORNING);
+      expect(found[0]?.body).not.toContain('confiance');
+    });
   });
 
   it('ne renotifie pas ce qui est deja connu, ni une vigilance jaune', async () => {

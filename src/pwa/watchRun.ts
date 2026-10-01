@@ -2,13 +2,27 @@ import { fetchForecast } from '../data/clients/openMeteo';
 import { fetchVigilance } from '../data/clients/vigilance';
 import { mapOpenMeteoResponse } from '../data/mappers/openMeteoMapper';
 import { evaluateAlerts } from '../domain/alerts';
+import { briefingAt } from '../domain/briefing';
+import { confidenceAt } from '../domain/confidence';
+import { dayDigest } from '../domain/dayDigest';
 import { evaluateSpreadAlerts } from '../domain/spreadAlerts';
 import { MODEL_ORDER } from '../domain/models';
 import { summarizeVigilance } from '../domain/vigilance';
-import { WATCH_VIGILANCE_MIN_LEVEL, alertKey, spreadKey, vigilanceKey } from '../domain/watch';
+import type { ForecastBundle } from '../domain/types';
+import {
+  DIGEST_MAX_PLACES,
+  WATCH_VIGILANCE_MIN_LEVEL,
+  alertKey,
+  digestDue,
+  digestKey,
+  spreadKey,
+  vigilanceKey,
+} from '../domain/watch';
 import type { WatchEntry, WatchState } from '../domain/watch';
 import { hitSentence, ruleSentence, spreadHitSentence } from '../ui/alertPresentation';
 import { computeCascadeView } from '../ui/cascadeView';
+import type { CascadeView } from '../ui/cascadeView';
+import { digestBody } from '../ui/digestPresentation';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import {
   VIGILANCE_LEVEL_WORDS,
@@ -43,15 +57,13 @@ function placeLabel(entry: WatchEntry): string {
   return entry.place.alias ?? entry.place.name;
 }
 
-async function alertNotifications(
-  entry: WatchEntry,
-  windUnit: WatchState['windUnit'],
-  now: Date,
-): Promise<readonly WatchNotification[]> {
-  const rules = entry.rules.filter((rule) => rule.enabled);
-  if (rules.length === 0) {
-    return [];
-  }
+interface EntryForecast {
+  readonly bundle: ForecastBundle;
+  readonly cascade: CascadeView;
+}
+
+/** Prevision rechargee d'un lieu et sa cascade : celle de la page, avec les memes intrants. */
+async function loadEntryForecast(entry: WatchEntry, now: Date): Promise<EntryForecast | null> {
   const response = await fetchForecast({
     latitude: entry.place.latitude,
     longitude: entry.place.longitude,
@@ -60,7 +72,7 @@ async function alertNotifications(
     forecastDays: WATCH_FORECAST_DAYS,
   });
   if (!response.ok) {
-    return [];
+    return null;
   }
   const mapped = mapOpenMeteoResponse({
     place: entry.place,
@@ -70,13 +82,25 @@ async function alertNotifications(
     fetchedAt: now.getTime(),
   });
   if (!mapped.ok) {
-    return [];
+    return null;
   }
+  const bundle = mapped.value.bundle;
   const cascade = computeCascadeView(
-    mapped.value.bundle,
+    bundle,
     { terrain: entry.terrain, verification: entry.verification, preferred: entry.preferred },
     now,
   );
+  return { bundle, cascade };
+}
+
+function alertNotifications(
+  entry: WatchEntry,
+  windUnit: WatchState['windUnit'],
+  now: Date,
+  forecast: EntryForecast,
+): readonly WatchNotification[] {
+  const rules = entry.rules.filter((rule) => rule.enabled);
+  const { bundle, cascade } = forecast;
   const hits = evaluateAlerts({
     rules,
     placeId: entry.place.id,
@@ -84,7 +108,7 @@ async function alertNotifications(
     now,
   });
   // Desaccord entre modeles : evalue sur toutes les series, pas sur le modele retenu.
-  const spreadHits = evaluateSpreadAlerts({ rules, bundle: mapped.value.bundle, now });
+  const spreadHits = evaluateSpreadAlerts({ rules, bundle, now });
   const url = `/${sharedPlaceSearch(entry.place)}`;
   return [
     ...hits.map((hit) => ({
@@ -100,6 +124,45 @@ async function alertNotifications(
       url,
     })),
   ];
+}
+
+/**
+ * Resume du matin d'un lieu : le bulletin du moment (modele nomme, ecart des
+ * autres chiffre) et les 24 heures a venir. Null quand il n'y a rien a dire.
+ */
+function digestNotification(
+  entry: WatchEntry,
+  date: string,
+  windUnit: WatchState['windUnit'],
+  now: Date,
+  forecast: EntryForecast,
+): WatchNotification | null {
+  const { bundle, cascade } = forecast;
+  const nowPoint = cascade.nowIndex === -1 ? null : (cascade.points[cascade.nowIndex] ?? null);
+  const briefing =
+    nowPoint === null
+      ? null
+      : briefingAt({
+          bundle,
+          index: cascade.nowIndex,
+          active: { model: nowPoint.model, temperature: nowPoint.temperature.value },
+          // Sans terrain connu, pas de verdict de confiance : le bulletin ne l'annonce pas.
+          verdict:
+            entry.terrain === null ? null : confidenceAt(bundle, cascade.nowIndex, entry.terrain),
+        });
+  const body = digestBody(
+    briefing,
+    dayDigest({ points: cascade.points.filter((point) => point !== null), now }),
+    windUnit,
+  );
+  return body === null
+    ? null
+    : {
+        key: digestKey(date, entry.place.id),
+        title: `${placeLabel(entry)} · Résumé du matin`,
+        body,
+        url: `/${sharedPlaceSearch(entry.place)}`,
+      };
 }
 
 type VigilanceFetch = ReturnType<typeof fetchVigilance>;
@@ -146,11 +209,24 @@ export async function collectWatchNotifications(
   const seen = new Set(Object.keys(state.notified));
   const fresh: WatchNotification[] = [];
   const bulletins = new Map<string, VigilanceFetch>();
-  for (const entry of state.entries) {
+  // Resume du matin : voulu par l'utilisateur, a la premiere veille de la matinee.
+  const digestDate = state.digest ? digestDue(now) : null;
+  for (const [position, entry] of state.entries.entries()) {
+    const digestWanted =
+      digestDate !== null &&
+      position < DIGEST_MAX_PLACES &&
+      !seen.has(digestKey(digestDate, entry.place.id));
+    const needsForecast = entry.rules.some((rule) => rule.enabled) || digestWanted;
+    const forecast = needsForecast ? await loadEntryForecast(entry, now) : null;
     const found = [
       // Meme cle pour deux lieux d'un departement : notifiee une fois.
       ...(await vigilanceNotifications(entry, now, bulletins)),
-      ...(await alertNotifications(entry, state.windUnit, now)),
+      ...(forecast === null ? [] : alertNotifications(entry, state.windUnit, now, forecast)),
+      ...(forecast === null || !digestWanted
+        ? []
+        : [digestNotification(entry, digestDate, state.windUnit, now, forecast)].filter(
+            (notification): notification is WatchNotification => notification !== null,
+          )),
     ];
     for (const notification of found) {
       if (!seen.has(notification.key)) {

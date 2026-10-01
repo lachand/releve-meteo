@@ -1,0 +1,87 @@
+.comparison {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.pickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+}
+
+.picker {
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-xs);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}
+
+.picker select {
+  min-height: 44px;
+  padding: 0 var(--esp-2);
+  font: inherit;
+  font-family: var(--font-corps);
+  font-size: var(--pas-s);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--encre);
+  background: var(--papier-creux);
+  border: var(--filet-encre);
+  border-radius: var(--rayon);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-s);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.swatch {
+  flex: none;
+  width: 28px;
+  height: 0;
+  border-top: 3px solid var(--encre);
+}
+
+.legend li[data-series='second'] .swatch {
+  border-top: 3px dashed var(--marge);
+}
+
+.figure {
+  margin: 0;
+}
+
+.caption {
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+}
+
+.chart {
+  position: relative;
+  height: 200px;
+  max-width: 48rem;
+}
+
+.note,
+.muted {
+  margin: 0;
+  max-width: 44rem;
+  font-size: var(--pas-s);
+  color: var(--encre-faible);
+}

@@ -8,6 +8,7 @@ import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
 import type { EnsembleDay } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
+import type { RainCheck } from '../../domain/rainCheck';
 import type { StationCheck } from '../../domain/stationCheck';
 import type { StationTrace } from '../../domain/stationTrace';
 import type { LeadScores } from '../../domain/leadScores';
@@ -56,6 +57,8 @@ export interface ForecastViewModel {
   readonly stationCheck: StationCheck | null;
   /** Mesure et modeles heure par heure sur les dernieres heures. */
   readonly stationTrace: StationTrace | null;
+  /** Pluie mesuree a la station sur 24 h face au calcul du modele retenu ; null sans assez d'heures. */
+  readonly rainCheck: RainCheck | null;
   /** Hier, prevu la veille contre mesure a la station ; null sans assez de donnees. */
   readonly yesterday: YesterdayReview | null;
   /** Notes des echeances de 1 a 12 h sur les instantanes enregistres ; null hors station. */

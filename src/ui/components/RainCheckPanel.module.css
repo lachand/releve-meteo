@@ -1,0 +1,46 @@
+.panel {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.figures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--esp-2);
+}
+
+/* Provenance (DESIGN.md 5) : pastille pleine = mesurée, creuse = calculée. */
+.pastille {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: var(--esp-2);
+  border-radius: 50%;
+  border: 1.5px solid var(--observe);
+  background: var(--observe);
+  vertical-align: 0.05em;
+}
+
+li[data-provenance='forecast'] .pastille {
+  background: transparent;
+  border-color: var(--estime);
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-size: var(--pas-m);
+}
+
+.caption,
+.muted {
+  margin: 0;
+  color: var(--encre-faible);
+}
+
+.caption {
+  font-family: var(--font-titre);
+  font-style: italic;
+}

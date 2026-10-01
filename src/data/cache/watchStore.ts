@@ -27,7 +27,11 @@ function isWatchState(value: unknown): value is WatchState {
 
 export async function readWatchState(): Promise<WatchState> {
   const cached = await getDataset<unknown>('watch', WATCH_ID);
-  return cached !== null && isWatchState(cached.value) ? cached.value : emptyWatchState();
+  if (cached === null || !isWatchState(cached.value)) {
+    return emptyWatchState();
+  }
+  // Un etat enregistre avant le resume du matin n'a pas de `digest` : desactive.
+  return { ...cached.value, digest: cached.value.digest === true };
 }
 
 async function write(state: WatchState, now: Date): Promise<void> {
@@ -42,6 +46,14 @@ export async function saveWatchEntries(
 ): Promise<void> {
   const current = await readWatchState();
   await write({ ...current, entries, windUnit }, now);
+}
+
+/** Page : le resume du matin est-il voulu ? Ne touche a rien d'autre. */
+export async function saveWatchDigest(digest: boolean, now: Date): Promise<void> {
+  const current = await readWatchState();
+  if (current.digest !== digest) {
+    await write({ ...current, digest }, now);
+  }
 }
 
 /**
