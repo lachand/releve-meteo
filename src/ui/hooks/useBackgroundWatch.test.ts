@@ -221,6 +221,30 @@ describe('useBackgroundWatch', () => {
     await waitFor(() => expect(again.result.current.notify.mode).toBe('instant'));
   });
 
+  it('relit l etat quand le service worker devient actif apres une premiere lecture decue', async () => {
+    let activate: () => void = () => undefined;
+    const ready = new Promise<void>((resolve) => {
+      activate = resolve;
+    });
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: { ready, addEventListener: vi.fn(), removeEventListener: vi.fn() },
+    });
+    // Machine chargee : le worker n'est pas encore actif, la veille semble indisponible.
+    mocked.readWatchStatus.mockResolvedValue('unsupported');
+    const hook = renderHook(() => useBackgroundWatch(inputs()));
+    const { result } = hook;
+    try {
+      await waitFor(() => expect(result.current.status).toBe('unsupported'));
+      mocked.readWatchStatus.mockResolvedValue('needs-install');
+      act(() => activate());
+      await waitFor(() => expect(result.current.status).toBe('needs-install'));
+    } finally {
+      hook.unmount();
+      Reflect.deleteProperty(navigator, 'serviceWorker');
+    }
+  });
+
   it('arrete la veille', async () => {
     mocked.disableWatch.mockResolvedValue('off');
     const { result } = renderHook(() => useBackgroundWatch(inputs()));

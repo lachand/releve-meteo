@@ -157,6 +157,17 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
       }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
+    // Premiere visite sur une machine chargee : le service worker peut mettre
+    // plus longtemps a s'activer que l'attente de la lecture ci-dessus, qui a
+    // alors conclu « non pris en charge ». Des qu'il est actif, on relit.
+    void Promise.resolve(navigator.serviceWorker.ready).then(
+      () => {
+        if (!cancelled) {
+          refresh();
+        }
+      },
+      () => undefined,
+    );
     return () => {
       cancelled = true;
       navigator.serviceWorker.removeEventListener('message', onMessage);
