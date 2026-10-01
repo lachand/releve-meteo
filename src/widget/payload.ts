@@ -1,10 +1,14 @@
 import { briefingAt } from '../domain/briefing';
 import { confidenceAt } from '../domain/confidence';
+import { blendDaily } from '../domain/dailyBlend';
 import { dayDigest } from '../domain/dayDigest';
 import type { ConfidenceLevel, LocalIsoHour, ModelId, WeatherVariable } from '../domain/types';
 import type { WatchEntry } from '../domain/watch';
 import type { EntryForecast } from '../pwa/watchRun';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
+import { weatherCodeLabel } from '../ui/weatherCodePresentation';
+import { weatherIcon } from './icon';
+import type { WidgetIconName } from './icon';
 
 /*
  * Ce que le widget Android affiche, en donnees et non en phrases : le modele
@@ -17,8 +21,10 @@ import { sharedPlaceSearch } from '../ui/sharedPlace';
 export const WIDGET_PAYLOAD_VERSION = 1;
 /** Heures a venir montrees par le grand widget. */
 export const WIDGET_HOURS = 12;
-/** Lieux montres, favoris d'abord : autant que la veille en traite. */
-export const WIDGET_MAX_PLACES = 3;
+/** Lieux calcules, favoris d'abord : chaque widget en choisit un. */
+export const WIDGET_MAX_PLACES = 6;
+/** Jours montres par le grand widget, aujourd'hui compris. */
+export const WIDGET_DAYS = 4;
 
 export interface WidgetNow {
   readonly time: LocalIsoHour;
@@ -31,6 +37,22 @@ export interface WidgetNow {
   /** 'unavailable' : terrain inconnu ou un seul modele, aucun verdict. */
   readonly confidence: ConfidenceLevel | 'unavailable';
   readonly drivers: readonly WeatherVariable[];
+  /** Pictogramme du temps du moment, null sans code de temps connu. */
+  readonly icon: WidgetIconName | null;
+  /** « Partiellement nuageux » : le nom du temps, accompagne toujours l'icone. */
+  readonly label: string | null;
+}
+
+/** Un jour a venir : un modele retenu par jour, comme la vue « jours » de la page. */
+export interface WidgetForecastDay {
+  /** AAAA-MM-JJ, heure de Paris. */
+  readonly date: string;
+  readonly model: ModelId;
+  readonly tempMin: number | null;
+  readonly tempMax: number | null;
+  readonly rainMm: number | null;
+  readonly icon: WidgetIconName | null;
+  readonly label: string | null;
 }
 
 export interface WidgetHour {
@@ -56,6 +78,8 @@ export interface WidgetPlace {
   readonly now: WidgetNow | null;
   readonly hours: readonly WidgetHour[];
   readonly day: WidgetDay | null;
+  /** Aujourd'hui et les jours suivants, vide sans prevision quotidienne. */
+  readonly days: readonly WidgetForecastDay[];
 }
 
 export interface WidgetPayload {
@@ -121,9 +145,22 @@ export function widgetPlace(input: {
             maxGap: briefing.maxGap,
             confidence: briefing.confidence,
             drivers: briefing.drivers,
+            icon: weatherIcon(nowPoint.weatherCode, nowPoint.isDay),
+            label: weatherCodeLabel(nowPoint.weatherCode),
           },
     hours,
     day: dayDigest({ points, now }),
+    days: blendDaily({ bundle, context: cascade.context, now, preferred: entry.preferred })
+      .slice(0, WIDGET_DAYS)
+      .map((day): WidgetForecastDay => ({
+        date: day.date,
+        model: day.model,
+        tempMin: day.tempMin.value,
+        tempMax: day.tempMax.value,
+        rainMm: day.precipitationSum.value,
+        icon: weatherIcon(day.weatherCode, true),
+        label: weatherCodeLabel(day.weatherCode),
+      })),
   };
 }
 

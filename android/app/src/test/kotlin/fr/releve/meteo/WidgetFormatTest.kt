@@ -27,6 +27,50 @@ class WidgetFormatTest {
     }
 
     @Test
+    fun aRemovedPlaceFallsBackToTheFirst() {
+        val a = ShownPlace(WidgetPlace("a", "A"), 1)
+        val b = ShownPlace(WidgetPlace("b", "B"), 1)
+        assertEquals("b", pickPlace(listOf(a, b), "b")?.place?.id)
+        assertEquals("a", pickPlace(listOf(a, b), "gone")?.place?.id)
+        assertEquals("a", pickPlace(listOf(a, b), null)?.place?.id)
+        assertNull(pickPlace(emptyList(), "a"))
+    }
+
+    @Test
+    fun anUnknownThemeIsAutomatic() {
+        assertEquals(WidgetTheme.DARK, WidgetTheme.of("dark"))
+        assertEquals(WidgetTheme.AUTO, WidgetTheme.of("rose"))
+        assertEquals(WidgetTheme.AUTO, WidgetTheme.of(null))
+    }
+
+    @Test
+    fun aMissingDegreeStaysADash() {
+        assertEquals("17°", WidgetFormat.degrees(16.6))
+        assertEquals("–", WidgetFormat.degrees(null))
+        assertEquals("0°", WidgetFormat.degrees(0.2))
+    }
+
+    @Test
+    fun dayNamesAreFrenchAndTodayIsSaid() {
+        // 2026-09-28 12:00 a Paris (lundi).
+        val now = java.time.ZonedDateTime.of(2026, 9, 28, 12, 0, 0, 0, java.time.ZoneId.of("Europe/Paris")).toInstant().toEpochMilli()
+        assertEquals("auj.", WidgetFormat.dayName("2026-09-28", now))
+        assertEquals("mar.", WidgetFormat.dayName("2026-09-29", now))
+        assertEquals("jeu.", WidgetFormat.dayName("2026-10-01", now))
+    }
+
+    @Test
+    fun theDaysCaptionNamesEachModelOnce() {
+        val days =
+            listOf(
+                WidgetForecastDay("2026-09-28", "arome"),
+                WidgetForecastDay("2026-09-29", "arome"),
+                WidgetForecastDay("2026-09-30", "icon_d2"),
+            )
+        assertEquals("prévu · AROME, ICON-D2", WidgetFormat.daysCaption(days))
+    }
+
+    @Test
     fun theLeadNamesTheModelBeforeTheFigure() {
         assertEquals("AROME prévoit", WidgetFormat.lead(now()))
         assertEquals("ICON-D2 prévoit", WidgetFormat.lead(now(model = "icon_d2")))

@@ -6,7 +6,13 @@ import type { WatchEntry } from '../domain/watch';
 import { loadEntryForecast } from '../pwa/watchRun';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import type { EntryForecast } from '../pwa/watchRun';
-import { WIDGET_HOURS, WIDGET_PAYLOAD_VERSION, widgetPayload, widgetPlace } from './payload';
+import {
+  WIDGET_DAYS,
+  WIDGET_HOURS,
+  WIDGET_PAYLOAD_VERSION,
+  widgetPayload,
+  widgetPlace,
+} from './payload';
 
 // 15 h 27 locale le 28 septembre 2026 : l'instant des fixtures enregistrees.
 const NOW = new Date('2026-09-28T13:27:00Z');
@@ -57,6 +63,47 @@ describe('widgetPlace', () => {
     expect(place.hours[0]?.time).toBe('2026-09-28T17:00');
     expect(place.hours.at(-1)?.time).toBe('2026-09-29T04:00');
     expect(place.day?.tempMax).not.toBeNull();
+  });
+
+  it('dit le temps du moment par une icone et son libelle', async () => {
+    const place = widgetPlace({ entry: LYON, forecast: await forecastOf(LYON), now: NOW });
+    expect(place.now?.icon).not.toBeUndefined();
+    if (place.now?.icon !== null) {
+      expect(place.now?.label).not.toBeNull();
+    }
+  });
+
+  it('donne les jours a venir, un modele par jour, sans inventer une valeur absente', async () => {
+    const place = widgetPlace({ entry: LYON, forecast: await forecastOf(LYON), now: NOW });
+    expect(place.days.length).toBeGreaterThanOrEqual(2);
+    expect(place.days.length).toBeLessThanOrEqual(WIDGET_DAYS);
+    expect(place.days[0]?.date).toBe('2026-09-28');
+    const dates = place.days.map((day) => day.date);
+    expect([...dates].sort()).toEqual(dates);
+    for (const day of place.days) {
+      expect(typeof day.model).toBe('string');
+      expect(day.tempMax).not.toBeUndefined();
+      if (day.tempMax !== null && day.tempMin !== null) {
+        expect(day.tempMax).toBeGreaterThanOrEqual(day.tempMin);
+      }
+    }
+  });
+
+  it('ne donne aucun jour sans prevision quotidienne', async () => {
+    const forecast = await forecastOf(LYON);
+    const bare = {
+      ...forecast,
+      bundle: {
+        ...forecast.bundle,
+        series: Object.fromEntries(
+          Object.entries(forecast.bundle.series).map(([model, series]) => [
+            model,
+            { ...series, daily: [] },
+          ]),
+        ),
+      },
+    } as EntryForecast;
+    expect(widgetPlace({ entry: LYON, forecast: bare, now: NOW }).days).toEqual([]);
   });
 
   it('porte le lien qui ouvre ce lieu dans l application', async () => {

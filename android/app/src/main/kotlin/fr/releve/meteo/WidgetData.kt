@@ -20,6 +20,10 @@ data class WidgetNow(
     /** "high", "medium", "low" ou "unavailable". */
     val confidence: String,
     val drivers: List<String> = emptyList(),
+    /** Pictogramme du temps du moment (choisi par la page), ou null. */
+    val icon: String? = null,
+    /** « Partiellement nuageux » : le nom du temps, a dire avec l'icone. */
+    val label: String? = null,
 )
 
 @Serializable
@@ -38,6 +42,18 @@ data class WidgetDay(
     val gustMax: Double? = null,
 )
 
+/** Un jour a venir : le modele retenu ce jour-la, les extremes, la pluie et le temps. */
+@Serializable
+data class WidgetForecastDay(
+    val date: String,
+    val model: String,
+    val tempMin: Double? = null,
+    val tempMax: Double? = null,
+    val rainMm: Double? = null,
+    val icon: String? = null,
+    val label: String? = null,
+)
+
 @Serializable
 data class WidgetPlace(
     val id: String,
@@ -47,6 +63,7 @@ data class WidgetPlace(
     val now: WidgetNow? = null,
     val hours: List<WidgetHour> = emptyList(),
     val day: WidgetDay? = null,
+    val days: List<WidgetForecastDay> = emptyList(),
 )
 
 @Serializable

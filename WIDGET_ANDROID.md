@@ -52,7 +52,9 @@ WidgetStore garde le JSON (SharedPreferences), les widgets Glance se redessinent
 | Tests                                    | `WidgetFormatTest` (JVM), `WidgetWorkerTest` et `SharedStorageTest` (émulateur), `tests/e2e/widget.spec.ts` et tests unitaires de `src/widget/`                                                                            |
 | CI                                       | `.github/workflows/android.yml` : build du web, tests JVM, APK de debug (artefact `releve-debug-apk`), essai sur émulateur API 34                                                                                          |
 
-Un clic sur un widget ouvre l'application sur le lieu du widget (`link` du contenu, repris par `MainActivity`, y compris application déjà ouverte). Dans l'application, le réglage de veille dit que ce sont les widgets qui rechargent la prévision et propose de les mettre à jour tout de suite.
+Chaque widget se règle séparément : à la pose, puis par appui long et « Réglages », un écran propose le **lieu** (parmi les six premiers lieux veillés, vos favoris d'abord) et l'**apparence** (automatique selon le téléphone, clair ou sombre). Le choix est gardé par identifiant de widget ; un lieu retiré des favoris laisse place au premier. Le temps du moment s'affiche par une **icône** (soleil, lune, nuages, brouillard, bruine, pluie, neige, orage) choisie par la page (`src/widget/icon.ts`, d'après le code WMO du modèle retenu) et dessinée en vectoriel ; sans code connu, aucune icône. Le grand widget montre les **jours à venir** (aujourd'hui et trois jours : icône, maximum, minimum), avec le modèle retenu pour chaque jour comme dans la vue « jours » de la page.
+
+Les deux widgets s'adaptent à la taille donnée : étirés en hauteur, ils ajoutent la phrase de l'écart des autres modèles, les heures à venir (petit) et la phrase « Sur 24 h » (petit). Un clic sur un widget ouvre l'application sur le lieu du widget (`link` du contenu, repris par `MainActivity`, y compris application déjà ouverte). Dans l'application, le réglage de veille dit que ce sont les widgets qui rechargent la prévision et propose de les mettre à jour tout de suite.
 
 Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l'ordre). Sans favori, un lieu peut être passé dans l'adresse de la page (essai, premier lancement).
 
@@ -66,7 +68,7 @@ Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l
 
 - **Pas encore essayé sur un appareil réel** : l'émulateur ne dit rien de la batterie, de Doze ni de la fréquence réelle de WorkManager (15 minutes au mieux, une heure demandée). À la charge de l'utilisateur, la première fois.
 - **APK de debug seulement** : pas de signature de publication. À faire avec le Play Store (compte, clé de signature conservée, fiche).
-- **Choix des lieux** : les favoris, dans l'ordre, sans réglage par widget. Un choix du lieu par widget (écran de configuration) reste à faire.
+- **Réglage** : lieu et apparence par widget (fait). Reste : plusieurs lieux sur un même widget.
 - **Géolocalisation** : demande minimale dans `MainActivity`.
 - **Service worker dans la WebView** : non traité spécifiquement ; la veille par notification reste celle du navigateur.
 - **iOS** : hors périmètre (WidgetKit demanderait un autre habillage, un compte payant et un Mac).
