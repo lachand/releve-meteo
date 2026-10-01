@@ -29,6 +29,7 @@ const ALLOWED_EXTERNAL_HOSTNAMES: ReadonlySet<string> = new Set([
   'tile.openstreetmap.org',
   'tilecache.rainviewer.com',
   'api.rainviewer.com',
+  'view.eumetsat.int',
 ]);
 
 function isAllowedRequestUrl(rawUrl: string): boolean {

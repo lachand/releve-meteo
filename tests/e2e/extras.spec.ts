@@ -81,6 +81,26 @@ test('cartes : la carte du desaccord dit son cout et ne charge rien avant la dem
   await expect(page.getByRole('button', { name: 'Afficher la carte du désaccord' })).toBeVisible();
 });
 
+test('cartes : la foudre observee dit sa source, son age et ses limites, et la couche Orage est prevue', async ({
+  page,
+}) => {
+  await stubApis(page);
+  await page.goto(`${LYON_URL}&vue=carte`);
+  await expect(
+    page.getByRole('heading', { name: 'Éclairs observés par satellite, deux dernières heures' }),
+  ).toBeVisible({ timeout: 20000 });
+  const slider = page.getByRole('slider', { name: 'Image des éclairs' });
+  await expect(slider).toBeVisible({ timeout: 20000 });
+  await expect(slider).toHaveValue('23');
+  // Instant fige a 15 h 27 : la derniere image du satellite est de 15 h 25.
+  await expect(page.getByText(/dernière image de 15:25, il y a 2 min/)).toBeVisible();
+  await expect(page.getByText(/pas des impacts localisés au sol/)).toBeVisible();
+  // Prevision : la couche Orage de la carte du modele, marquee prevue.
+  await page.getByRole('button', { name: 'Orage', exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Légende du potentiel d’orage' })).toBeVisible();
+  await expect(page.getByText(/C’est une prévision, pas une mesure/)).toBeVisible();
+});
+
 test('fiabilite : l historique montre un calendrier des 30 derniers jours', async ({ page }) => {
   await stubApis(page);
   await page.goto(`${LYON_URL}&vue=fiabilite`);

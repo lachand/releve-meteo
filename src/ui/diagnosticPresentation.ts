@@ -14,6 +14,7 @@ export const DIAGNOSTIC_LABELS: Readonly<Record<DiagnosticSource, string>> = {
   grid: 'Cartes de prévision (Open-Meteo)',
   normals: 'Normales 1991-2020 (réanalyse ERA5)',
   marine: 'Mer et houle (Open-Meteo Marine)',
+  lightning: 'Foudre observée (EUMETSAT, satellite MTG)',
 };
 
 type Failure = NonNullable<SourceDiagnostic['lastFailure']>;

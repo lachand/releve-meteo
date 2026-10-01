@@ -41,4 +41,16 @@ export async function stubTileRequests(page: Page): Promise<void> {
       }),
     }),
   );
+  // Foudre observee (EUMETView) : capacites avec une derniere image a l'instant
+  // fige des fixtures, puis des images transparentes.
+  await page.route('https://view.eumetsat.int/**', (route) =>
+    route.request().url().includes('request=GetCapabilities')
+      ? route.fulfill({
+          status: 200,
+          contentType: 'text/xml',
+          headers: corsHeaders,
+          body: '<WMS_Capabilities><Dimension name="time" default="2026-09-28T13:25:00Z" units="ISO8601">2025-05-30T15:00:00.000Z/2026-09-28T13:25:00.000Z/PT5M</Dimension></WMS_Capabilities>',
+        })
+      : route.fulfill({ status: 200, contentType: 'image/png', headers: corsHeaders, body: png }),
+  );
 }

@@ -1,0 +1,15 @@
+/* Legende de la source : d'un a vingt eclairs et plus par maille de 2 km et 5 minutes. */
+.legend {
+  display: grid;
+  grid-template-columns: auto minmax(4rem, 14rem) auto;
+  align-items: center;
+  gap: var(--esp-2);
+  margin: 0;
+  font-size: var(--pas-xs);
+}
+
+.gradient {
+  height: 10px;
+  border: var(--filet-encre);
+  border-radius: 2px;
+}

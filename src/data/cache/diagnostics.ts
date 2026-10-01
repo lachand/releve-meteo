@@ -18,6 +18,7 @@ export const DIAGNOSTIC_SOURCES = [
   'grid',
   'normals',
   'marine',
+  'lightning',
 ] as const;
 
 export type DiagnosticSource = (typeof DIAGNOSTIC_SOURCES)[number];

@@ -20,6 +20,8 @@ import { fetchAirQuality } from './clients/airQuality';
 import type { AirQualitySeries } from './clients/airQuality';
 import { fetchEnsemble } from './clients/ensemble';
 import { fetchForecastGrid } from './clients/forecastGrid';
+import { fetchLightningFrames } from './clients/lightning';
+import type { LightningFrames } from './clients/lightning';
 import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
@@ -447,6 +449,22 @@ export async function getSpreadGrid(place: Place): Promise<HttpResult<DatasetRes
       stale: loaded.some((result) => result.stale),
     },
   };
+}
+
+/**
+ * Foudre observee autour du lieu (imageur d'eclairs du satellite MTG). Une
+ * lecture sans cache : les images n'ont de sens que fraiches. Une lecture
+ * interrompue par l'utilisateur n'est pas une panne et n'entre pas au journal.
+ */
+export async function getLightning(
+  center: { readonly latitude: number; readonly longitude: number },
+  signal?: AbortSignal,
+): Promise<HttpResult<LightningFrames>> {
+  const result = await fetchLightningFrames(center, signal);
+  if (result.ok || result.failure.kind !== 'aborted') {
+    recordDiagnostic('lightning', result, Date.now());
+  }
+  return result;
 }
 
 let departmentsPromise: Promise<readonly Department[]> | null = null;

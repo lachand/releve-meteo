@@ -4,6 +4,7 @@ import type { ModelId } from '../../domain/types';
 import { DisagreementMap } from '../components/DisagreementMap';
 import { FavouritesMap } from '../components/FavouritesMap';
 import { FavouritesTable } from '../components/FavouritesTable';
+import { LightningMap } from '../components/LightningMap';
 import { ForecastMap } from '../components/ForecastMap';
 import { PlaceComparison } from '../components/PlaceComparison';
 import { RadarMap } from '../components/RadarMap';
@@ -39,6 +40,15 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
           Contrairement au reste du relevé, cette carte est une observation.
         </p>
         <RadarMap key={vm.place.id} place={vm.place} />
+      </Section>
+      <Section eyebrow="Foudre" title="Éclairs observés par satellite, deux dernières heures">
+        <p className={styles.lede}>
+          Ce que le satellite européen MTG a vu : les éclairs, dans les nuages comme vers le sol,
+          image par image toutes les cinq minutes. Une observation, comme le radar, mais pas un
+          réseau de détection des impacts au sol. Pour savoir où l’orage est <em>prévu</em>, voir la
+          couche « Orage » de la carte de prévision plus bas.
+        </p>
+        <LightningMap key={vm.place.id} place={vm.place} now={vm.now} />
       </Section>
       {model !== null && (
         <Section

@@ -12,6 +12,7 @@ import {
   getEnsemble,
   getForecast,
   getForecastGrid,
+  getLightning,
   getSpreadGrid,
   getNowcast,
   getStationReport,
@@ -855,5 +856,41 @@ describe('getVigilance', () => {
     expect(await loadDepartments()).toEqual([]);
     expect(await loadDepartments()).toEqual([]);
     expect(calls).toBe(1);
+  });
+});
+
+describe('getLightning', () => {
+  const CAPABILITIES_URL = 'https://view.eumetsat.int/geoserver/mtg_fd/li_afa/ows';
+  const LYON = { latitude: 45.75, longitude: 4.85 };
+
+  beforeEach(() => {
+    localStorage.removeItem('meteo-fr:diagnostics');
+    resetDiagnosticsForTests();
+  });
+
+  it('rend les images et note la lecture reussie au journal', async () => {
+    server.use(
+      http.get(CAPABILITIES_URL, () =>
+        HttpResponse.text('<Dimension name="time" default="2026-10-01T11:30:00Z">x</Dimension>'),
+      ),
+    );
+    const result = await getLightning(LYON);
+    expect(result.ok).toBe(true);
+    expect(readDiagnostics().lightning.lastSuccess).not.toBeNull();
+  });
+
+  it("note l'echec de la lecture au journal", async () => {
+    server.use(http.get(CAPABILITIES_URL, () => HttpResponse.error()));
+    const failed = await getLightning(LYON);
+    expect(failed.ok).toBe(false);
+    expect(readDiagnostics().lightning.lastFailure?.kind).toBe('network');
+  });
+
+  it("ne note pas une lecture interrompue par l'utilisateur", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const aborted = await getLightning(LYON, controller.signal);
+    expect(aborted).toMatchObject({ ok: false, failure: { kind: 'aborted' } });
+    expect(readDiagnostics().lightning.lastFailure).toBeNull();
   });
 });
