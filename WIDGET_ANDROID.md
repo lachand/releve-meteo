@@ -76,7 +76,7 @@ Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l
 
 ## Construire et installer
 
-Depuis l'onglet Actions de GitHub : workflow « Android », artefact `releve-debug-apk`, à installer sur le téléphone (sources inconnues autorisées). En local (JDK 17 et SDK Android) :
+Sur le téléphone, depuis l'application GitHub : onglet « Releases » du dépôt, pré-publication « APK de test (debug) » (`apk-latest`), appui sur `releve-debug.apk`, puis installation (sources inconnues autorisées pour le navigateur ou le gestionnaire de fichiers). Cette pré-publication est remplacée à chaque envoi qui construit l'APK. Sur ordinateur, l'artefact `releve-debug-apk` du workflow « Android » contient le même fichier, dans un zip. En local (JDK 17 et SDK Android) :
 
 ```
 npm run build
