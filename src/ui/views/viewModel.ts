@@ -3,6 +3,7 @@ import type { VerificationReport } from '../../data/clients/verification';
 import type { Nowcast } from '../../data/mappers/nowcastMapper';
 import type { StationReport, VigilanceReport } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
+import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
 import type { EnsembleDay } from '../../domain/ensemble';
@@ -82,6 +83,7 @@ export interface ForecastViewModel {
   /** Alertes personnelles de ce lieu, et celles que la prevision franchit. */
   readonly alertRules: readonly AlertRule[];
   readonly alertHits: readonly AlertHit[];
+  readonly spreadHits: readonly SpreadHit[];
   readonly addAlert: (rule: Omit<AlertRule, 'id'>) => void;
   readonly toggleAlert: (id: string) => void;
   readonly removeAlert: (id: string) => void;

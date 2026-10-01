@@ -83,6 +83,38 @@ describe('collectWatchNotifications', () => {
     expect(forecastParams[0]?.get('models')?.split(',').length).toBeGreaterThan(3);
   });
 
+  it('notifie un desaccord entre modeles une seule fois, et se tait sous le seuil', async () => {
+    server.use(http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)));
+    const placeId = '45.7578:4.8320';
+    const spreadRule = (threshold: number): WatchEntry => ({
+      ...LYON,
+      department: null,
+      rules: [
+        {
+          id: 'ecart',
+          placeId,
+          variable: 'temperature',
+          comparator: 'gt',
+          threshold,
+          enabled: true,
+          kind: 'spread',
+        },
+      ],
+    });
+    const found = await collectWatchNotifications(state([spreadRule(0.5)]), NOW);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      key: expect.stringMatching(/^ecart\|ecart\|2026-09-2\dT\d\d:00$/) as unknown as string,
+      title: 'Lyon · Modèles en désaccord de plus de 0,5\u00a0°C sur la température',
+      body: expect.stringMatching(/^Dès .*d’écart.*\(.*°C.*\).*\.$/s) as unknown as string,
+    });
+    // Une seconde veille ne renotifie rien.
+    const known = Object.fromEntries(found.map((n) => [n.key, NOW.getTime()]));
+    expect(await collectWatchNotifications(state([spreadRule(0.5)], known), NOW)).toEqual([]);
+    // Un seuil que les modeles n'atteignent pas : rien.
+    expect(await collectWatchNotifications(state([spreadRule(60)]), NOW)).toEqual([]);
+  });
+
   it('ne renotifie pas ce qui est deja connu, ni une vigilance jaune', async () => {
     server.use(
       http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)),

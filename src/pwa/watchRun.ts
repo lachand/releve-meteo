@@ -2,11 +2,12 @@ import { fetchForecast } from '../data/clients/openMeteo';
 import { fetchVigilance } from '../data/clients/vigilance';
 import { mapOpenMeteoResponse } from '../data/mappers/openMeteoMapper';
 import { evaluateAlerts } from '../domain/alerts';
+import { evaluateSpreadAlerts } from '../domain/spreadAlerts';
 import { MODEL_ORDER } from '../domain/models';
 import { summarizeVigilance } from '../domain/vigilance';
-import { WATCH_VIGILANCE_MIN_LEVEL, alertKey, vigilanceKey } from '../domain/watch';
+import { WATCH_VIGILANCE_MIN_LEVEL, alertKey, spreadKey, vigilanceKey } from '../domain/watch';
 import type { WatchEntry, WatchState } from '../domain/watch';
-import { hitSentence, ruleSentence } from '../ui/alertPresentation';
+import { hitSentence, ruleSentence, spreadHitSentence } from '../ui/alertPresentation';
 import { computeCascadeView } from '../ui/cascadeView';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import {
@@ -82,12 +83,23 @@ async function alertNotifications(
     points: cascade.points.filter((point) => point !== null),
     now,
   });
-  return hits.map((hit) => ({
-    key: alertKey(hit),
-    title: `${placeLabel(entry)} · ${ruleSentence(hit.rule, windUnit)}`,
-    body: `${capitalize(hitSentence(hit, windUnit))}.`,
-    url: `/${sharedPlaceSearch(entry.place)}`,
-  }));
+  // Desaccord entre modeles : evalue sur toutes les series, pas sur le modele retenu.
+  const spreadHits = evaluateSpreadAlerts({ rules, bundle: mapped.value.bundle, now });
+  const url = `/${sharedPlaceSearch(entry.place)}`;
+  return [
+    ...hits.map((hit) => ({
+      key: alertKey(hit),
+      title: `${placeLabel(entry)} · ${ruleSentence(hit.rule, windUnit)}`,
+      body: `${capitalize(hitSentence(hit, windUnit))}.`,
+      url,
+    })),
+    ...spreadHits.map((hit) => ({
+      key: spreadKey(hit),
+      title: `${placeLabel(entry)} · ${ruleSentence(hit.rule, windUnit)}`,
+      body: `${capitalize(spreadHitSentence(hit, windUnit))}.`,
+      url,
+    })),
+  ];
 }
 
 type VigilanceFetch = ReturnType<typeof fetchVigilance>;

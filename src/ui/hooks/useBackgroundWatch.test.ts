@@ -9,6 +9,7 @@ import { clearModelChoices, writeModelChoice } from '../../data/cache/modelChoic
 import { readWatchState, saveWatchEntries } from '../../data/cache/watchStore';
 import { resetDepartmentsForTests } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
+import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { AlertRule, Place } from '../../domain/types';
 import * as backgroundWatch from '../../pwa/backgroundWatch';
 import { buildWatchEntries, useBackgroundWatch } from './useBackgroundWatch';
@@ -54,6 +55,7 @@ function inputs(overrides: Partial<WatchMirrorInputs> = {}): WatchMirrorInputs {
     rules: [rule('lyon'), rule('brest', false)],
     windUnit: 'kmh',
     alertHits: [],
+    spreadHits: [],
     vigilance: null,
     ...overrides,
   };
@@ -116,10 +118,25 @@ describe('useBackgroundWatch', () => {
       extreme: { time: '2026-09-28T16:00', value: 26, model: 'arome' },
       hours: 1,
     };
+    const crossing = {
+      time: '2026-09-28T18:00' as const,
+      variable: 'temperature' as const,
+      spread: 5,
+      modelCount: 3,
+      high: { model: 'arome' as const, value: 20 },
+      low: { model: 'gfs' as const, value: 15 },
+    };
+    const spreadHit: SpreadHit = {
+      rule: { ...rule('lyon'), id: 'e-lyon', kind: 'spread', threshold: 3 },
+      first: crossing,
+      extreme: crossing,
+      hours: 1,
+    };
     const { result } = renderHook(() =>
       useBackgroundWatch(
         inputs({
           alertHits: [hit],
+          spreadHits: [spreadHit],
           vigilance: {
             department: '69',
             summary: {
@@ -145,6 +162,7 @@ describe('useBackgroundWatch', () => {
     await waitFor(async () =>
       expect(Object.keys((await readWatchState()).notified).sort()).toEqual([
         'alerte|r-lyon|2026-09-28T16:00',
+        'ecart|e-lyon|2026-09-28T18:00',
         'vigilance|69|thunderstorm|3|1|terre',
       ]),
     );

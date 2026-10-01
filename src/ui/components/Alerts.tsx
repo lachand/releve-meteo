@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ALERT_HORIZON_HOURS } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
+import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { AlertRule, Preferences, WeatherVariable } from '../../domain/types';
 import {
   ALERT_COMPARATOR_LABELS,
@@ -9,6 +10,7 @@ import {
   alertUnit,
   hitSentence,
   ruleSentence,
+  spreadHitSentence,
 } from '../alertPresentation';
 import { toKmh } from '../windUnit';
 import styles from './Alerts.module.css';
@@ -27,23 +29,33 @@ const VARIABLES: readonly WeatherVariable[] = ['temperature', 'precipitation', '
 /** Bandeau des regles franchies, en tete du releve. Rien si aucune. */
 export function AlertBanner({
   hits,
+  spreadHits = [],
   windUnit,
 }: {
   readonly hits: readonly AlertHit[];
+  /** Regles d'ecart entre modeles depassees. */
+  readonly spreadHits?: readonly SpreadHit[];
   readonly windUnit: WindUnit;
 }) {
-  if (hits.length === 0) {
+  const total = hits.length + spreadHits.length;
+  if (total === 0) {
     return null;
   }
   return (
     <section className={styles.banner} aria-labelledby="alertes-franchies">
       <h2 id="alertes-franchies" className={styles.bannerTitle}>
-        {hits.length === 1 ? 'Votre alerte est franchie' : 'Vos alertes sont franchies'}
+        {total === 1 ? 'Votre alerte est franchie' : 'Vos alertes sont franchies'}
       </h2>
       <ul className={styles.hits}>
         {hits.map((hit) => (
           <li key={hit.rule.id}>
             <strong>{ruleSentence(hit.rule, windUnit)}</strong> : {hitSentence(hit, windUnit)}.
+          </li>
+        ))}
+        {spreadHits.map((hit) => (
+          <li key={hit.rule.id}>
+            <strong>{ruleSentence(hit.rule, windUnit)}</strong> : {spreadHitSentence(hit, windUnit)}
+            .
           </li>
         ))}
       </ul>
@@ -72,6 +84,7 @@ export function AlertRulesEditor({
   onRemove,
 }: AlertRulesEditorProps) {
   const id = useId().replace(/:/g, '');
+  const [kind, setKind] = useState<'value' | 'spread'>('value');
   const [variable, setVariable] = useState<WeatherVariable>('temperature');
   const [comparator, setComparator] = useState<AlertRule['comparator']>('lt');
   const [threshold, setThreshold] = useState('2');
@@ -83,21 +96,23 @@ export function AlertRulesEditor({
     if (!valid) {
       return;
     }
-    onAdd({
-      placeId,
-      variable,
-      comparator,
-      threshold: variable === 'wind' ? toKmh(parsed, windUnit) : parsed,
-      enabled: true,
-    });
+    const converted = variable === 'wind' ? toKmh(parsed, windUnit) : parsed;
+    // Une regle de valeur ne porte pas de `kind` : meme forme qu'avant l'alerte d'ecart.
+    onAdd(
+      kind === 'spread'
+        ? { placeId, variable, comparator: 'gt', threshold: converted, enabled: true, kind }
+        : { placeId, variable, comparator, threshold: converted, enabled: true },
+    );
   };
 
   return (
     <div className={styles.editor}>
       <p className={styles.note}>
         Évaluées à chaque ouverture du relevé, sur les {ALERT_HORIZON_HOURS} prochaines heures, avec
-        le modèle retenu heure par heure. Sans serveur, Relevé ne peut vous prévenir application
-        fermée que par la veille en arrière-plan, là où le navigateur la permet (Réglages).
+        le modèle retenu heure par heure ; une alerte « modèles en désaccord » compare à la place le
+        plus haut et le plus bas des modèles disponibles. Sans serveur, Relevé ne peut vous prévenir
+        application fermée que par la veille en arrière-plan, là où le navigateur la permet
+        (Réglages).
       </p>
 
       {rules.length === 0 ? (
@@ -124,6 +139,17 @@ export function AlertRulesEditor({
       )}
 
       <form className={styles.form} onSubmit={submit} aria-label="Nouvelle alerte">
+        <label className={styles.field} htmlFor={`${id}-type`}>
+          <span>Type</span>
+          <select
+            id={`${id}-type`}
+            value={kind}
+            onChange={(event) => setKind(event.target.value as 'value' | 'spread')}
+          >
+            <option value="value">Valeur franchie</option>
+            <option value="spread">Modèles en désaccord</option>
+          </select>
+        </label>
         <label className={styles.field} htmlFor={`${id}-grandeur`}>
           <span>Grandeur</span>
           <select
@@ -138,19 +164,23 @@ export function AlertRulesEditor({
             ))}
           </select>
         </label>
-        <label className={styles.field} htmlFor={`${id}-sens`}>
-          <span>Sens</span>
-          <select
-            id={`${id}-sens`}
-            value={comparator}
-            onChange={(event) => setComparator(event.target.value as AlertRule['comparator'])}
-          >
-            <option value="lt">{ALERT_COMPARATOR_LABELS.lt}</option>
-            <option value="gt">{ALERT_COMPARATOR_LABELS.gt}</option>
-          </select>
-        </label>
+        {kind === 'value' && (
+          <label className={styles.field} htmlFor={`${id}-sens`}>
+            <span>Sens</span>
+            <select
+              id={`${id}-sens`}
+              value={comparator}
+              onChange={(event) => setComparator(event.target.value as AlertRule['comparator'])}
+            >
+              <option value="lt">{ALERT_COMPARATOR_LABELS.lt}</option>
+              <option value="gt">{ALERT_COMPARATOR_LABELS.gt}</option>
+            </select>
+          </label>
+        )}
         <label className={styles.field} htmlFor={`${id}-seuil`}>
-          <span>Seuil ({alertUnit(variable, windUnit)})</span>
+          <span>
+            {kind === 'spread' ? 'Écart entre modèles' : 'Seuil'} ({alertUnit(variable, windUnit)})
+          </span>
           <input
             id={`${id}-seuil`}
             type="text"

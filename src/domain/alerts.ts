@@ -48,8 +48,9 @@ function crosses(value: number, rule: AlertRule): boolean {
 }
 
 /**
- * Regles actives de ce lieu franchies dans l'horizon, dans l'ordre des
- * regles. Une valeur absente ne declenche jamais rien.
+ * Regles de valeur actives de ce lieu franchies dans l'horizon, dans l'ordre
+ * des regles (les regles d'ecart entre modeles sont dans spreadAlerts.ts).
+ * Une valeur absente ne declenche jamais rien.
  */
 export function evaluateAlerts(input: {
   readonly rules: readonly AlertRule[];
@@ -62,7 +63,7 @@ export function evaluateAlerts(input: {
     return lead >= 0 && lead <= ALERT_HORIZON_HOURS;
   });
   return input.rules
-    .filter((rule) => rule.enabled && rule.placeId === input.placeId)
+    .filter((rule) => rule.enabled && rule.placeId === input.placeId && rule.kind !== 'spread')
     .flatMap((rule): AlertHit[] => {
       const field = FIELD[rule.variable];
       const crossings = upcoming.flatMap((point): AlertCrossing[] => {

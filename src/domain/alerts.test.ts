@@ -46,6 +46,16 @@ describe('evaluateAlerts', () => {
     });
   });
 
+  it('laisse les regles d ecart entre modeles a spreadAlerts', () => {
+    const hits = evaluateAlerts({
+      rules: [rule({ kind: 'spread', comparator: 'gt', threshold: 0 })],
+      placeId: 'lyon',
+      points: HOURS,
+      now: NOW,
+    });
+    expect(hits).toEqual([]);
+  });
+
   it('compare la pluie horaire et les rafales au-dessus du seuil', () => {
     const hits = evaluateAlerts({
       rules: [

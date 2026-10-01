@@ -6,11 +6,13 @@ import type { AlertHit } from '../../domain/alerts';
 import { departmentAt } from '../../domain/departments';
 import { MODEL_ORDER } from '../../domain/models';
 import type { ModelVerification } from '../../domain/reliability';
+import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { AlertRule, ModelId, Place, Preferences, TerrainProfile } from '../../domain/types';
 import type { VigilanceSummary } from '../../domain/vigilance';
 import {
   WATCH_VIGILANCE_MIN_LEVEL,
   alertKey,
+  spreadKey,
   vigilanceKey,
   watchedPlaces,
 } from '../../domain/watch';
@@ -58,6 +60,7 @@ export interface WatchMirrorInputs {
   readonly rules: readonly AlertRule[];
   readonly windUnit: Preferences['units']['wind'];
   readonly alertHits: readonly AlertHit[];
+  readonly spreadHits: readonly SpreadHit[];
   readonly vigilance: { readonly department: string; readonly summary: VigilanceSummary } | null;
 }
 
@@ -169,6 +172,7 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   const vigilance = inputs.vigilance;
   const seenKeys = [
     ...inputs.alertHits.map(alertKey),
+    ...inputs.spreadHits.map(spreadKey),
     ...(vigilance === null
       ? []
       : vigilance.summary.warnings
