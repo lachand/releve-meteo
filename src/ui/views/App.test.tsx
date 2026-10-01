@@ -412,6 +412,40 @@ describe('App', { timeout: 30000 }, () => {
     ).toBeInTheDocument();
   });
 
+  it('ouvre un lien partage avec son modele : choix manuel dit a l ecran, repris dans le lien', async () => {
+    server.use(...liveHandlers());
+    window.history.replaceState(
+      null,
+      '',
+      '/?lat=45.7578&lon=4.832&nom=Lyon&alt=170&dep=Rh%C3%B4ne&modele=arpege',
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    // Jamais impose en silence : le tampon dit « Choix manuel ».
+    expect(await screen.findByText('Choix manuel', {}, { timeout: 8000 })).toBeInTheDocument();
+    expect(window.location.search).toContain('modele=arpege');
+
+    // Le bouton copie ce meme lien, modele compris.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
+    await user.click(screen.getByRole('button', { name: 'Copier le lien de ce relevé' }));
+    expect(writeText).toHaveBeenCalledOnce();
+    expect(String(writeText.mock.calls[0]?.[0])).toContain('modele=arpege');
+  });
+
+  it('ignore un modele inconnu dans le lien', async () => {
+    server.use(...liveHandlers());
+    window.history.replaceState(
+      null,
+      '',
+      '/?lat=45.7578&lon=4.832&nom=Lyon&modele=meteo-fantaisie',
+    );
+    render(<App />);
+    expect(await screen.findByText('Modèle retenu', {}, { timeout: 8000 })).toBeInTheDocument();
+    expect(window.location.search).not.toContain('modele=');
+  });
+
   it('verifie les modeles contre la station la plus proche', async () => {
     server.use(...liveHandlers());
     const user = await openLyon();
@@ -570,6 +604,18 @@ describe('App', { timeout: 30000 }, () => {
     );
     expect(within(table).getAllByRole('row').length).toBeGreaterThan(1);
     expect(within(section).getByText(/la station Lyon \/ Bron a mesuré de/)).toBeInTheDocument();
+
+    // Pluie tombee : le cumul de la station, ou la raison de son absence, jamais un zero.
+    const rain = (
+      await screen.findByRole('heading', { name: 'Pluie réellement tombée, 24 heures' })
+    ).closest('section') as HTMLElement;
+    expect(
+      await within(rain).findByText(
+        /Mesuré à la station Lyon \/ Bron|n’a pas assez de mesures de pluie/,
+        {},
+        { timeout: 8000 },
+      ),
+    ).toBeInTheDocument();
   }, 20000);
 
   it('confronte la valeur du modele retenu au dernier releve de la station', async () => {

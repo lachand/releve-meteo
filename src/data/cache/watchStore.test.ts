@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { WatchEntry } from '../../domain/watch';
 import { deleteDbForTests } from './db';
 import { resetMemoryDatasetStore, setDataset } from './datasetStore';
-import { markNotified, readWatchState, saveWatchEntries } from './watchStore';
+import {
+  markNotified,
+  readWatchState,
+  saveWatchDigest,
+  saveWatchEntries,
+  saveWatchNotify,
+} from './watchStore';
+import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
 
 const NOW = new Date('2026-09-28T13:27:00Z');
 const HOUR = 60 * 60 * 1000;
@@ -36,6 +43,8 @@ describe('watchStore', () => {
       windUnit: 'kmh',
       notified: {},
       lastRunUtcMs: null,
+      digest: false,
+      notify: DEFAULT_NOTIFY,
     });
     await setDataset('watch', 'all', { entries: 'oups' }, 0, 1);
     expect((await readWatchState()).entries).toEqual([]);
@@ -49,7 +58,25 @@ describe('watchStore', () => {
       windUnit: 'kt',
       notified: { a: NOW.getTime() },
       lastRunUtcMs: NOW.getTime(),
+      digest: false,
+      notify: DEFAULT_NOTIFY,
     });
+  });
+
+  it('garde le choix du resume du matin sans toucher au reste, et le lit absent comme desactive', async () => {
+    await saveWatchEntries([ENTRY], 'kmh', NOW);
+    await saveWatchDigest(true, NOW);
+    expect(await readWatchState()).toMatchObject({ digest: true, entries: [ENTRY] });
+    // Une recopie des lieux ne l'efface pas.
+    await saveWatchEntries([ENTRY], 'kt', NOW);
+    expect((await readWatchState()).digest).toBe(true);
+    // Deja dans cet etat : rien a ecrire.
+    await saveWatchDigest(true, NOW);
+    await saveWatchDigest(false, NOW);
+    expect((await readWatchState()).digest).toBe(false);
+    // Un etat ancien, sans champ.
+    await setDataset('watch', 'all', { entries: [], notified: {}, windUnit: 'kmh' }, 0, 1);
+    expect((await readWatchState()).digest).toBe(false);
   });
 
   it('note les cles nouvelles, garde la date des anciennes et oublie les trop vieilles', async () => {
@@ -62,5 +89,18 @@ describe('watchStore', () => {
     const state = await readWatchState();
     expect(state.notified).toEqual({ gardee: earlier.getTime(), nouvelle: NOW.getTime() });
     expect(state.lastRunUtcMs).toBeNull();
+  });
+
+  it('garde les notifications voulues sans toucher au reste, et relit un champ illisible comme rien', async () => {
+    await saveWatchEntries([ENTRY], 'kmh', NOW);
+    const wanted = { risks: true, rain: false, pollen: true, mode: 'instant', hour: 6 } as const;
+    await saveWatchNotify(wanted, NOW);
+    expect(await readWatchState()).toMatchObject({ notify: wanted, entries: [ENTRY] });
+    // Une recopie des lieux ne l'efface pas ; une ecriture identique n'ecrit rien.
+    await saveWatchEntries([ENTRY], 'kt', NOW);
+    await saveWatchNotify(wanted, NOW);
+    expect((await readWatchState()).notify).toEqual(wanted);
+    await setDataset('watch', 'all', { entries: [], notified: {}, notify: 'oups' }, 0, 1);
+    expect((await readWatchState()).notify).toEqual(DEFAULT_NOTIFY);
   });
 });

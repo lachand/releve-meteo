@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { AlertHit } from './alerts';
 import type { AlertRule, Place } from './types';
+import { DEFAULT_NOTIFY } from './weatherNotices';
 import {
   NOTIFIED_RETENTION_HOURS,
   alertKey,
+  digestKey,
   emptyWatchState,
   pruneNotified,
   spreadKey,
@@ -118,6 +120,14 @@ describe('pruneNotified', () => {
       windUnit: 'kmh',
       notified: {},
       lastRunUtcMs: null,
+      digest: false,
+      notify: DEFAULT_NOTIFY,
     });
+  });
+});
+
+describe('digestKey', () => {
+  it('un resume par jour et par lieu', () => {
+    expect(digestKey('2026-09-28', 'lyon')).toBe('resume|2026-09-28|lyon');
   });
 });

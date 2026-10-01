@@ -15,6 +15,7 @@ import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
+import { rainCheck } from '../../domain/rainCheck';
 import { stationCheck } from '../../domain/stationCheck';
 import { stationTrace } from '../../domain/stationTrace';
 import { leadScores } from '../../domain/leadScores';
@@ -26,6 +27,7 @@ import { InstallPrompt } from '../components/InstallPrompt';
 import { PlaceSearch } from '../components/PlaceSearch';
 import { PlaceSwitcher } from '../components/PlaceSwitcher';
 import { Settings } from '../components/Settings';
+import { ShareButton } from '../components/ShareButton';
 import { Tabs } from '../components/Tabs';
 import type { TabItem } from '../components/Tabs';
 import { UpdateBanner } from '../components/UpdateBanner';
@@ -47,7 +49,7 @@ import { useServiceWorkerUpdate } from '../hooks/useServiceWorkerUpdate';
 import { useTerrain } from '../hooks/useTerrain';
 import { TERRAIN_KIND_LABELS } from '../modelPresentation';
 import { explainSelection } from '../selectionExplanation';
-import { parseSharedPlace, sharedPlaceSearch, sharedView } from '../sharedPlace';
+import { parseSharedPlace, sharedModel, sharedPlaceSearch, sharedView } from '../sharedPlace';
 import styles from './App.module.css';
 import { PHENOMENA_HORIZON_HOURS, TodayView } from './TodayView';
 import { VIEW_KEYS } from './viewModel';
@@ -226,15 +228,26 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule tentative au demarrage.
   }, [geoRequested]);
 
+  // Un lien partage peut porter un modele (`?modele=`) : il est applique une
+  // seule fois, a l'ouverture, comme un choix manuel que l'interface affiche.
+  const [linkedModel] = useState(() => sharedModel(window.location.search));
+  useEffect(() => {
+    if (linkedModel !== null) {
+      setPreferred(linkedModel);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois, a l'ouverture.
+  }, []);
+
+  const searchView = view === 'jour' ? undefined : view;
   useEffect(() => {
     if (place === null) {
       return;
     }
-    const search = sharedPlaceSearch(place, view === 'jour' ? undefined : view);
+    const search = sharedPlaceSearch(place, searchView, preferred);
     if (window.location.search !== search) {
       window.history.replaceState(null, '', search);
     }
-  }, [place, view]);
+  }, [place, searchView, preferred]);
 
   const navigate = useCallback((next: ViewKey) => {
     setView(next);
@@ -284,6 +297,15 @@ export function App() {
       stationTrace:
         station.status === 'ready'
           ? stationTrace({ records: station.value.records, models: station.value.models, now })
+          : null,
+      rainCheck:
+        station.status === 'ready' && cascade.activeModel !== null
+          ? rainCheck({
+              records: station.value.records,
+              model: cascade.activeModel,
+              hourly: bundle.series[cascade.activeModel]?.hourly ?? [],
+              now,
+            })
           : null,
       leadScores: shortLead ?? null,
       yesterday:
@@ -419,6 +441,13 @@ export function App() {
               >
                 {isFavourite ? '★' : '☆'}
               </button>
+            )}
+            {place !== null && (
+              <ShareButton
+                className={styles.iconButton}
+                title={place.alias ?? place.name}
+                url={`${window.location.origin}${window.location.pathname}${sharedPlaceSearch(place, searchView, preferred)}`}
+              />
             )}
             {place !== null && (
               <button

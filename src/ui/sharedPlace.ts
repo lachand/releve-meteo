@@ -1,5 +1,6 @@
+import { MODEL_ORDER } from '../domain/models';
 import { isWithinMetropolitanFrance } from '../domain/terrain';
-import type { Place } from '../domain/types';
+import type { ModelId, Place } from '../domain/types';
 
 const COORDINATE_DECIMALS = 4;
 
@@ -44,9 +45,10 @@ export function parseSharedPlace(search: string): Place | null {
 
 /**
  * Chaine de recherche a placer dans l'URL courante pour partager ce lieu :
- * coordonnees, nom, altitude et departement, puis la vue ouverte.
+ * coordonnees, nom, altitude et departement, puis la vue ouverte et, si
+ * l'utilisateur en a choisi un, le modele de reference.
  */
-export function sharedPlaceSearch(place: Place, view?: string): string {
+export function sharedPlaceSearch(place: Place, view?: string, model?: ModelId | null): string {
   const params = new URLSearchParams();
   params.set('lat', String(place.latitude));
   params.set('lon', String(place.longitude));
@@ -58,10 +60,19 @@ export function sharedPlaceSearch(place: Place, view?: string): string {
   if (view !== undefined) {
     params.set('vue', view);
   }
+  if (model !== undefined && model !== null) {
+    params.set('modele', model);
+  }
   return `?${params.toString()}`;
 }
 
 /** Vue demandee par `?vue=`, ou null. */
 export function sharedView(search: string): string | null {
   return new URLSearchParams(search).get('vue');
+}
+
+/** Modele demande par `?modele=`, seulement s'il est connu ; sinon null. */
+export function sharedModel(search: string): ModelId | null {
+  const requested = new URLSearchParams(search).get('modele');
+  return MODEL_ORDER.find((model) => model === requested) ?? null;
 }

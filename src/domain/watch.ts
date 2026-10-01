@@ -1,6 +1,8 @@
 import type { AlertHit } from './alerts';
 import type { ModelVerification } from './reliability';
 import type { SpreadHit } from './spreadAlerts';
+import { DEFAULT_NOTIFY } from './weatherNotices';
+import type { NotifyPrefs } from './weatherNotices';
 import type { AlertRule, ModelId, Place, Preferences, TerrainProfile } from './types';
 import type { VigilanceWarning } from './vigilance';
 
@@ -35,6 +37,10 @@ export interface WatchState {
   readonly notified: Readonly<Record<string, number>>;
   /** Derniere veille menee a bien, epoch ms. */
   readonly lastRunUtcMs: number | null;
+  /** Resume du matin : choix de l'utilisateur, desactive par defaut. */
+  readonly digest: boolean;
+  /** Notifications de risques, de pluie et de pollens : choix de l'utilisateur, rien par defaut. */
+  readonly notify: NotifyPrefs;
 }
 
 /** Seules les vigilances orange et rouge meritent une notification. */
@@ -46,7 +52,14 @@ export const NOTIFIED_RETENTION_HOURS = 96;
 const HOUR_MS = 60 * 60 * 1000;
 
 export function emptyWatchState(): WatchState {
-  return { entries: [], windUnit: 'kmh', notified: {}, lastRunUtcMs: null };
+  return {
+    entries: [],
+    windUnit: 'kmh',
+    notified: {},
+    lastRunUtcMs: null,
+    digest: false,
+    notify: DEFAULT_NOTIFY,
+  };
 }
 
 /**
@@ -72,6 +85,14 @@ export function watchedPlaces(input: {
 /** Une alerte est notifiee une fois par regle et par premiere heure franchie. */
 export function alertKey(hit: AlertHit): string {
   return `alerte|${hit.rule.id}|${hit.first.time}`;
+}
+
+/** Lieux resumes par veille, favoris d'abord : une notification chacun. */
+export const DIGEST_MAX_PLACES = 3;
+
+/** Un resume par jour et par lieu. */
+export function digestKey(date: string, placeId: string): string {
+  return `resume|${date}|${placeId}`;
 }
 
 /** Un desaccord entre modeles est notifie une fois par regle et par premiere heure depassee. */

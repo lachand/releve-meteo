@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { readModelChoice } from '../../data/cache/modelChoice';
 import { getForecast, peekVerifications } from '../../data/repository';
-import { dayDigest } from '../../domain/dayDigest';
-import type { DayDigest } from '../../domain/dayDigest';
+import { comparisonHours, dayDigest } from '../../domain/dayDigest';
+import type { ComparisonHour, DayDigest } from '../../domain/dayDigest';
 import type { BlendedPoint } from '../../domain/modelCascade';
 import { MODEL_ORDER } from '../../domain/models';
 import type { ForecastBundle, ModelId, Place } from '../../domain/types';
@@ -30,6 +30,8 @@ export type FavouriteSnapshot =
       readonly manual: boolean;
       /** 24 prochaines heures, pour comparer les lieux ; null sans heure a venir. */
       readonly digest: DayDigest | null;
+      /** 48 prochaines heures selon le modele retenu, pour tracer deux lieux ensemble. */
+      readonly hours: readonly ComparisonHour[];
     };
 
 /** Valeur du moment d'un favori, pure : exportee pour les tests. */
@@ -49,6 +51,7 @@ export function snapshotOf(input: {
     },
     input.now,
   );
+  const points = view.points.filter((p) => p !== null);
   const point = view.nowIndex === -1 ? null : (view.points[view.nowIndex] ?? null);
   return {
     place: input.place,
@@ -56,7 +59,8 @@ export function snapshotOf(input: {
     model: point?.model ?? null,
     point,
     manual: input.preferred !== null && input.preferred === point?.model,
-    digest: dayDigest({ points: view.points.filter((p) => p !== null), now: input.now }),
+    digest: dayDigest({ points, now: input.now }),
+    hours: comparisonHours({ points, now: input.now }),
   };
 }
 

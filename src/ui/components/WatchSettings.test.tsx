@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
 import type { WatchStatus } from '../../pwa/backgroundWatch';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
 import { WatchSettings } from './WatchSettings';
@@ -14,6 +15,10 @@ function watch(status: WatchStatus | null, overrides: Partial<BackgroundWatch> =
     collect: vi.fn(),
     allow: vi.fn(),
     disable: vi.fn(),
+    digest: false,
+    setDigest: vi.fn(),
+    notify: DEFAULT_NOTIFY,
+    setNotify: vi.fn(),
     ...overrides,
   } satisfies BackgroundWatch;
 }
@@ -93,5 +98,64 @@ describe('WatchSettings', () => {
     expect(screen.queryByRole('button', { name: 'Collecter sans notification' })).toBeNull();
     rerender(<WatchSettings watch={watch('needs-install')} />);
     expect(screen.queryByRole('button', { name: 'Collecter sans notification' })).toBeNull();
+  });
+
+  it('propose le resume du matin quand la veille notifie, en disant que l heure n est pas garantie', async () => {
+    const on = watch('on');
+    const { rerender } = render(<WatchSettings watch={on} />);
+    const box = screen.getByRole('checkbox', { name: /Résumé du matin/ });
+    expect(box).not.toBeChecked();
+    expect(screen.getByText(/l’heure n’est pas garantie/)).toBeInTheDocument();
+    await userEvent.click(box);
+    expect(on.setDigest).toHaveBeenCalledWith(true);
+
+    rerender(<WatchSettings watch={watch('on', { digest: true })} />);
+    expect(screen.getByRole('checkbox', { name: /Résumé du matin/ })).toBeChecked();
+  });
+
+  it('laisse choisir risques, pluie et pollens, chacun avec ce qui partira', async () => {
+    const on = watch('on');
+    render(<WatchSettings watch={on} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: /Phénomènes violents à venir/ }));
+    expect(on.setNotify).toHaveBeenLastCalledWith({ risks: true });
+    await userEvent.click(screen.getByRole('checkbox', { name: /Pluie à venir/ }));
+    expect(on.setNotify).toHaveBeenLastCalledWith({ rain: true });
+    await userEvent.click(screen.getByRole('checkbox', { name: /Pollens à un niveau élevé/ }));
+    expect(on.setNotify).toHaveBeenLastCalledWith({ pollen: true });
+  });
+
+  it('laisse choisir le matin a une heure precise, ou des la detection', async () => {
+    const on = watch('on');
+    const { rerender } = render(<WatchSettings watch={on} />);
+    expect(screen.getByRole('radio', { name: /Le matin, une notification groupée/ })).toBeChecked();
+    const hour = screen.getByRole('combobox', { name: 'Heure visée' });
+    expect(hour).toHaveValue('7');
+    await userEvent.selectOptions(hour, '6');
+    expect(on.setNotify).toHaveBeenLastCalledWith({ hour: 6 });
+    await userEvent.click(screen.getByRole('radio', { name: /Dès qu’un avis est détecté/ }));
+    expect(on.setNotify).toHaveBeenLastCalledWith({ mode: 'instant' });
+
+    rerender(
+      <WatchSettings watch={watch('on', { notify: { ...DEFAULT_NOTIFY, mode: 'instant' } })} />,
+    );
+    expect(screen.getByRole('radio', { name: /Dès qu’un avis est détecté/ })).toBeChecked();
+    await userEvent.click(
+      screen.getByRole('radio', { name: /Le matin, une notification groupée/ }),
+    );
+  });
+
+  it('ne propose pas le resume sans notification possible', () => {
+    for (const status of [
+      'off',
+      'collecting',
+      'blocked',
+      'unsupported',
+      'needs-install',
+    ] as const) {
+      const { unmount } = render(<WatchSettings watch={watch(status)} />);
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });

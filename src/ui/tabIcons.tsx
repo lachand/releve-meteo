@@ -95,3 +95,24 @@ export function PrintIcon() {
     </Icon>
   );
 }
+
+/** Trois points relies : le bouton « Copier le lien » de l'en-tete. */
+export function ShareIcon() {
+  return (
+    <Icon>
+      <circle cx={6} cy={12} r={2.5} />
+      <circle cx={18} cy={6} r={2.5} />
+      <circle cx={18} cy={18} r={2.5} />
+      <path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6" />
+    </Icon>
+  );
+}
+
+/** Coche : confirmation d'une copie. */
+export function CheckIcon() {
+  return (
+    <Icon>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}
