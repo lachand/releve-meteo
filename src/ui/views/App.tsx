@@ -9,6 +9,8 @@ import {
 } from '../../data/repository';
 import { evaluateAlerts } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
+import { evaluateSpreadAlerts } from '../../domain/spreadAlerts';
+import type { SpreadHit } from '../../domain/spreadAlerts';
 import { blendDaily } from '../../domain/dailyBlend';
 import { dailyEnsemble } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
@@ -64,6 +66,7 @@ const ReliabilityView = lazy(() =>
 
 /** Aucune alerte franchie : reference stable pour la veille. */
 const NO_HITS: readonly AlertHit[] = [];
+const NO_SPREAD_HITS: readonly SpreadHit[] = [];
 
 const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.', icon: <TodayIcon /> },
@@ -188,7 +191,25 @@ export function App() {
     () => (verification.status === 'ready' ? verification.value.verifications : []),
     [verification],
   );
-  const cascade = useCascadeView(bundle, { terrain, verification: verifications, preferred });
+  // Notes de 1 a 12 h : les prevues enregistrees par l'application, face aux
+  // mesures de la station. Elles entrent dans la selection quand il y en a assez.
+  const shortLead = useMemo(
+    () =>
+      station.status === 'ready'
+        ? leadScores({
+            snapshots: station.value.snapshots,
+            records: station.value.records,
+            now: new Date(),
+          })
+        : undefined,
+    [station],
+  );
+  const cascade = useCascadeView(bundle, {
+    terrain,
+    verification: verifications,
+    preferred,
+    shortLead,
+  });
   const confidence = useConfidenceView(bundle, terrain);
 
   useAppliedTheme(preferences.preferences.theme);
@@ -264,14 +285,7 @@ export function App() {
         station.status === 'ready'
           ? stationTrace({ records: station.value.records, models: station.value.models, now })
           : null,
-      leadScores:
-        station.status === 'ready'
-          ? leadScores({
-              snapshots: station.value.snapshots,
-              records: station.value.records,
-              now,
-            })
-          : null,
+      leadScores: shortLead ?? null,
       yesterday:
         station.status === 'ready'
           ? yesterdayReview({
@@ -304,6 +318,11 @@ export function App() {
         points: cascade.points.filter((point) => point !== null),
         now,
       }),
+      spreadHits: evaluateSpreadAlerts({
+        rules: preferences.preferences.alerts.filter((rule) => rule.placeId === place.id),
+        bundle,
+        now,
+      }),
       addAlert: preferences.addAlert,
       toggleAlert: preferences.toggleAlert,
       removeAlert: preferences.removeAlert,
@@ -312,6 +331,7 @@ export function App() {
     terrain,
     bundle,
     cascade,
+    shortLead,
     confidence,
     ensembleDays,
     ensembleValue,
@@ -342,6 +362,7 @@ export function App() {
     rules: preferences.preferences.alerts,
     windUnit: preferences.preferences.units.wind,
     alertHits: vm?.alertHits ?? NO_HITS,
+    spreadHits: vm?.spreadHits ?? NO_SPREAD_HITS,
     vigilance:
       vm !== null &&
       vm.vigilanceSummary !== null &&

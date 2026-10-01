@@ -42,7 +42,9 @@ function isAlertRule(value: unknown): value is AlertRule {
     (rule.comparator === 'lt' || rule.comparator === 'gt') &&
     typeof rule.threshold === 'number' &&
     Number.isFinite(rule.threshold) &&
-    typeof rule.enabled === 'boolean'
+    typeof rule.enabled === 'boolean' &&
+    // Les regles enregistrees avant l'alerte d'ecart n'ont pas de `kind`.
+    (rule.kind === undefined || rule.kind === 'value' || rule.kind === 'spread')
   );
 }
 

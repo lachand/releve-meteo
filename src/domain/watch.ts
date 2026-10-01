@@ -1,5 +1,6 @@
 import type { AlertHit } from './alerts';
 import type { ModelVerification } from './reliability';
+import type { SpreadHit } from './spreadAlerts';
 import type { AlertRule, ModelId, Place, Preferences, TerrainProfile } from './types';
 import type { VigilanceWarning } from './vigilance';
 
@@ -71,6 +72,11 @@ export function watchedPlaces(input: {
 /** Une alerte est notifiee une fois par regle et par premiere heure franchie. */
 export function alertKey(hit: AlertHit): string {
   return `alerte|${hit.rule.id}|${hit.first.time}`;
+}
+
+/** Un desaccord entre modeles est notifie une fois par regle et par premiere heure depassee. */
+export function spreadKey(hit: SpreadHit): string {
+  return `ecart|${hit.rule.id}|${hit.first.time}`;
 }
 
 /** Une vigilance est notifiee une fois par phenomene, niveau et debut. */

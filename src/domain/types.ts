@@ -115,6 +115,13 @@ export interface Preferences {
 
 export interface AlertRule {
   readonly id: string;
+  /**
+   * 'value' (defaut, regles enregistrees avant l'existence du champ) : la
+   * valeur du modele retenu franchit le seuil. 'spread' : les modeles
+   * s'ecartent de plus que le seuil, dans l'unite de la grandeur ; le sens
+   * est alors toujours 'gt'.
+   */
+  readonly kind?: 'value' | 'spread';
   readonly placeId: string;
   readonly variable: WeatherVariable;
   readonly comparator: 'lt' | 'gt';

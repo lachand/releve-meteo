@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DAILY_ERRORS,
   DAY_PERIODS,
   PERIOD_BIAS,
   biasByPeriod,
+  dailyErrors,
   errorStats,
   matchSamples,
   pruneArchive,
@@ -10,7 +12,9 @@ import {
   rankByError,
   scoreFromSamples,
   verifyModel,
+  weeklyComparison,
 } from './reliability';
+import type { DailyError } from './reliability';
 import type { ArchivedForecast, VerificationPair } from './reliability';
 import type { LocalIsoHour } from './types';
 
@@ -290,5 +294,124 @@ describe('verifyModel, biais par moment de la journee', () => {
     ).toHaveLength(4);
     expect(verifyModel({ ...base, variable: 'wind', pairs: hourly(72) }).periods).toBeNull();
     expect(verifyModel({ ...base, variable: 'temperature', pairs: hourly(5) }).periods).toBeNull();
+  });
+});
+
+describe('dailyErrors', () => {
+  /** n heures d'un jour, toutes ecartees de `gap` degres. */
+  function hours(date: string, n: number, gap: number): VerificationPair[] {
+    return Array.from({ length: n }, (_, hour) => ({
+      predicted: 10 + gap,
+      observed: 10,
+      time: `${date}T${String(hour).padStart(2, '0')}:00` as LocalIsoHour,
+    }));
+  }
+
+  it('rend l erreur absolue moyenne de chaque jour, du plus ancien au plus recent', () => {
+    const daily = dailyErrors([...hours('2026-09-26', 24, -2), ...hours('2026-09-25', 24, 1)]);
+    expect(daily).toEqual([
+      { date: '2026-09-25', mae: 1, count: 24 },
+      { date: '2026-09-26', mae: 2, count: 24 },
+    ]);
+  });
+
+  it('ignore les paires sans heure ou sans valeur, et les jours trop courts', () => {
+    const daily = dailyErrors([
+      ...hours('2026-09-25', DAILY_ERRORS.minPairs, 1),
+      ...hours('2026-09-26', DAILY_ERRORS.minPairs - 1, 5),
+      { predicted: 30, observed: 10 },
+      { predicted: null, observed: 10, time: '2026-09-25T20:00' as LocalIsoHour },
+      { predicted: 12, observed: null, time: '2026-09-25T21:00' as LocalIsoHour },
+    ]);
+    expect(daily).toEqual([{ date: '2026-09-25', mae: 1, count: DAILY_ERRORS.minPairs }]);
+  });
+
+  it('rend null sans aucune journee exploitable', () => {
+    expect(dailyErrors([])).toBeNull();
+    expect(dailyErrors(hours('2026-09-25', 3, 1))).toBeNull();
+  });
+});
+
+describe('verifyModel, erreur par jour', () => {
+  it('ne la calcule que pour la temperature, une fois la verification prete', () => {
+    const pairsOf = Array.from({ length: 48 }, (_, i) => ({
+      predicted: 11,
+      observed: 10,
+      time: `2026-09-${String(10 + Math.floor(i / 24)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}:00` as LocalIsoHour,
+    }));
+    const base = { model: 'arome', leadDays: 1, reference: 'observed', minSamples: 10 } as const;
+    expect(verifyModel({ ...base, variable: 'temperature', pairs: pairsOf }).daily).toHaveLength(2);
+    expect(verifyModel({ ...base, variable: 'wind', pairs: pairsOf }).daily).toBeNull();
+    expect(
+      verifyModel({ ...base, variable: 'temperature', pairs: pairsOf.slice(0, 5) }).daily,
+    ).toBeNull();
+  });
+});
+
+describe('weeklyComparison', () => {
+  /** Une erreur journaliere par jour, de `from` a `to` inclus (jours de septembre 2026). */
+  function days(from: number, to: number, mae: number): DailyError[] {
+    return Array.from({ length: to - from + 1 }, (_, i) => ({
+      date: `2026-09-${String(from + i).padStart(2, '0')}`,
+      mae,
+      count: 24,
+    }));
+  }
+
+  it("designe le plus juste sur les 7 derniers jours et sur les 7 d'avant", () => {
+    // Fenetre recente : 22 a 28 ; precedente : 15 a 21.
+    const result = weeklyComparison([
+      { model: 'arome', daily: [...days(15, 21, 2), ...days(22, 28, 0.8)] },
+      { model: 'arpege', daily: [...days(15, 21, 1.1), ...days(22, 28, 1.5)] },
+    ]);
+    expect(result?.lastDate).toBe('2026-09-28');
+    expect(result?.recent).toMatchObject({ model: 'arome', days: 7 });
+    expect(result?.recent?.mae).toBeCloseTo(0.8);
+    expect(result?.previous).toMatchObject({ model: 'arpege', days: 7 });
+  });
+
+  it('pese chaque jour par son nombre de paires', () => {
+    const result = weeklyComparison([
+      {
+        model: 'arome',
+        daily: [
+          { date: '2026-09-25', mae: 1, count: 24 },
+          { date: '2026-09-26', mae: 4, count: 6 },
+          ...days(27, 28, 1),
+        ],
+      },
+      { model: 'arpege', daily: days(25, 28, 1.3) },
+    ]);
+    // Pondere : AROME (24 + 24 + 24 + 24) / 78 = 1.23, devant ARPEGE 1.3 ;
+    // non pondere, la mauvaise journee courte (4) le ferait passer a 1.75.
+    expect(result?.recent?.model).toBe('arome');
+    expect(result?.recent?.mae).toBeCloseTo(96 / 78);
+  });
+
+  it('exige quatre jours comptes et au moins deux modeles, sans quoi il ne designe personne', () => {
+    expect(weeklyComparison([])).toBeNull();
+    expect(weeklyComparison([{ model: 'arome', daily: days(22, 28, 1) }])).toBeNull();
+    const short = weeklyComparison([
+      { model: 'arome', daily: days(22, 28, 1) },
+      { model: 'arpege', daily: days(26, 28, 0.5) },
+    ]);
+    expect(short).toBeNull();
+  });
+
+  it('garde une fenetre quand l autre n a pas assez de jours', () => {
+    const result = weeklyComparison([
+      { model: 'arome', daily: days(24, 28, 1) },
+      { model: 'arpege', daily: days(24, 28, 2) },
+    ]);
+    expect(result?.recent?.model).toBe('arome');
+    expect(result?.previous).toBeNull();
+  });
+
+  it('en cas d egalite, garde le premier modele de la liste', () => {
+    const result = weeklyComparison([
+      { model: 'arome', daily: days(22, 28, 1) },
+      { model: 'arpege', daily: days(22, 28, 1) },
+    ]);
+    expect(result?.recent?.model).toBe('arome');
   });
 });

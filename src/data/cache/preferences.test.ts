@@ -193,6 +193,18 @@ describe('alertes', () => {
     expect(readPreferences().alerts).toEqual([frost]);
   });
 
+  it('relit une regle d ecart entre modeles, et ecarte un type inconnu', () => {
+    const spread: AlertRule = { ...frost, id: 'ecart', comparator: 'gt', kind: 'spread' };
+    const value: AlertRule = { ...frost, id: 'valeur', kind: 'value' };
+    const stored = {
+      ...defaultPreferences(),
+      alerts: [frost, spread, value, { ...frost, id: 'inconnu', kind: 'autre' }],
+    };
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(stored));
+    // Une regle sans `kind` (enregistree avant l'alerte d'ecart) reste une regle de valeur.
+    expect(readPreferences().alerts).toEqual([frost, spread, value]);
+  });
+
   it('vaut une liste vide quand le champ manque dans un enregistrement ancien', () => {
     const { alerts: _omitted, ...withoutAlerts } = defaultPreferences();
     localStorage.setItem('meteo-fr:prefs', JSON.stringify(withoutAlerts));

@@ -6,6 +6,7 @@ import {
   alertKey,
   emptyWatchState,
   pruneNotified,
+  spreadKey,
   vigilanceKey,
   watchedPlaces,
 } from './watch';
@@ -49,6 +50,32 @@ describe('cles de notification', () => {
       hours: 2,
     };
     expect(alertKey(hit)).toBe('alerte|r-lyon|2026-09-29T06:00');
+  });
+
+  it('un desaccord entre modeles par regle et par premiere heure depassee', () => {
+    const crossing = {
+      time: '2026-09-29T06:00' as const,
+      variable: 'temperature' as const,
+      spread: 5,
+      modelCount: 3,
+      high: { model: 'arome' as const, value: 15 },
+      low: { model: 'gfs' as const, value: 10 },
+    };
+    const hit = {
+      rule: {
+        id: 'r-ecart',
+        placeId: 'lyon',
+        variable: 'temperature',
+        comparator: 'gt',
+        threshold: 3,
+        enabled: true,
+        kind: 'spread',
+      } as const,
+      first: crossing,
+      extreme: crossing,
+      hours: 2,
+    };
+    expect(spreadKey(hit)).toBe('ecart|r-ecart|2026-09-29T06:00');
   });
 
   it('une vigilance par phenomene, niveau, debut et domaine', () => {

@@ -7,8 +7,7 @@ import type { ForecastGrid } from '../domain/grid';
 import { takeSnapshot } from '../domain/leadScores';
 import type { ForecastSnapshot } from '../domain/leadScores';
 import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
-import { nearestStation } from '../domain/stations';
-import type { Station, StationMatch } from '../domain/stations';
+import type { StationMatch } from '../domain/stations';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
 import type { VigilanceBulletin } from '../domain/vigilance';
 import { fetchAirQuality } from './clients/airQuality';
@@ -19,6 +18,7 @@ import { fetchPlaces } from './clients/geocoding';
 import { request } from './clients/http';
 import type { HttpResult } from './clients/http';
 import { fetchStationYear, parseStationRecords } from './clients/meteostat';
+import { stationFor } from './clients/stations';
 import {
   fetchForecast,
   fetchNowcast,
@@ -201,35 +201,7 @@ export function getEnsemble(place: Place): Promise<HttpResult<DatasetResult<Ense
   });
 }
 
-let stationsPromise: Promise<readonly Station[]> | null = null;
-
-/**
- * Stations d'observation de France metropolitaine, liste statique generee
- * par `scripts/generate-stations.py` et servie avec l'application (donc
- * disponible hors ligne). Liste vide si le fichier manque : la
- * verification se replie alors sur la reanalyse.
- */
-export function loadStations(): Promise<readonly Station[]> {
-  stationsPromise ??= request<readonly Station[]>('/data/stations-fr.json', { retries: 0 }).then(
-    (result) => (result.ok && Array.isArray(result.value) ? result.value : []),
-  );
-  return stationsPromise;
-}
-
-/** Reinitialise la liste memorisee. Utilise par les tests. */
-export function resetStationsForTests(): void {
-  stationsPromise = null;
-}
-
-/** Station representative du lieu (distance et denivele bornes), ou null. */
-async function stationFor(place: Place): Promise<StationMatch | null> {
-  return nearestStation({
-    latitude: place.latitude,
-    longitude: place.longitude,
-    elevation: place.elevation,
-    stations: await loadStations(),
-  });
-}
+export { loadStations, resetStationsForTests } from './clients/stations';
 
 export async function getVerifications(
   place: Place,

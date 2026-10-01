@@ -65,7 +65,7 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
   return (
     <div className={styles.stack}>
       <VigilanceBanner state={vm.vigilance} summary={vm.vigilanceSummary} now={vm.now} />
-      <AlertBanner hits={vm.alertHits} windUnit={vm.windUnit} />
+      <AlertBanner hits={vm.alertHits} spreadHits={vm.spreadHits} windUnit={vm.windUnit} />
       <Section eyebrow="Maintenant" className={styles.nowSheet}>
         {briefing !== null && <p className={styles.briefing}>{briefingSentence(briefing)}</p>}
         <NowPanel

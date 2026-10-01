@@ -11,6 +11,8 @@ function watch(status: WatchStatus | null, overrides: Partial<BackgroundWatch> =
     lastRunUtcMs: null,
     busy: false,
     enable: vi.fn(),
+    collect: vi.fn(),
+    allow: vi.fn(),
     disable: vi.fn(),
     ...overrides,
   } satisfies BackgroundWatch;
@@ -26,6 +28,7 @@ describe('WatchSettings', () => {
     ['blocked', /notifications de Relevé sont bloquées/],
     ['needs-install', /n’accorde la veille qu’aux applications installées/],
     ['off', /vigilance Météo-France orange ou rouge, application fermée/],
+    ['collecting', /Collecte active, sans notification/],
   ])('dit ce que permet l etat %s', (status, text) => {
     render(<WatchSettings watch={watch(status)} />);
     expect(screen.getByRole('status')).toHaveTextContent(text);
@@ -58,5 +61,37 @@ describe('WatchSettings', () => {
   it('desactive le bouton pendant une demande', () => {
     render(<WatchSettings watch={watch('needs-install', { busy: true })} />);
     expect(screen.getByRole('button', { name: 'Activer la veille' })).toBeDisabled();
+  });
+
+  it('propose la collecte sans notification, en disant ce qu elle enregistre et ce qu elle n affiche pas', async () => {
+    const off = watch('off');
+    render(<WatchSettings watch={off} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Collecter sans notification' }));
+    expect(off.collect).toHaveBeenCalledOnce();
+    expect(screen.getByText(/enregistrer en arrière-plan les prévisions/)).toBeInTheDocument();
+  });
+
+  it('propose la collecte seule meme quand les notifications sont bloquees', async () => {
+    const blocked = watch('blocked');
+    render(<WatchSettings watch={blocked} />);
+    expect(screen.queryByRole('button', { name: 'Activer la veille' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Collecter sans notification' }));
+    expect(blocked.collect).toHaveBeenCalledOnce();
+  });
+
+  it('en collecte seule, demande la permission de notifier sur geste, ou arrete', async () => {
+    const collecting = watch('collecting');
+    render(<WatchSettings watch={collecting} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Autoriser les notifications' }));
+    expect(collecting.allow).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole('button', { name: 'Arrêter la veille' }));
+    expect(collecting.disable).toHaveBeenCalledOnce();
+  });
+
+  it('n offre pas la collecte quand la veille est deja active ou impossible', () => {
+    const { rerender } = render(<WatchSettings watch={watch('on')} />);
+    expect(screen.queryByRole('button', { name: 'Collecter sans notification' })).toBeNull();
+    rerender(<WatchSettings watch={watch('needs-install')} />);
+    expect(screen.queryByRole('button', { name: 'Collecter sans notification' })).toBeNull();
   });
 });

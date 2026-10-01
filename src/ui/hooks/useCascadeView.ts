@@ -15,16 +15,16 @@ export function useCascadeView(
   bundle: ForecastBundle | null,
   inputs: CascadeInputs,
 ): CascadeView | null {
-  const { terrain, verification, preferred } = inputs;
+  const { terrain, verification, preferred, shortLead } = inputs;
   return useMemo(() => {
     if (bundle === null) {
       return null;
     }
     return computeCascadeView(
       bundle,
-      { terrain, verification, preferred },
+      { terrain, verification, preferred, shortLead },
       inputs.now ?? new Date(),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `now` change a chaque rendu par defaut ; seuls les intrants de selection doivent recalculer la cascade.
-  }, [bundle, terrain, verification, preferred]);
+  }, [bundle, terrain, verification, preferred, shortLead]);
 }

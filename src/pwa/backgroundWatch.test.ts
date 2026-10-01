@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   WATCH_MIN_INTERVAL_MS,
+  allowNotifications,
   disableWatch,
+  enableCollection,
   enableWatch,
   readWatchStatus,
   requestWatchRun,
@@ -144,6 +146,14 @@ describe('readWatchStatus', () => {
     install({ permission: 'granted', tags: [WATCH_TAG] });
     expect(await readWatchStatus()).toBe('on');
   });
+
+  it('dit « collecte seule » quand la veille est inscrite sans permission de notifier', async () => {
+    install({ permission: 'default', tags: [WATCH_TAG] });
+    expect(await readWatchStatus()).toBe('collecting');
+    // Un refus de notifier n'arrete pas la collecte deja inscrite.
+    install({ permission: 'denied', tags: [WATCH_TAG] });
+    expect(await readWatchStatus()).toBe('collecting');
+  });
 });
 
 describe('enableWatch et disableWatch', () => {
@@ -179,5 +189,49 @@ describe('enableWatch et disableWatch', () => {
     install();
     await requestWatchRun();
     expect(posted).toEqual([{ type: WATCH_RUN_MESSAGE }]);
+  });
+});
+
+describe('enableCollection et allowNotifications', () => {
+  it('inscrit la collecte sans demander la permission de notifier', async () => {
+    install();
+    expect(await enableCollection()).toBe('collecting');
+    expect(browser.tags).toEqual([WATCH_TAG]);
+    expect(Notification.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('passe a « active » quand la permission de notifier est deja accordee', async () => {
+    install({ permission: 'granted' });
+    expect(await enableCollection()).toBe('on');
+  });
+
+  it('inscrit la collecte meme quand les notifications sont bloquees', async () => {
+    install({ permission: 'denied' });
+    expect(await enableCollection()).toBe('collecting');
+  });
+
+  it('dit d installer l application, ou de ne rien promettre sans support', async () => {
+    install({ registerFails: true });
+    expect(await enableCollection()).toBe('needs-install');
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'serviceWorker');
+    expect(await enableCollection()).toBe('unsupported');
+  });
+
+  it('demande la permission de notifier sur la collecte deja active', async () => {
+    install({ tags: [WATCH_TAG] });
+    expect(await allowNotifications()).toBe('on');
+    expect(Notification.requestPermission).toHaveBeenCalledOnce();
+  });
+
+  it('reste en collecte seule quand la demande est refusee ou laissee en suspens', async () => {
+    install({ tags: [WATCH_TAG], requested: 'denied' });
+    expect(await allowNotifications()).toBe('collecting');
+    install({ tags: [WATCH_TAG], requested: 'default' });
+    expect(await allowNotifications()).toBe('collecting');
+  });
+
+  it('ne fait rien sans support', async () => {
+    expect(await allowNotifications()).toBe('unsupported');
   });
 });

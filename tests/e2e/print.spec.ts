@@ -23,3 +23,23 @@ test("l'impression garde la provenance et retire les commandes", async ({ page }
   await expect(footer).toBeVisible();
   await expect(page.getByRole('heading', { level: 1, name: 'Lyon' })).toBeVisible();
 });
+
+// Les feuillets repliables (air, repères du jour, alertes...) s'ouvrent a
+// l'impression : la feuille de registre ne cache rien. `emulateMedia` ne
+// declenche pas `beforeprint`, que le navigateur envoie avant d'imprimer.
+test("l'impression ouvre les feuillets replies, puis les referme", async ({ page }) => {
+  await stubApis(page);
+  await openLyon(page);
+  await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible({ timeout: 15000 });
+
+  const airDetails = page
+    .getByRole('heading', { name: 'Qualité de l’air et pollens' })
+    .locator('xpath=ancestor::details');
+  await expect(airDetails).not.toHaveAttribute('open', '');
+
+  await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
+  await expect(airDetails).toHaveAttribute('open', '');
+
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await expect(airDetails).not.toHaveAttribute('open', '');
+});

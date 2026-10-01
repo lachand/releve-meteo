@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { rankModels } from '../domain/modelSelection';
-import type { Criterion, ModelRanking, SelectionContext } from '../domain/modelSelection';
+import type {
+  Criterion,
+  ModelRanking,
+  SelectionContext,
+  SwitchReason,
+} from '../domain/modelSelection';
 import type { ModelVerification } from '../domain/reliability';
 import type { ModelId } from '../domain/types';
-import { criterionSentence, explainSelection, localTemperatureError } from './selectionExplanation';
+import {
+  criterionSentence,
+  explainSelection,
+  localTemperatureError,
+  switchSentence,
+} from './selectionExplanation';
 
 function ranking(model: ModelId, overrides: Partial<ModelRanking> = {}): ModelRanking {
   return {
@@ -80,6 +90,32 @@ describe('criterionSentence', () => {
     expect(criterionSentence('gfs', criterion)).toBe(
       'Moins juste ici que la moyenne des modèles sur le vent : 2,5 km/h d’erreur moyenne à J+3 sur 40 h vérifiées, contre 1,5 km/h en moyenne pour les autres.',
     );
+  });
+
+  it('redige la performance a courte echeance, station a station, meilleure ou moins bonne que les pairs', () => {
+    const better: Criterion = {
+      kind: 'shortSkill',
+      points: 2,
+      detail: { mae: 0.6, peerMae: 1.4, sampleCount: 14, variable: 'temperature', bucket: '3 h' },
+    };
+    expect(criterionSentence('arpege', better)?.replace(/\u00a0/g, ' ')).toBe(
+      'Plus proche des mesures de la station que la moyenne des modèles à courte échéance : 0,6 °C d’erreur moyenne à 3 h d’échéance sur 14 h comparées à la station, contre 1,4 °C en moyenne pour les autres.',
+    );
+    const worse: Criterion = {
+      kind: 'shortSkill',
+      points: -1,
+      detail: { mae: 1.8, peerMae: 1.2, sampleCount: 9, variable: 'temperature', bucket: '1 h' },
+    };
+    expect(criterionSentence('gfs', worse)).toContain('Moins proche des mesures de la station');
+  });
+
+  it('retourne null pour une performance courte quand un champ du detail manque', () => {
+    const criterion: Criterion = {
+      kind: 'shortSkill',
+      points: 1,
+      detail: { mae: 0.6, peerMae: 1.4, sampleCount: 14 }, // bucket absent
+    };
+    expect(criterionSentence('arome', criterion)).toBeNull();
   });
 
   it('retourne null pour une performance locale quand un champ du detail manque', () => {
@@ -260,5 +296,99 @@ describe('localTemperatureError', () => {
 
   it('retourne null quand l entree existe mais n a pas encore de statistiques (en collecte)', () => {
     expect(localTemperatureError(verifications, 'gfs')).toBeNull();
+  });
+});
+
+describe('switchSentence', () => {
+  const plain = (text: string) => text.replace(/\u00a0/g, ' ');
+  const base: SwitchReason = {
+    kind: 'resolution',
+    from: 'gfs',
+    to: 'arome',
+    leadHours: 3.2,
+    gain: 4,
+    cause: null,
+    fromDetail: null,
+    toDetail: { terrain: 'mountain' },
+  };
+
+  it('nomme la limite de l ancien modele quand c est elle qui force la bascule', () => {
+    const sentence = (cause: SwitchReason['cause']) =>
+      plain(switchSentence({ ...base, kind: 'availability', from: 'arome', to: 'arpege', cause }));
+    expect(sentence('outOfRange')).toBe(
+      'AROME ne couvre pas plus de 48 h d’échéance : ARPEGE prend le relais.',
+    );
+    expect(sentence('noData')).toBe(
+      'AROME n’a plus de valeur à partir de là : ARPEGE prend le relais.',
+    );
+    expect(sentence('unavailable')).toContain('AROME est absent de la réponse du service');
+    expect(sentence('outOfDomain')).toContain('Ce lieu est hors du domaine de calcul de AROME');
+  });
+
+  it('dit le choix manuel', () => {
+    expect(switchSentence({ ...base, kind: 'manual' })).toContain('AROME, votre choix, couvre');
+  });
+
+  it('chiffre la maille avec le terrain', () => {
+    const text = plain(switchSentence(base));
+    expect(text).toContain('À 3 h d’échéance, AROME (maille de 1,3 km) convient mieux que GFS');
+    expect(text).toContain('terrain montagne');
+    expect(plain(switchSentence({ ...base, toDetail: null }))).toContain('terrain plaine');
+  });
+
+  it('dit la moyenne echeance', () => {
+    expect(
+      plain(switchSentence({ ...base, kind: 'mediumRange', to: 'ecmwf', leadHours: 90 })),
+    ).toBe(
+      'À 90 h d’échéance, la maille compte moins : ECMWF IFS tient mieux la moyenne échéance que GFS.',
+    );
+  });
+
+  it('chiffre la mesure locale, avec l ancien modele quand c est la meme mesure', () => {
+    const detail = { mae: 0.4, variable: 'temperature', leadDays: 3, sampleCount: 60 } as const;
+    const same = plain(
+      switchSentence({
+        ...base,
+        kind: 'localSkill',
+        toDetail: detail,
+        fromDetail: { ...detail, mae: 2 },
+      }),
+    );
+    expect(same).toBe(
+      'AROME a été plus juste ici que GFS sur la température : 0,4 °C d’erreur moyenne à J+3, contre 2,0 °C pour GFS.',
+    );
+    const other = plain(
+      switchSentence({
+        ...base,
+        kind: 'localSkill',
+        toDetail: detail,
+        fromDetail: { ...detail, variable: 'wind' },
+      }),
+    );
+    expect(other).not.toContain('contre');
+    expect(plain(switchSentence({ ...base, kind: 'localSkill' }))).toBe(
+      'AROME a été plus juste que GFS ici, sur les vérifications locales.',
+    );
+  });
+
+  it('chiffre la note courte, avec l ancien modele quand elle existe', () => {
+    const detail = { mae: 0.3, bucket: '3 h' };
+    const full = plain(
+      switchSentence({
+        ...base,
+        kind: 'shortSkill',
+        toDetail: detail,
+        fromDetail: { ...detail, mae: 2.5 },
+      }),
+    );
+    expect(full).toBe(
+      'AROME a été plus proche des mesures de la station que GFS à 3 h d’échéance : 0,3 °C d’erreur moyenne, contre 2,5 °C pour GFS.',
+    );
+    expect(plain(switchSentence({ ...base, kind: 'shortSkill', toDetail: detail }))).not.toContain(
+      'contre',
+    );
+    expect(plain(switchSentence({ ...base, kind: 'shortSkill' }))).toBe(
+      'AROME a été plus proche des mesures de la station que GFS à courte échéance.',
+    );
   });
 });

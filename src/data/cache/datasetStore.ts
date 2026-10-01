@@ -30,7 +30,8 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   // v2 : verification a l'altitude de la station.
   // v3 : fenetre jusqu'a aujourd'hui, avec l'heure de la derniere mesure.
   // v4 : biais par moment de la journee.
-  verification: 4,
+  // v5 : erreur par jour (historique de fiabilité).
+  verification: 5,
   airQuality: 1,
   nowcast: 1,
   // v2 : temperatures des modeles au point de la station.

@@ -57,6 +57,30 @@ describe('HourlyStrip', () => {
     expect(within(modelRow as HTMLElement).getAllByText('ARPEGE').length).toBeGreaterThan(0);
   });
 
+  it('ecrit la raison de la bascule sous le tableau, seulement si elle tombe dans la fenetre', () => {
+    const timeline = buildHourlyTimeline('2026-08-17T00:00', 6);
+    const bundle = buildBundle({
+      timeline,
+      models: ['arome', 'arpege'],
+      values: (model, index) => (model === 'arome' && index >= 3 ? { temperature: null } : {}),
+    });
+    const cascade = computeCascadeView(
+      bundle,
+      { terrain: null, verification: [], preferred: null },
+      NOW,
+    );
+    const { unmount } = render(
+      <HourlyStrip bundle={bundle} cascade={cascade} hours={6} windUnit="kmh" caption="Test" />,
+    );
+    expect(screen.getByText(/AROME n’a plus de valeur à partir de là/)).toBeInTheDocument();
+    unmount();
+    // Fenetre de 3 heures : la bascule (a 3 h) n'est pas affichee, sa raison non plus.
+    render(
+      <HourlyStrip bundle={bundle} cascade={cascade} hours={3} windUnit="kmh" caption="Test" />,
+    );
+    expect(screen.queryByText(/n’a plus de valeur/)).not.toBeInTheDocument();
+  });
+
   it('ne marque aucune colonne quand le modele ne change pas sur la fenetre affichee', () => {
     const timeline = buildHourlyTimeline('2026-08-17T00:00', 4);
     const bundle = buildBundle({ timeline, models: ['arome'] });

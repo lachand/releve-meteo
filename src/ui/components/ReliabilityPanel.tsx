@@ -18,6 +18,7 @@ import type { DatasetState } from '../hooks/useDataset';
 import { MODEL_LABELS, modelColor, modelColorVar } from '../modelPresentation';
 import { VARIABLE_LABELS, VARIABLE_UNITS } from '../selectionExplanation';
 import { PeriodBiasTable } from './PeriodBiasTable';
+import { ReliabilityHistory } from './ReliabilityHistory';
 import styles from './ReliabilityPanel.module.css';
 
 const LEADS = [1, 2, 3, 5, 7] as const;
@@ -289,6 +290,7 @@ export function ReliabilityPanel({ state, activeModel = null }: ReliabilityPanel
           {variable === 'temperature' && (
             <PeriodBiasTable verification={verifications} activeModel={activeModel} />
           )}
+          {variable === 'temperature' && <ReliabilityHistory verification={verifications} />}
         </section>
       ))}
 

@@ -9,6 +9,9 @@ import { resetMemoryForecastStore } from '../../data/cache/forecastStore';
 import { resetMemoryGeocodingStore } from '../../data/cache/geocodingStore';
 import { clearModelChoices } from '../../data/cache/modelChoice';
 import { resetMemoryPreferencesForTests } from '../../data/cache/preferences';
+import { recordSnapshot } from '../../data/cache/snapshotStore';
+import type { ForecastSnapshot } from '../../domain/leadScores';
+import type { LocalIsoHour } from '../../domain/types';
 import { resetDepartmentsForTests, resetStationsForTests } from '../../data/repository';
 import departments from '../../../public/data/departements-fr.json';
 import airQualityRaw from '../../../tests/fixtures/live/air-quality-lyon.json?raw';
@@ -430,6 +433,10 @@ describe('App', { timeout: 30000 }, () => {
     expect(
       await screen.findByRole('heading', { name: 'Biais selon le moment de la journée' }),
     ).toBeInTheDocument();
+    // Historique : l'erreur de chaque jour, sur la fenetre de 30 jours deja lue.
+    expect(
+      await screen.findByRole('heading', { name: 'Historique de fiabilité' }),
+    ).toBeInTheDocument();
 
     // Controle au dernier releve : METAR de 10 h UTC (12 h locale), 26 °C.
     // Jeu de donnees distinct de la verification : il peut arriver apres.
@@ -504,6 +511,36 @@ describe('App', { timeout: 30000 }, () => {
       ).not.toHaveAttribute('open');
     }
   }, 20000);
+
+  it('fait entrer les notes courtes dans le choix du modele, et le dit dans l onglet Modeles', async () => {
+    server.use(...liveHandlers());
+    // Dix relevees horaires de la matinee (2 h a 11 h), chacune avec les 12 heures
+    // suivantes : AROME colle a 25 °C, ARPEGE s'en ecarte de 6 °C.
+    for (let issued = 2; issued <= 11; issued += 1) {
+      const timeline = Array.from(
+        { length: 12 },
+        (_, i) => `2026-09-28T${String(issued + 1 + i).padStart(2, '0')}:00` as LocalIsoHour,
+      ).filter((time) => time < '2026-09-29');
+      const snapshot: ForecastSnapshot = {
+        issuedAt: `2026-09-28T${String(issued).padStart(2, '0')}:00` as LocalIsoHour,
+        timeline,
+        temperature: { arome: timeline.map(() => 25), arpege: timeline.map(() => 31) },
+      };
+      await recordSnapshot('07480', snapshot, new Date());
+    }
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+
+    await user.click(screen.getByRole('tab', { name: 'Modèles' }));
+    // La station arrive apres la prevision : la phrase apparait quand les notes courtes
+    // existent, et nomme la mesure de la station comme source.
+    const sentences = await screen.findAllByText(
+      /(Plus|Moins) proche des mesures de la station que la moyenne des modèles à courte échéance/,
+      {},
+      { timeout: 12000 },
+    );
+    expect(sentences.length).toBeGreaterThan(0);
+  }, 30000);
 
   it('annonce la collecte des echeances courtes, avec les previsions deja enregistrees', async () => {
     server.use(...liveHandlers());

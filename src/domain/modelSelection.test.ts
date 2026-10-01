@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { buildHourlyTimeline } from '../../tests/factories';
 import {
+  SELECTION_WEIGHTS,
   buildSelectedCascade,
+  explainSwitch,
   leadDaysFor,
   rankModels,
   resolutionWeight,
   selectBestModel,
 } from './modelSelection';
 import type { SelectionContext } from './modelSelection';
+import type { LeadBucketScores, LeadScores } from './leadScores';
 import type { ModelVerification } from './reliability';
 import type { ModelId, WeatherVariable } from './types';
 
@@ -183,6 +186,127 @@ describe('rankModels', () => {
   });
 });
 
+/** Notes courtes : `maes` donne l'erreur moyenne de chaque modele dans la classe d'echeance `label`. */
+function shortScores(
+  label: '1 h' | '3 h' | '6 h' | '12 h',
+  maes: Partial<Record<ModelId, number>>,
+  pairs = 20,
+): LeadScores {
+  const bounds = { '1 h': [1, 1], '3 h': [2, 3], '6 h': [4, 6], '12 h': [7, 12] } as const;
+  const buckets: LeadBucketScores[] = (['1 h', '3 h', '6 h', '12 h'] as const).map((l) => ({
+    label: l,
+    from: bounds[l][0],
+    to: bounds[l][1],
+    models:
+      l === label
+        ? (Object.entries(maes) as [ModelId, number][]).map(([model, mae]) => ({
+            model,
+            pairs,
+            bias: 0,
+            mae,
+          }))
+        : [],
+  }));
+  return { buckets, snapshots: 30, oldestIssuedAt: '2026-09-27T08:00', ready: true };
+}
+
+describe('rankModels, notes courtes (shortSkill)', () => {
+  const withShort = (shortLead: LeadScores): SelectionContext => ({ ...lyon, shortLead });
+
+  it('ajoute un critere shortSkill a courte echeance, au profit du modele le plus proche des mesures', () => {
+    const context = withShort(shortScores('3 h', { arome: 2, arpege: 0.5, gfs: 2 }));
+    const ranking = rankModels(context, 3);
+    const arpege = ranking.find((r) => r.model === 'arpege');
+    const arome = ranking.find((r) => r.model === 'arome');
+    const short = arpege?.criteria.find((c) => c.kind === 'shortSkill');
+    expect(short?.points).toBeGreaterThan(0);
+    expect(short?.detail).toMatchObject({
+      bucket: '3 h',
+      variable: 'temperature',
+      sampleCount: 20,
+    });
+    expect(arome?.criteria.find((c) => c.kind === 'shortSkill')?.points).toBeLessThan(0);
+  });
+
+  it('peut renverser l a priori de maille quand l ecart mesure est net', () => {
+    const base = rankModels(lyon, 3)[0]?.model;
+    expect(base).toBe('arome');
+    const context = withShort(
+      shortScores('3 h', {
+        arome: 3,
+        arome_france: 3,
+        icon_d2: 3,
+        arpege: 0.2,
+        icon_eu: 3,
+        gfs: 3,
+      }),
+    );
+    const ranked = rankModels(context, 3);
+    const aromeShort = ranked
+      .find((r) => r.model === 'arome')
+      ?.criteria.find((c) => c.kind === 'shortSkill');
+    const arpegeShort = ranked
+      .find((r) => r.model === 'arpege')
+      ?.criteria.find((c) => c.kind === 'shortSkill');
+    expect((arpegeShort?.points ?? 0) - (aromeShort?.points ?? 0)).toBeGreaterThan(
+      SELECTION_WEIGHTS.shortSkill * 0.5,
+    );
+  });
+
+  it('remplace le volet temperature de la mesure locale, sans toucher pluie et vent', () => {
+    const context: SelectionContext = {
+      ...withShort(shortScores('3 h', { arome: 1, arpege: 2 })),
+      verification: [
+        verification('arome', 1, { leadDays: 1 }),
+        verification('arpege', 2, { leadDays: 1 }),
+        verification('arome', 1, { leadDays: 1, variable: 'wind' }),
+        verification('arpege', 2, { leadDays: 1, variable: 'wind' }),
+      ],
+    };
+    const arome = rankModels(context, 3).find((r) => r.model === 'arome');
+    const locals = arome?.criteria.filter((c) => c.kind === 'localSkill') ?? [];
+    expect(locals.map((c) => c.detail.variable)).toEqual(['wind']);
+    expect(arome?.criteria.some((c) => c.kind === 'shortSkill')).toBe(true);
+  });
+
+  it('retombe sur la mesure locale quotidienne sans note courte exploitable', () => {
+    const verifs = [
+      verification('arome', 1, { leadDays: 1 }),
+      verification('arpege', 2, { leadDays: 1 }),
+    ];
+    const noScores: LeadScores = { ...shortScores('3 h', {}), ready: false };
+    for (const shortLead of [undefined, noScores, shortScores('6 h', { arome: 1, arpege: 2 })]) {
+      const context: SelectionContext = { ...lyon, verification: verifs, shortLead };
+      const arome = rankModels(context, 3).find((r) => r.model === 'arome');
+      expect(arome?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+      expect(arome?.criteria.filter((c) => c.kind === 'localSkill')).toHaveLength(1);
+    }
+  });
+
+  it('ne s applique qu aux echeances de 0 a 12 h, et a un modele note avec au moins un pair', () => {
+    const context = withShort(shortScores('12 h', { arome: 1, arpege: 2 }));
+    expect(rankModels(context, 12.5)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+    expect(rankModels(context, -2)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+    expect(rankModels(context, 12)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(true);
+    // Un seul modele note dans la classe : aucun pair, donc aucun critere.
+    const alone = withShort(shortScores('3 h', { arome: 1 }));
+    expect(rankModels(alone, 3).some((r) => r.criteria.some((c) => c.kind === 'shortSkill'))).toBe(
+      false,
+    );
+    // Des pairs sans erreur : rien a comparer.
+    const exact = withShort(shortScores('3 h', { arome: 0, arpege: 0 }));
+    expect(rankModels(exact, 3).some((r) => r.criteria.some((c) => c.kind === 'shortSkill'))).toBe(
+      false,
+    );
+  });
+
+  it('classe une echeance fractionnaire dans la classe suivante, au moins 1 h', () => {
+    const context = withShort(shortScores('1 h', { arome: 1, arpege: 2 }));
+    expect(rankModels(context, 0.2)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(true);
+    expect(rankModels(context, 1.4)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+  });
+});
+
 describe('selectBestModel', () => {
   it('retourne le premier modele eligible', () => {
     expect(selectBestModel(lyon, 3)?.model).toBe('arome');
@@ -258,5 +382,114 @@ describe('buildSelectedCascade', () => {
     expect(strict.map((s) => s.model)).toEqual(['icon_eu', 'ecmwf']);
     expect(damped.map((s) => s.model)).toEqual(['icon_eu', 'ecmwf']);
     expect(damped[1]?.startIndex ?? 0).toBeGreaterThan(strict[1]?.startIndex ?? 0);
+  });
+});
+
+describe('explainSwitch', () => {
+  it('dit qu un modele a atteint la fin de sa portee, quand c est la raison', () => {
+    // AROME France ne va pas au-dela de 51 h : a 60 h il ne couvre plus l'echeance.
+    const reason = explainSwitch({
+      context: lyon,
+      from: 'arome_france',
+      to: 'arpege',
+      leadHours: 60,
+    });
+    expect(reason).toMatchObject({
+      kind: 'availability',
+      from: 'arome_france',
+      to: 'arpege',
+      cause: 'outOfRange',
+      leadHours: 60,
+    });
+  });
+
+  it('dit qu un modele n a plus de valeurs, meme dans sa portee nominale', () => {
+    const reason = explainSwitch({
+      context: lyon,
+      from: 'arome',
+      to: 'arpege',
+      leadHours: 20,
+      fromHasData: false,
+    });
+    expect(reason).toMatchObject({ kind: 'availability', cause: 'noData' });
+  });
+
+  it('dit qu un modele est absent ou hors de son domaine', () => {
+    const missing = explainSwitch({
+      context: { ...lyon, available: ['arpege'] },
+      from: 'arome',
+      to: 'arpege',
+      leadHours: 10,
+    });
+    expect(missing).toMatchObject({ kind: 'availability', cause: 'unavailable' });
+    const brest = { ...lyon, latitude: 48.39, longitude: -4.49 };
+    const outside = explainSwitch({ context: brest, from: 'icon_d2', to: 'arome', leadHours: 10 });
+    expect(outside).toMatchObject({ kind: 'availability', cause: 'outOfDomain' });
+  });
+
+  it('dit le choix manuel quand le modele rejoint est celui que l utilisateur a choisi', () => {
+    const reason = explainSwitch({
+      context: lyon,
+      from: 'arpege',
+      to: 'arome',
+      leadHours: 10,
+      preferred: 'arome',
+    });
+    expect(reason).toMatchObject({ kind: 'manual', to: 'arome', gain: 0 });
+  });
+
+  it('retient le critere qui a le plus pese : la maille a courte echeance', () => {
+    const reason = explainSwitch({ context: lyon, from: 'gfs', to: 'arome', leadHours: 3 });
+    expect(reason.kind).toBe('resolution');
+    expect(reason.gain).toBeGreaterThan(0);
+    expect(reason.toDetail?.resolutionKm).toBe(1.3);
+    expect(reason.fromDetail?.resolutionKm).toBeGreaterThan(10);
+  });
+
+  it('retient la qualite en moyenne echeance quand la maille ne compte plus', () => {
+    const reason = explainSwitch({ context: lyon, from: 'arpege', to: 'ecmwf', leadHours: 90 });
+    expect(reason.kind).toBe('mediumRange');
+  });
+
+  it('retient la mesure locale quand c est elle qui a fait la difference', () => {
+    // A 72 h les a priori sont proches ; ICON-EU, nettement plus juste ici, passe devant ARPEGE.
+    const context: SelectionContext = {
+      ...lyon,
+      verification: [
+        ...ALL.filter((m) => m !== 'icon_eu').map((m) => verification(m, 2, { leadDays: 3 })),
+        verification('icon_eu', 0.4, { leadDays: 3 }),
+        // Un volet de vent, moins determinant : le detail rendu est celui qui pese le plus.
+        ...ALL.map((m) =>
+          verification(m, m === 'icon_eu' ? 3 : 4, { leadDays: 3, variable: 'wind' }),
+        ),
+      ],
+    };
+    const reason = explainSwitch({ context, from: 'arpege', to: 'icon_eu', leadHours: 72 });
+    expect(reason.kind).toBe('localSkill');
+    expect(reason.toDetail?.mae).toBe(0.4);
+    expect(reason.toDetail?.variable).toBe('temperature');
+  });
+
+  it('retient la note courte quand elle a fait la difference', () => {
+    const context: SelectionContext = {
+      ...lyon,
+      shortLead: shortScores('3 h', { arpege: 0.3, gfs: 2.5, icon_eu: 2.5 }),
+    };
+    const reason = explainSwitch({ context, from: 'arome', to: 'arpege', leadHours: 3 });
+    expect(reason.kind).toBe('shortSkill');
+    expect(reason.toDetail?.bucket).toBe('3 h');
+    // AROME n'a pas de note a cette echeance : rien a citer pour lui.
+    expect(reason.fromDetail).toBeNull();
+  });
+
+  it('ne rend pas un gain negatif quand aucun critere ne favorise le modele rejoint', () => {
+    // Deux modeles a criteres identiques (meme classe, memes donnees) : rien ne distingue.
+    const reason = explainSwitch({
+      context: lyon,
+      from: 'arome',
+      to: 'arome_france',
+      leadHours: 3,
+    });
+    expect(reason.gain).toBeGreaterThanOrEqual(0);
   });
 });

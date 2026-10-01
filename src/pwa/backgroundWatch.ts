@@ -8,7 +8,11 @@ import { WATCH_RUN_MESSAGE, WATCH_TAG } from './watchTags';
  * viendra pas (SERVICE_WORKER.md 9).
  */
 
-export type WatchStatus = 'unsupported' | 'blocked' | 'needs-install' | 'off' | 'on';
+/**
+ * `on` : collecte des instantanes et notifications ; `collecting` : collecte
+ * seule, sans permission de notifier (refusee ou pas demandee).
+ */
+export type WatchStatus = 'unsupported' | 'blocked' | 'needs-install' | 'off' | 'collecting' | 'on';
 
 interface PeriodicSyncManager {
   register(tag: string, options?: { readonly minInterval: number }): Promise<void>;
@@ -78,12 +82,12 @@ export async function readWatchStatus(): Promise<WatchStatus> {
     if (manager === null) {
       return 'unsupported';
     }
+    const tags = await manager.sync.getTags();
+    if (tags.includes(WATCH_TAG)) {
+      return Notification.permission === 'granted' ? 'on' : 'collecting';
+    }
     if (Notification.permission === 'denied') {
       return 'blocked';
-    }
-    const tags = await manager.sync.getTags();
-    if (tags.includes(WATCH_TAG) && Notification.permission === 'granted') {
-      return 'on';
     }
     return (await syncGranted()) ? 'off' : 'needs-install';
   } catch {
@@ -110,6 +114,34 @@ export async function enableWatch(): Promise<WatchStatus> {
     return 'needs-install';
   }
   return 'on';
+}
+
+/**
+ * Inscrit la collecte des instantanes de prevision seule, sans demander la
+ * permission de notifier : rien n'est affiche, des heures sont enregistrees.
+ */
+export async function enableCollection(): Promise<WatchStatus> {
+  const manager = await syncManager();
+  if (manager === null) {
+    return 'unsupported';
+  }
+  try {
+    await manager.sync.register(WATCH_TAG, { minInterval: WATCH_MIN_INTERVAL_MS });
+  } catch {
+    // Refus du navigateur : application non installee.
+    return 'needs-install';
+  }
+  return Notification.permission === 'granted' ? 'on' : 'collecting';
+}
+
+/** Demande la permission de notifier, la collecte etant deja inscrite (sur geste de l'utilisateur). */
+export async function allowNotifications(): Promise<WatchStatus> {
+  const manager = await syncManager();
+  if (manager === null) {
+    return 'unsupported';
+  }
+  const permission = await Notification.requestPermission();
+  return permission === 'granted' ? 'on' : 'collecting';
 }
 
 /** Lance une veille tout de suite, une fois les lieux recopies. */
