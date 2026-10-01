@@ -1,4 +1,5 @@
 import { RELIABILITY } from './constants';
+import { utcMsFromLocalIso } from './time';
 import type { LocalIsoHour, ModelId, Provenance, WeatherVariable } from './types';
 
 /*
@@ -113,6 +114,121 @@ export function biasByPeriod(pairs: readonly VerificationPair[]): readonly Perio
   return result.length === 0 ? null : result;
 }
 
+export const DAILY_ERRORS = {
+  /** Paires minimales dans une journee : en deca, la journee n'est pas comptee. */
+  minPairs: 6,
+  /** Longueur de la fenetre « ces derniers jours » et de celle d'avant, en jours. */
+  windowDays: 7,
+  /** Journees comptees minimales par fenetre et par modele pour le designer. */
+  minDays: 4,
+} as const;
+
+export interface DailyError {
+  /** Jour local, 'YYYY-MM-DD'. */
+  readonly date: string;
+  /** Erreur absolue moyenne de la journee. */
+  readonly mae: number;
+  readonly count: number;
+}
+
+/**
+ * Erreur absolue moyenne par jour local, du plus ancien au plus recent. Les
+ * paires sans heure ou dont un terme manque sont ignorees, jamais comptees
+ * comme zero ; une journee sous le minimum de paires est omise ; null s'il
+ * n'en reste aucune.
+ */
+export function dailyErrors(pairs: readonly VerificationPair[]): readonly DailyError[] | null {
+  const byDay = new Map<string, number[]>();
+  for (const pair of pairs) {
+    if (pair.time === undefined || pair.predicted === null || pair.observed === null) {
+      continue;
+    }
+    const date = pair.time.slice(0, 10);
+    const gaps = byDay.get(date) ?? [];
+    gaps.push(Math.abs(pair.predicted - pair.observed));
+    byDay.set(date, gaps);
+  }
+  const days: DailyError[] = [];
+  for (const [date, gaps] of byDay) {
+    if (gaps.length >= DAILY_ERRORS.minPairs) {
+      days.push({
+        date,
+        mae: gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length,
+        count: gaps.length,
+      });
+    }
+  }
+  days.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return days.length === 0 ? null : days;
+}
+
+export interface WeekLeader {
+  readonly model: ModelId;
+  readonly mae: number;
+  /** Journees comptees dans la fenetre. */
+  readonly days: number;
+}
+
+export interface WeeklyComparison {
+  /** Dernier jour pris en compte, 'YYYY-MM-DD'. */
+  readonly lastDate: string;
+  /** Le plus juste sur les 7 derniers jours, null sans pair assez nombreux. */
+  readonly recent: WeekLeader | null;
+  /** Le plus juste sur les 7 jours d'avant. */
+  readonly previous: WeekLeader | null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function dayNumber(date: string): number {
+  return Math.round(utcMsFromLocalIso(`${date}T00:00` as LocalIsoHour) / DAY_MS);
+}
+
+function leaderOf(
+  rows: readonly { readonly model: ModelId; readonly daily: readonly DailyError[] }[],
+  from: number,
+  to: number,
+): WeekLeader | null {
+  const candidates: WeekLeader[] = [];
+  for (const { model, daily } of rows) {
+    const inside = daily.filter((d) => {
+      const n = dayNumber(d.date);
+      return n >= from && n <= to;
+    });
+    if (inside.length < DAILY_ERRORS.minDays) {
+      continue;
+    }
+    const count = inside.reduce((sum, d) => sum + d.count, 0);
+    const mae = inside.reduce((sum, d) => sum + d.mae * d.count, 0) / count;
+    candidates.push({ model, mae, days: inside.length });
+  }
+  // Un seul modele eligible n'est le « plus juste » de personne.
+  if (candidates.length < 2) {
+    return null;
+  }
+  return candidates.reduce((best, c) => (c.mae < best.mae ? c : best));
+}
+
+/**
+ * Le modele le plus juste sur les 7 derniers jours et sur les 7 d'avant, a
+ * partir des erreurs journalieres de chaque modele. null quand ni l'une ni
+ * l'autre fenetre n'a de designe.
+ */
+export function weeklyComparison(
+  rows: readonly { readonly model: ModelId; readonly daily: readonly DailyError[] }[],
+): WeeklyComparison | null {
+  const dates = rows.flatMap((row) => row.daily.map((d) => d.date));
+  if (dates.length === 0) {
+    return null;
+  }
+  const lastDate = dates.reduce((a, b) => (a > b ? a : b));
+  const last = dayNumber(lastDate);
+  const span = DAILY_ERRORS.windowDays;
+  const recent = leaderOf(rows, last - span + 1, last);
+  const previous = leaderOf(rows, last - 2 * span + 1, last - span);
+  return recent === null && previous === null ? null : { lastDate, recent, previous };
+}
+
 /** Table de contingence pluie / sec, seuil en mm/h. */
 export interface RainContingency {
   readonly hits: number;
@@ -200,6 +316,8 @@ export interface ModelVerification {
   readonly rain: RainContingency | null;
   /** Biais par moment de la journee ; temperature seulement, une fois la verification prete. */
   readonly periods?: readonly PeriodBias[] | null;
+  /** Erreur par jour ; temperature seulement, une fois la verification prete. */
+  readonly daily?: readonly DailyError[] | null;
   readonly sampleCount: number;
   readonly status: 'ready' | 'collecting';
   /** Provenance de la reference comparee. */
@@ -224,6 +342,7 @@ export function verifyModel(input: {
     stats: ready ? stats : null,
     rain: ready && input.variable === 'precipitation' ? rainContingency(input.pairs) : null,
     periods: ready && input.variable === 'temperature' ? biasByPeriod(input.pairs) : null,
+    daily: ready && input.variable === 'temperature' ? dailyErrors(input.pairs) : null,
     sampleCount,
     status: ready ? 'ready' : 'collecting',
     reference: input.reference,

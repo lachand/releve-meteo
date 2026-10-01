@@ -433,6 +433,10 @@ describe('App', { timeout: 30000 }, () => {
     expect(
       await screen.findByRole('heading', { name: 'Biais selon le moment de la journée' }),
     ).toBeInTheDocument();
+    // Historique : l'erreur de chaque jour, sur la fenetre de 30 jours deja lue.
+    expect(
+      await screen.findByRole('heading', { name: 'Historique de fiabilité' }),
+    ).toBeInTheDocument();
 
     // Controle au dernier releve : METAR de 10 h UTC (12 h locale), 26 °C.
     // Jeu de donnees distinct de la verification : il peut arriver apres.

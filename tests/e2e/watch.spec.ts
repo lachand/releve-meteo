@@ -311,7 +311,6 @@ test('la veille enregistre des instantanes de prevision meme sans permission de 
 
   // Aucune permission de notification accordee : rien ne sera affiche.
   expect(await page.evaluate(() => Notification.permission)).not.toBe('granted');
-  await dispatchPeriodicSync(page, 'releve-veille');
 
   type Stored = {
     issuedAt: string;
@@ -322,7 +321,19 @@ test('la veille enregistre des instantanes de prevision meme sans permission de 
   // on attend celui de la veille, reconnaissable a son heure d'emission.
   const fromWatch = async (): Promise<Stored | undefined> =>
     ((await storedSnapshots(page, '07480')) as Stored[]).find((s) => s.issuedAt === parisHour(0));
-  await expect.poll(async () => (await fromWatch()) !== undefined, { timeout: 20000 }).toBe(true);
+  // Les contextes de test paralleles partagent l'identifiant d'enregistrement
+  // des outils de developpement : un evenement peut atteindre le worker d'un
+  // autre test. La collecte etant idempotente (une heure, un instantane), on
+  // redeclenche la veille jusqu'a trouver le notre.
+  await expect
+    .poll(
+      async () => {
+        await dispatchPeriodicSync(page, 'releve-veille');
+        return (await fromWatch()) !== undefined;
+      },
+      { timeout: 30000, intervals: [2000] },
+    )
+    .toBe(true);
   const snapshot = await fromWatch();
   expect(snapshot?.timeline[0]).toBe(parisHour(1));
   expect(snapshot?.temperature.arome?.[0]).toBe(21);
