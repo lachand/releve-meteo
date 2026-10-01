@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { WatchEntry } from '../../domain/watch';
 import { deleteDbForTests } from './db';
 import { resetMemoryDatasetStore, setDataset } from './datasetStore';
-import { markNotified, readWatchState, saveWatchDigest, saveWatchEntries } from './watchStore';
+import {
+  markNotified,
+  readWatchState,
+  saveWatchDigest,
+  saveWatchEntries,
+  saveWatchNotify,
+} from './watchStore';
+import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
 
 const NOW = new Date('2026-09-28T13:27:00Z');
 const HOUR = 60 * 60 * 1000;
@@ -37,6 +44,7 @@ describe('watchStore', () => {
       notified: {},
       lastRunUtcMs: null,
       digest: false,
+      notify: DEFAULT_NOTIFY,
     });
     await setDataset('watch', 'all', { entries: 'oups' }, 0, 1);
     expect((await readWatchState()).entries).toEqual([]);
@@ -51,6 +59,7 @@ describe('watchStore', () => {
       notified: { a: NOW.getTime() },
       lastRunUtcMs: NOW.getTime(),
       digest: false,
+      notify: DEFAULT_NOTIFY,
     });
   });
 
@@ -80,5 +89,18 @@ describe('watchStore', () => {
     const state = await readWatchState();
     expect(state.notified).toEqual({ gardee: earlier.getTime(), nouvelle: NOW.getTime() });
     expect(state.lastRunUtcMs).toBeNull();
+  });
+
+  it('garde les notifications voulues sans toucher au reste, et relit un champ illisible comme rien', async () => {
+    await saveWatchEntries([ENTRY], 'kmh', NOW);
+    const wanted = { risks: true, rain: false, pollen: true, mode: 'instant', hour: 6 } as const;
+    await saveWatchNotify(wanted, NOW);
+    expect(await readWatchState()).toMatchObject({ notify: wanted, entries: [ENTRY] });
+    // Une recopie des lieux ne l'efface pas ; une ecriture identique n'ecrit rien.
+    await saveWatchEntries([ENTRY], 'kt', NOW);
+    await saveWatchNotify(wanted, NOW);
+    expect((await readWatchState()).notify).toEqual(wanted);
+    await setDataset('watch', 'all', { entries: [], notified: {}, notify: 'oups' }, 0, 1);
+    expect((await readWatchState()).notify).toEqual(DEFAULT_NOTIFY);
   });
 });

@@ -5,6 +5,7 @@ import {
   readWatchState,
   saveWatchDigest,
   saveWatchEntries,
+  saveWatchNotify,
 } from '../../data/cache/watchStore';
 import { loadDepartments, peekVerifications } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
@@ -12,6 +13,8 @@ import { departmentAt } from '../../domain/departments';
 import { MODEL_ORDER } from '../../domain/models';
 import type { ModelVerification } from '../../domain/reliability';
 import type { SpreadHit } from '../../domain/spreadAlerts';
+import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
+import type { NotifyPrefs } from '../../domain/weatherNotices';
 import type { AlertRule, ModelId, Place, Preferences, TerrainProfile } from '../../domain/types';
 import type { VigilanceSummary } from '../../domain/vigilance';
 import {
@@ -57,6 +60,9 @@ export interface BackgroundWatch {
   /** Resume du matin voulu : une notification par favori, a la premiere veille de la matinee. */
   readonly digest: boolean;
   readonly setDigest: (wanted: boolean) => void;
+  /** Risques, pluie et pollens voulus, et quand : le matin a heure choisie, ou des la detection. */
+  readonly notify: NotifyPrefs;
+  readonly setNotify: (change: Partial<NotifyPrefs>) => void;
 }
 
 export interface WatchMirrorInputs {
@@ -111,6 +117,7 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   const [status, setStatus] = useState<WatchStatus | null>(null);
   const [lastRunUtcMs, setLastRun] = useState<number | null>(null);
   const [digest, setDigestState] = useState(false);
+  const [notify, setNotifyState] = useState<NotifyPrefs>(DEFAULT_NOTIFY);
   const [busy, setBusy] = useState(false);
   // Premiere veille demandee a l'activation, lancee apres la recopie.
   const runAfterMirror = useRef(false);
@@ -120,6 +127,7 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
       setStatus(next);
       setLastRun(state.lastRunUtcMs);
       setDigestState(state.digest);
+      setNotifyState(state.notify);
     });
   }, []);
 
@@ -130,7 +138,11 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
         setStatus(next);
         setLastRun(state.lastRunUtcMs);
         setDigestState(state.digest);
+        setNotifyState(state.notify);
+        setNotifyState(state.notify);
         setDigestState(state.digest);
+        setNotifyState(state.notify);
+        setNotifyState(state.notify);
       }
     });
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
@@ -234,8 +246,43 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
     setDigestState(wanted);
     void saveWatchDigest(wanted, new Date());
   }, []);
+  // Dernier choix connu, pour que deux changements successifs se cumulent.
+  const notifyRef = useRef(notify);
+  useEffect(() => {
+    notifyRef.current = notify;
+  }, [notify]);
+  const setNotify = useCallback((change: Partial<NotifyPrefs>) => {
+    const next = { ...notifyRef.current, ...change };
+    notifyRef.current = next;
+    setNotifyState(next);
+    void saveWatchNotify(next, new Date());
+  }, []);
   return useMemo(
-    () => ({ status, lastRunUtcMs, busy, enable, collect, allow, disable, digest, setDigest }),
-    [status, lastRunUtcMs, busy, enable, collect, allow, disable, digest, setDigest],
+    () => ({
+      status,
+      lastRunUtcMs,
+      busy,
+      enable,
+      collect,
+      allow,
+      disable,
+      digest,
+      setDigest,
+      notify,
+      setNotify,
+    }),
+    [
+      status,
+      lastRunUtcMs,
+      busy,
+      enable,
+      collect,
+      allow,
+      disable,
+      digest,
+      setDigest,
+      notify,
+      setNotify,
+    ],
   );
 }

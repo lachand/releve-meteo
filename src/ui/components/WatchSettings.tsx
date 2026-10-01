@@ -37,6 +37,99 @@ function statusText(watch: BackgroundWatch): string {
   }
 }
 
+const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+
+/**
+ * Ce que Relevé peut notifier, et quand. Chaque case dit ce qui partira ; le
+ * moment est soit une heure visee le matin, soit des qu'un avis est detecte.
+ */
+function NoticeSettings({ watch }: { readonly watch: BackgroundWatch }) {
+  const { notify, setNotify } = watch;
+  const morning = notify.mode === 'morning';
+  return (
+    <fieldset className={styles.notices}>
+      <legend className={styles.noticesLegend}>Notifications météo</legend>
+      <label className={styles.checkRow}>
+        <input
+          type="checkbox"
+          checked={watch.digest}
+          onChange={(event) => watch.setDigest(event.target.checked)}
+        />
+        <span>
+          Résumé du matin : le bulletin du moment (modèle nommé, écart des autres chiffré) et les 24
+          heures à venir, pour vos favoris (trois au plus).
+        </span>
+      </label>
+      <label className={styles.checkRow}>
+        <input
+          type="checkbox"
+          checked={notify.risks}
+          onChange={(event) => setNotify({ risks: event.target.checked })}
+        />
+        <span>
+          Phénomènes violents à venir : orage, forte pluie, vent fort, pluie verglaçante (niveau
+          modéré ou fort), gel, neige, brouillard et chaleur (niveau fort), dans les 48 heures.
+        </span>
+      </label>
+      <label className={styles.checkRow}>
+        <input
+          type="checkbox"
+          checked={notify.rain}
+          onChange={(event) => setNotify({ rain: event.target.checked })}
+        />
+        <span>Pluie à venir : au plus tard dans les trois heures en mode immédiat.</span>
+      </label>
+      <label className={styles.checkRow}>
+        <input
+          type="checkbox"
+          checked={notify.pollen}
+          onChange={(event) => setNotify({ pollen: event.target.checked })}
+        />
+        <span>Pollens à un niveau élevé (prévision CAMS Europe, 80 grains par m³ et plus).</span>
+      </label>
+      <div className={styles.timing} role="radiogroup" aria-label="Quand notifier">
+        <label className={styles.checkRow}>
+          <input
+            type="radio"
+            name="notify-mode"
+            checked={morning}
+            onChange={() => setNotify({ mode: 'morning' })}
+          />
+          <span>
+            Le matin, une notification groupée vers{' '}
+            <select
+              aria-label="Heure visée"
+              value={notify.hour}
+              onChange={(event) => setNotify({ hour: Number(event.target.value) })}
+            >
+              {HOURS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {hour}&nbsp;h
+                </option>
+              ))}
+            </select>
+          </span>
+        </label>
+        <label className={styles.checkRow}>
+          <input
+            type="radio"
+            name="notify-mode"
+            checked={!morning}
+            onChange={() => setNotify({ mode: 'instant' })}
+          />
+          <span>Dès qu’un avis est détecté, à chaque veille du navigateur.</span>
+        </label>
+      </div>
+      <p className={styles.hint}>
+        Sans serveur, l’heure n’est pas garantie : la notification du matin part à la première
+        veille entre l’heure visée et six heures plus tard, et le navigateur choisit le moment des
+        veilles (souvent quelques fois par jour). Il peut aussi ne pas se réveiller ce jour-là. Pour
+        un risque vital, la vigilance officielle de Météo-France reste la référence.
+      </p>
+    </fieldset>
+  );
+}
+
 export function WatchSettings({ watch }: { readonly watch: BackgroundWatch }) {
   const canEnable = watch.status === 'off' || watch.status === 'needs-install';
   return (
@@ -80,23 +173,7 @@ export function WatchSettings({ watch }: { readonly watch: BackgroundWatch }) {
           Autoriser les notifications
         </button>
       )}
-      {watch.status === 'on' && (
-        <label className={styles.checkRow}>
-          <input
-            type="checkbox"
-            checked={watch.digest}
-            onChange={(event) => watch.setDigest(event.target.checked)}
-          />
-          <span>
-            Résumé du matin : une notification par favori (trois au plus), avec le bulletin du
-            moment et les 24 heures à venir.{' '}
-            <span className={styles.hint}>
-              Elle part à la première veille entre 6 h et midi : l’heure exacte dépend du
-              navigateur, qui peut aussi ne pas se réveiller ce jour-là.
-            </span>
-          </span>
-        </label>
-      )}
+      {watch.status === 'on' && <NoticeSettings watch={watch} />}
       {(watch.status === 'on' || watch.status === 'collecting') && (
         <button
           type="button"

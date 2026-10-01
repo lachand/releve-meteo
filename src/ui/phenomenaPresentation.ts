@@ -6,7 +6,7 @@ import {
   formatInteger,
   formatTemperature,
 } from './format';
-import { MODEL_LABELS } from './modelPresentation';
+import { MODEL_LABELS } from './modelLabels';
 
 export const PHENOMENON_LABELS: Readonly<Record<PhenomenonKind, string>> = {
   thunderstorm: 'Orage',

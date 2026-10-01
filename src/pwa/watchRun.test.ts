@@ -4,12 +4,16 @@ import { server } from '../../tests/msw';
 import forecastLyon from '../../tests/fixtures/live/forecast-lyon.json';
 import vigilanceRhone from '../../tests/fixtures/live/vigilance-rhone.json';
 import type { WatchEntry, WatchState } from '../domain/watch';
+import { DEFAULT_NOTIFY } from '../domain/weatherNotices';
+import type { NotifyPrefs } from '../domain/weatherNotices';
+import airQualityLyon from '../../tests/fixtures/live/air-quality-lyon.json';
 import { collectWatchNotifications } from './watchRun';
 
 const NOW = new Date('2026-09-28T13:27:00Z');
 // 9 h 12 a Paris le meme jour : dans la matinee du resume.
 const MORNING = new Date('2026-09-28T07:12:00Z');
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+const AIR_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality';
 const VIGILANCE_URL =
   'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/weatherref-france-vigilance-meteo-departement/records';
 
@@ -43,8 +47,16 @@ function state(
   entries: readonly WatchEntry[],
   notified: Record<string, number> = {},
   digest = false,
+  notify: Partial<NotifyPrefs> = {},
 ): WatchState {
-  return { entries, windUnit: 'kmh', notified, lastRunUtcMs: null, digest };
+  return {
+    entries,
+    windUnit: 'kmh',
+    notified,
+    lastRunUtcMs: null,
+    digest,
+    notify: { ...DEFAULT_NOTIFY, ...notify },
+  };
 }
 
 /** Bulletin du Rhone ou les orages du jour passent a `level`. */
@@ -242,5 +254,185 @@ describe('collectWatchNotifications', () => {
       rules: LYON.rules.map((rule) => ({ ...rule, enabled: false })),
     };
     expect(await collectWatchNotifications(state([noDepartment, disabled, LYON]), NOW)).toEqual([]);
+  });
+
+  describe('risques, pluie et pollens', () => {
+    const NO_RULES: WatchEntry = { ...LYON, department: null, rules: [] };
+    const ID = LYON.place.id;
+    // Index horaires du jeu enregistre : 27/09 a 0 h = 0, donc 28/09 a 9 h = 33, a 15 h = 39.
+
+    /** Prevision enregistree dont les rafales et la pluie de chaque modele sont reecrites. */
+    function forecastWith(patch: {
+      gusts?: Record<number, number>;
+      rain?: Record<number, number>;
+    }) {
+      const hourly: Record<string, unknown> = { ...forecastLyon.hourly };
+      for (const key of Object.keys(hourly)) {
+        const values = hourly[key];
+        if (!Array.isArray(values)) {
+          continue;
+        }
+        if (key.startsWith('wind_gusts_10m')) {
+          hourly[key] = values.map((v, i) => patch.gusts?.[i] ?? v);
+        }
+        if (key.startsWith('precipitation_') && !key.includes('probability')) {
+          hourly[key] = values.map((_, i) => patch.rain?.[i] ?? 0);
+        }
+      }
+      return { ...forecastLyon, hourly };
+    }
+
+    function pollenBody(grass: number) {
+      const hourly: Record<string, unknown> = { ...airQualityLyon.hourly };
+      hourly.grass_pollen = (airQualityLyon.hourly.grass_pollen as number[]).map(() => grass);
+      return { ...airQualityLyon, hourly };
+    }
+
+    it('des la detection : un vent violent a venir, une fois, avec son modele', async () => {
+      server.use(
+        http.get(FORECAST_URL, () =>
+          HttpResponse.json(forecastWith({ gusts: { 45: 110, 46: 112 } })),
+        ),
+      );
+      const settings = { risks: true, mode: 'instant' } as const;
+      const found = await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW);
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        key: `risque|${ID}|strongWind|2026-09-28T21:00`,
+        title: 'Lyon · Vent fort, risque fort',
+      });
+      expect(found[0]?.body).toMatch(/Rafales jusqu’à 112 km\/h\. Selon [A-Z]/);
+      const known = Object.fromEntries(found.map((n) => [n.key, NOW.getTime()]));
+      expect(
+        await collectWatchNotifications(state([NO_RULES], known, false, settings), NOW),
+      ).toEqual([]);
+    });
+
+    it('des la detection : la pluie qui arrive dans les trois heures, une fois par plage de six heures', async () => {
+      server.use(
+        http.get(FORECAST_URL, () => HttpResponse.json(forecastWith({ rain: { 41: 2 } }))),
+      );
+      const settings = { rain: true, mode: 'instant' } as const;
+      const found = await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW);
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        key: `pluie|${ID}|2026-09-28|2`,
+        title: 'Lyon · Pluie à venir',
+      });
+      expect(found[0]?.body).toMatch(
+        /^Pluie attendue dès lundi 17h selon [A-Z].*2,0.mm sur 24.h\.$/u,
+      );
+      // Rien quand la pluie est loin.
+      server.use(
+        http.get(FORECAST_URL, () => HttpResponse.json(forecastWith({ rain: { 50: 2 } }))),
+      );
+      expect(await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW)).toEqual(
+        [],
+      );
+    });
+
+    it('des la detection : un pollen eleve, une fois par jour, source nommee', async () => {
+      server.use(http.get(AIR_URL, () => HttpResponse.json(pollenBody(150))));
+      const settings = { pollen: true, mode: 'instant' } as const;
+      const found = await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW);
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        key: `pollen|${ID}|2026-09-28`,
+        title: 'Lyon · Pollens élevés',
+      });
+      expect(found[0]?.body).toContain('Graminées (150');
+      expect(found[0]?.body).toContain('CAMS Europe');
+      // Niveau modere, ou service en panne : rien.
+      server.use(http.get(AIR_URL, () => HttpResponse.json(pollenBody(30))));
+      expect(await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW)).toEqual(
+        [],
+      );
+      server.use(http.get(AIR_URL, () => new HttpResponse(null, { status: 500 })));
+      expect(await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW)).toEqual(
+        [],
+      );
+    });
+
+    it('le matin a l heure choisie : une seule notification groupee pour les trois categories', async () => {
+      server.use(
+        http.get(FORECAST_URL, () =>
+          HttpResponse.json(forecastWith({ gusts: { 45: 110 }, rain: { 35: 1.5 } })),
+        ),
+        http.get(AIR_URL, () => HttpResponse.json(pollenBody(150))),
+      );
+      const settings = { risks: true, rain: true, pollen: true, mode: 'morning', hour: 8 } as const;
+      const found = await collectWatchNotifications(
+        state([NO_RULES], {}, false, settings),
+        MORNING,
+      );
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatchObject({
+        key: `resume|2026-09-28|${ID}`,
+        title: 'Lyon · Résumé du matin',
+      });
+      const body = found[0]?.body ?? '';
+      expect(body).toContain('Vent fort, risque fort');
+      expect(body).toMatch(/Pluie attendue dès lundi 11h/u);
+      expect(body).toContain('Pollens élevés');
+    });
+
+    it('le matin : rien avant l heure choisie ni apres la plage, et aucune requete inutile', async () => {
+      let calls = 0;
+      server.use(
+        http.get(FORECAST_URL, () => {
+          calls += 1;
+          return HttpResponse.json(forecastLyon);
+        }),
+        http.get(AIR_URL, () => {
+          calls += 1;
+          return HttpResponse.json(airQualityLyon);
+        }),
+      );
+      const settings = { risks: true, rain: true, pollen: true, mode: 'morning' } as const;
+      // 9 h 12 avant l'heure choisie (10 h), puis 15 h 27 apres la plage 7 h a 13 h.
+      expect(
+        await collectWatchNotifications(
+          state([NO_RULES], {}, false, { ...settings, hour: 10 }),
+          MORNING,
+        ),
+      ).toEqual([]);
+      expect(await collectWatchNotifications(state([NO_RULES], {}, false, settings), NOW)).toEqual(
+        [],
+      );
+      expect(calls).toBe(0);
+    });
+
+    it('mode immediat : le resume du matin reste groupe, sans la pluie ni les pollens', async () => {
+      server.use(
+        http.get(FORECAST_URL, () => HttpResponse.json(forecastWith({ rain: { 35: 1.5 } }))),
+        http.get(AIR_URL, () => HttpResponse.json(pollenBody(150))),
+      );
+      const settings = { rain: true, pollen: true, mode: 'instant', hour: 7 } as const;
+      const found = await collectWatchNotifications(state([NO_RULES], {}, true, settings), MORNING);
+      const keys = found.map((n) => n.key).sort();
+      expect(keys).toEqual([
+        `pluie|${ID}|2026-09-28|1`,
+        `pollen|${ID}|2026-09-28`,
+        `resume|2026-09-28|${ID}`,
+      ]);
+      const morning = found.find((n) => n.key.startsWith('resume'));
+      expect(morning?.body).not.toContain('Pollens');
+      expect(morning?.body).not.toContain('Pluie attendue');
+    });
+
+    it('se limite aux trois premiers lieux', async () => {
+      server.use(
+        http.get(FORECAST_URL, () => HttpResponse.json(forecastWith({ rain: { 41: 2 } }))),
+      );
+      const places = ['a', 'b', 'c', 'd'].map((id) => ({
+        ...NO_RULES,
+        place: { ...NO_RULES.place, id, name: id },
+      }));
+      const found = await collectWatchNotifications(
+        state(places, {}, false, { rain: true, mode: 'instant' }),
+        NOW,
+      );
+      expect(found).toHaveLength(3);
+    });
   });
 });

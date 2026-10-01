@@ -1,4 +1,6 @@
 import { emptyWatchState, pruneNotified } from '../../domain/watch';
+import { normalizeNotify } from '../../domain/weatherNotices';
+import type { NotifyPrefs } from '../../domain/weatherNotices';
 import type { WatchEntry, WatchState } from '../../domain/watch';
 import { getDataset, setDataset } from './datasetStore';
 
@@ -31,7 +33,11 @@ export async function readWatchState(): Promise<WatchState> {
     return emptyWatchState();
   }
   // Un etat enregistre avant le resume du matin n'a pas de `digest` : desactive.
-  return { ...cached.value, digest: cached.value.digest === true };
+  return {
+    ...cached.value,
+    digest: cached.value.digest === true,
+    notify: normalizeNotify(cached.value.notify),
+  };
 }
 
 async function write(state: WatchState, now: Date): Promise<void> {
@@ -53,6 +59,14 @@ export async function saveWatchDigest(digest: boolean, now: Date): Promise<void>
   const current = await readWatchState();
   if (current.digest !== digest) {
     await write({ ...current, digest }, now);
+  }
+}
+
+/** Page : risques, pluie et pollens voulus, et quand. Ne touche a rien d'autre. */
+export async function saveWatchNotify(notify: NotifyPrefs, now: Date): Promise<void> {
+  const current = await readWatchState();
+  if (JSON.stringify(current.notify) !== JSON.stringify(notify)) {
+    await write({ ...current, notify }, now);
   }
 }
 

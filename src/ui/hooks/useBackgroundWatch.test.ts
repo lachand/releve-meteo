@@ -10,6 +10,7 @@ import { readWatchState, saveWatchEntries } from '../../data/cache/watchStore';
 import { resetDepartmentsForTests } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
+import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
 import type { AlertRule, Place } from '../../domain/types';
 import * as backgroundWatch from '../../pwa/backgroundWatch';
 import { buildWatchEntries, useBackgroundWatch } from './useBackgroundWatch';
@@ -193,6 +194,31 @@ describe('useBackgroundWatch', () => {
 
     const again = renderHook(() => useBackgroundWatch(inputs()));
     await waitFor(() => expect(again.result.current.digest).toBe(true));
+  });
+
+  it('garde les notifications voulues et leur moment, relus a la prochaine ouverture', async () => {
+    const { result, unmount } = renderHook(() => useBackgroundWatch(inputs()));
+    await waitFor(() => expect(result.current.status).toBe('on'));
+    expect(result.current.notify).toEqual(DEFAULT_NOTIFY);
+    act(() => result.current.setNotify({ risks: true, mode: 'instant' }));
+    act(() => result.current.setNotify({ hour: 6 }));
+    expect(result.current.notify).toEqual({
+      ...DEFAULT_NOTIFY,
+      risks: true,
+      mode: 'instant',
+      hour: 6,
+    });
+    await waitFor(async () =>
+      expect((await readWatchState()).notify).toEqual({
+        ...DEFAULT_NOTIFY,
+        risks: true,
+        mode: 'instant',
+        hour: 6,
+      }),
+    );
+    unmount();
+    const again = renderHook(() => useBackgroundWatch(inputs()));
+    await waitFor(() => expect(again.result.current.notify.mode).toBe('instant'));
   });
 
   it('arrete la veille', async () => {
