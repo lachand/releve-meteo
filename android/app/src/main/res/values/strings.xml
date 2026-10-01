@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">Relevé</string>
     <string name="widget_small_label">Relevé, bulletin</string>
-    <string name="widget_medium_label">Relevé, bulletin et 12 heures</string>
-    <string name="widget_small_description">Le modèle retenu, la température et la confiance, pour un lieu.</string>
-    <string name="widget_medium_description">Le bulletin et les douze prochaines heures, pour un lieu.</string>
+    <string name="widget_medium_label">Relevé, bulletin et prochains jours</string>
+    <string name="widget_small_description">Le modèle retenu, la température, le temps du moment et la confiance, pour un lieu.</string>
+    <string name="widget_medium_description">Le bulletin, le temps du moment et les prochains jours, pour un lieu.</string>
+    <string name="widget_config_label">Réglages du widget</string>
 </resources>

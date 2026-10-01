@@ -1,6 +1,8 @@
 package fr.releve.meteo
 
 import java.time.Instant
+import java.time.LocalDate
+import java.time.format.TextStyle
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -92,6 +94,20 @@ object WidgetFormat {
         }
         return if (parts.isEmpty()) null else "Sur 24${NBSP}h$NBSP: ${parts.joinToString(", ")}."
     }
+
+    /** « 17° » ou un tiret : une valeur absente reste un tiret, jamais un zero. */
+    fun degrees(value: Double?): String = value?.let { "${it.roundToInt()}°" } ?: "–"
+
+    /** « auj. » pour aujourd'hui (heure de Paris), sinon « lun. », « mar. »... */
+    fun dayName(date: String, nowMs: Long): String {
+        val day = LocalDate.parse(date)
+        val today = LocalDate.ofInstant(Instant.ofEpochMilli(nowMs), PARIS)
+        return if (day == today) "auj." else day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.FRANCE)
+    }
+
+    /** « prévu · AROME, ICON-D2 » : la provenance des jours, un modele par jour, chacun nomme une fois. */
+    fun daysCaption(days: List<WidgetForecastDay>): String =
+        "prévu · " + days.map { modelLabel(it.model) }.distinct().joinToString(", ")
 
     fun isStale(generatedAtMs: Long, nowMs: Long): Boolean = nowMs - generatedAtMs > STALE_AFTER_MS
 

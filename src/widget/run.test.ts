@@ -75,16 +75,17 @@ describe('runWidget', () => {
           : HttpResponse.json(forecastLyon),
       ),
     );
-    const entries = [
-      entry('p0', 'P0', 45.7578),
-      entry('p1', 'P1', 46.5),
-      entry('p2', 'P2', 45.7578),
-      entry('p3', 'P3', 45.7578),
-      entry('p4', 'P4', 45.7578),
-    ];
+    // Un de plus que la limite, dont le deuxieme est injoignable.
+    const entries = Array.from({ length: WIDGET_MAX_PLACES + 1 }, (_, index) =>
+      entry(`p${index}`, `P${index}`, index === 1 ? 46.5 : 45.7578),
+    );
     await saveWatchEntries(entries, 'kmh', NOW);
     const payload = await runWidget('', NOW);
-    expect(payload.places.map((place) => place.id)).toEqual(['p0', 'p2']);
+    expect(payload.places.map((place) => place.id)).toEqual(
+      Array.from({ length: WIDGET_MAX_PLACES }, (_, index) => `p${index}`).filter(
+        (id) => id !== 'p1',
+      ),
+    );
     expect(payload.unreachable).toEqual(['p1']);
     expect(payload.places.length + payload.unreachable.length).toBe(WIDGET_MAX_PLACES);
   });
