@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildHourlyTimeline } from '../../tests/factories';
 import {
+  SELECTION_WEIGHTS,
   buildSelectedCascade,
   leadDaysFor,
   rankModels,
@@ -8,6 +9,7 @@ import {
   selectBestModel,
 } from './modelSelection';
 import type { SelectionContext } from './modelSelection';
+import type { LeadBucketScores, LeadScores } from './leadScores';
 import type { ModelVerification } from './reliability';
 import type { ModelId, WeatherVariable } from './types';
 
@@ -180,6 +182,127 @@ describe('rankModels', () => {
     expect(skillOf('icon_eu')).toEqual([]);
     // ecmwf fait mieux que son pair icon_eu : critere present, positif.
     expect(skillOf('ecmwf')?.[0]?.points).toBeGreaterThan(0);
+  });
+});
+
+/** Notes courtes : `maes` donne l'erreur moyenne de chaque modele dans la classe d'echeance `label`. */
+function shortScores(
+  label: '1 h' | '3 h' | '6 h' | '12 h',
+  maes: Partial<Record<ModelId, number>>,
+  pairs = 20,
+): LeadScores {
+  const bounds = { '1 h': [1, 1], '3 h': [2, 3], '6 h': [4, 6], '12 h': [7, 12] } as const;
+  const buckets: LeadBucketScores[] = (['1 h', '3 h', '6 h', '12 h'] as const).map((l) => ({
+    label: l,
+    from: bounds[l][0],
+    to: bounds[l][1],
+    models:
+      l === label
+        ? (Object.entries(maes) as [ModelId, number][]).map(([model, mae]) => ({
+            model,
+            pairs,
+            bias: 0,
+            mae,
+          }))
+        : [],
+  }));
+  return { buckets, snapshots: 30, oldestIssuedAt: '2026-09-27T08:00', ready: true };
+}
+
+describe('rankModels, notes courtes (shortSkill)', () => {
+  const withShort = (shortLead: LeadScores): SelectionContext => ({ ...lyon, shortLead });
+
+  it('ajoute un critere shortSkill a courte echeance, au profit du modele le plus proche des mesures', () => {
+    const context = withShort(shortScores('3 h', { arome: 2, arpege: 0.5, gfs: 2 }));
+    const ranking = rankModels(context, 3);
+    const arpege = ranking.find((r) => r.model === 'arpege');
+    const arome = ranking.find((r) => r.model === 'arome');
+    const short = arpege?.criteria.find((c) => c.kind === 'shortSkill');
+    expect(short?.points).toBeGreaterThan(0);
+    expect(short?.detail).toMatchObject({
+      bucket: '3 h',
+      variable: 'temperature',
+      sampleCount: 20,
+    });
+    expect(arome?.criteria.find((c) => c.kind === 'shortSkill')?.points).toBeLessThan(0);
+  });
+
+  it('peut renverser l a priori de maille quand l ecart mesure est net', () => {
+    const base = rankModels(lyon, 3)[0]?.model;
+    expect(base).toBe('arome');
+    const context = withShort(
+      shortScores('3 h', {
+        arome: 3,
+        arome_france: 3,
+        icon_d2: 3,
+        arpege: 0.2,
+        icon_eu: 3,
+        gfs: 3,
+      }),
+    );
+    const ranked = rankModels(context, 3);
+    const aromeShort = ranked
+      .find((r) => r.model === 'arome')
+      ?.criteria.find((c) => c.kind === 'shortSkill');
+    const arpegeShort = ranked
+      .find((r) => r.model === 'arpege')
+      ?.criteria.find((c) => c.kind === 'shortSkill');
+    expect((arpegeShort?.points ?? 0) - (aromeShort?.points ?? 0)).toBeGreaterThan(
+      SELECTION_WEIGHTS.shortSkill * 0.5,
+    );
+  });
+
+  it('remplace le volet temperature de la mesure locale, sans toucher pluie et vent', () => {
+    const context: SelectionContext = {
+      ...withShort(shortScores('3 h', { arome: 1, arpege: 2 })),
+      verification: [
+        verification('arome', 1, { leadDays: 1 }),
+        verification('arpege', 2, { leadDays: 1 }),
+        verification('arome', 1, { leadDays: 1, variable: 'wind' }),
+        verification('arpege', 2, { leadDays: 1, variable: 'wind' }),
+      ],
+    };
+    const arome = rankModels(context, 3).find((r) => r.model === 'arome');
+    const locals = arome?.criteria.filter((c) => c.kind === 'localSkill') ?? [];
+    expect(locals.map((c) => c.detail.variable)).toEqual(['wind']);
+    expect(arome?.criteria.some((c) => c.kind === 'shortSkill')).toBe(true);
+  });
+
+  it('retombe sur la mesure locale quotidienne sans note courte exploitable', () => {
+    const verifs = [
+      verification('arome', 1, { leadDays: 1 }),
+      verification('arpege', 2, { leadDays: 1 }),
+    ];
+    const noScores: LeadScores = { ...shortScores('3 h', {}), ready: false };
+    for (const shortLead of [undefined, noScores, shortScores('6 h', { arome: 1, arpege: 2 })]) {
+      const context: SelectionContext = { ...lyon, verification: verifs, shortLead };
+      const arome = rankModels(context, 3).find((r) => r.model === 'arome');
+      expect(arome?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+      expect(arome?.criteria.filter((c) => c.kind === 'localSkill')).toHaveLength(1);
+    }
+  });
+
+  it('ne s applique qu aux echeances de 0 a 12 h, et a un modele note avec au moins un pair', () => {
+    const context = withShort(shortScores('12 h', { arome: 1, arpege: 2 }));
+    expect(rankModels(context, 12.5)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+    expect(rankModels(context, -2)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
+    expect(rankModels(context, 12)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(true);
+    // Un seul modele note dans la classe : aucun pair, donc aucun critere.
+    const alone = withShort(shortScores('3 h', { arome: 1 }));
+    expect(rankModels(alone, 3).some((r) => r.criteria.some((c) => c.kind === 'shortSkill'))).toBe(
+      false,
+    );
+    // Des pairs sans erreur : rien a comparer.
+    const exact = withShort(shortScores('3 h', { arome: 0, arpege: 0 }));
+    expect(rankModels(exact, 3).some((r) => r.criteria.some((c) => c.kind === 'shortSkill'))).toBe(
+      false,
+    );
+  });
+
+  it('classe une echeance fractionnaire dans la classe suivante, au moins 1 h', () => {
+    const context = withShort(shortScores('1 h', { arome: 1, arpege: 2 }));
+    expect(rankModels(context, 0.2)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(true);
+    expect(rankModels(context, 1.4)[0]?.criteria.some((c) => c.kind === 'shortSkill')).toBe(false);
   });
 });
 

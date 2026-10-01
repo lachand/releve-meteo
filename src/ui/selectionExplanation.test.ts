@@ -82,6 +82,32 @@ describe('criterionSentence', () => {
     );
   });
 
+  it('redige la performance a courte echeance, station a station, meilleure ou moins bonne que les pairs', () => {
+    const better: Criterion = {
+      kind: 'shortSkill',
+      points: 2,
+      detail: { mae: 0.6, peerMae: 1.4, sampleCount: 14, variable: 'temperature', bucket: '3 h' },
+    };
+    expect(criterionSentence('arpege', better)?.replace(/\u00a0/g, ' ')).toBe(
+      'Plus proche des mesures de la station que la moyenne des modèles à courte échéance : 0,6 °C d’erreur moyenne à 3 h d’échéance sur 14 h comparées à la station, contre 1,4 °C en moyenne pour les autres.',
+    );
+    const worse: Criterion = {
+      kind: 'shortSkill',
+      points: -1,
+      detail: { mae: 1.8, peerMae: 1.2, sampleCount: 9, variable: 'temperature', bucket: '1 h' },
+    };
+    expect(criterionSentence('gfs', worse)).toContain('Moins proche des mesures de la station');
+  });
+
+  it('retourne null pour une performance courte quand un champ du detail manque', () => {
+    const criterion: Criterion = {
+      kind: 'shortSkill',
+      points: 1,
+      detail: { mae: 0.6, peerMae: 1.4, sampleCount: 14 }, // bucket absent
+    };
+    expect(criterionSentence('arome', criterion)).toBeNull();
+  });
+
   it('retourne null pour une performance locale quand un champ du detail manque', () => {
     const criterion: Criterion = {
       kind: 'localSkill',

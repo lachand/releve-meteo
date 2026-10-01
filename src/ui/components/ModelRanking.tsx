@@ -13,6 +13,7 @@ const CRITERION_LABELS: Readonly<Record<CriterionKind, string>> = {
   resolution: 'maille et terrain',
   mediumRange: 'moyenne échéance',
   localSkill: 'erreur mesurée ici',
+  shortSkill: 'erreur mesurée à courte échéance',
 };
 
 interface ModelRankingProps {
@@ -23,7 +24,13 @@ interface ModelRankingProps {
 
 /** Échelle des barres : score maximal théorique. */
 const MAX_SCORE =
-  SELECTION_WEIGHTS.resolution + SELECTION_WEIGHTS.mediumRange + SELECTION_WEIGHTS.localSkill;
+  SELECTION_WEIGHTS.resolution +
+  SELECTION_WEIGHTS.mediumRange +
+  // Les notes courtes remplacent le volet temperature (la moitie) de la mesure locale.
+  Math.max(
+    SELECTION_WEIGHTS.localSkill,
+    SELECTION_WEIGHTS.localSkill / 2 + SELECTION_WEIGHTS.shortSkill,
+  );
 
 export function ModelRankingTable({ ranking, verification, activeModel }: ModelRankingProps) {
   return (
@@ -120,6 +127,7 @@ export function ModelRankingTable({ ranking, verification, activeModel }: ModelR
         <span className={styles.key} data-kind="resolution" /> maille et terrain
         <span className={styles.key} data-kind="mediumRange" /> moyenne échéance
         <span className={styles.key} data-kind="localSkill" /> erreur mesurée ici
+        <span className={styles.key} data-kind="shortSkill" /> erreur mesurée à courte échéance
         <span className={styles.keyPenalty} /> pénalité
       </p>
     </div>

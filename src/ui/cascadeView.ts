@@ -1,3 +1,4 @@
+import type { LeadScores } from '../domain/leadScores';
 import { blendedPointAt, modelAt, transitionIndices } from '../domain/modelCascade';
 import type { BlendedPoint, CascadeSegment } from '../domain/modelCascade';
 import { MODEL_ORDER } from '../domain/models';
@@ -33,6 +34,8 @@ export interface CascadeInputs {
   readonly terrain: TerrainProfile | null;
   readonly verification: readonly ModelVerification[];
   readonly preferred: ModelId | null;
+  /** Notes de 1 a 12 h (instantanes enregistres) ; absentes ou en collecte, sans effet. */
+  readonly shortLead?: LeadScores;
   /** Injectable pour les tests ; par defaut l'instant du calcul. */
   readonly now?: Date;
 }
@@ -50,6 +53,7 @@ export function computeCascadeView(
     terrain: inputs.terrain?.kind ?? 'plain',
     available,
     verification: inputs.verification,
+    ...(inputs.shortLead === undefined ? {} : { shortLead: inputs.shortLead }),
   };
   const segments = buildSelectedCascade({
     timeline: bundle.timeline,

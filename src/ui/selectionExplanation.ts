@@ -80,6 +80,23 @@ export function criterionSentence(model: ModelId, criterion: Criterion): string 
         ? `Plus juste ici que la moyenne des modèles sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`
         : `Moins juste ici que la moyenne des modèles sur ${VARIABLE_WITH_ARTICLE[variable]}\u00a0: ${figures}.`;
     }
+    case 'shortSkill': {
+      const { mae, peerMae, sampleCount, bucket } = criterion.detail;
+      if (
+        mae === undefined ||
+        peerMae === undefined ||
+        sampleCount === undefined ||
+        bucket === undefined
+      ) {
+        return null;
+      }
+      // Station a station, sur les prevues que l'application a elle-meme
+      // enregistrees : la phrase dit d'ou vient la mesure et sur quoi elle porte.
+      const figures = `${formatOneDecimal(mae)}\u00a0°C d’erreur moyenne à ${bucket} d’échéance sur ${sampleCount}\u00a0h comparées à la station, contre ${formatOneDecimal(peerMae)}\u00a0°C en moyenne pour les autres`;
+      return mae <= peerMae
+        ? `Plus proche des mesures de la station que la moyenne des modèles à courte échéance\u00a0: ${figures}.`
+        : `Moins proche des mesures de la station que la moyenne des modèles à courte échéance\u00a0: ${figures}.`;
+    }
   }
 }
 

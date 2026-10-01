@@ -188,7 +188,25 @@ export function App() {
     () => (verification.status === 'ready' ? verification.value.verifications : []),
     [verification],
   );
-  const cascade = useCascadeView(bundle, { terrain, verification: verifications, preferred });
+  // Notes de 1 a 12 h : les prevues enregistrees par l'application, face aux
+  // mesures de la station. Elles entrent dans la selection quand il y en a assez.
+  const shortLead = useMemo(
+    () =>
+      station.status === 'ready'
+        ? leadScores({
+            snapshots: station.value.snapshots,
+            records: station.value.records,
+            now: new Date(),
+          })
+        : undefined,
+    [station],
+  );
+  const cascade = useCascadeView(bundle, {
+    terrain,
+    verification: verifications,
+    preferred,
+    shortLead,
+  });
   const confidence = useConfidenceView(bundle, terrain);
 
   useAppliedTheme(preferences.preferences.theme);
@@ -264,14 +282,7 @@ export function App() {
         station.status === 'ready'
           ? stationTrace({ records: station.value.records, models: station.value.models, now })
           : null,
-      leadScores:
-        station.status === 'ready'
-          ? leadScores({
-              snapshots: station.value.snapshots,
-              records: station.value.records,
-              now,
-            })
-          : null,
+      leadScores: shortLead ?? null,
       yesterday:
         station.status === 'ready'
           ? yesterdayReview({
@@ -312,6 +323,7 @@ export function App() {
     terrain,
     bundle,
     cascade,
+    shortLead,
     confidence,
     ensembleDays,
     ensembleValue,
