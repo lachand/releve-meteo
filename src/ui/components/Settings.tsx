@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Preferences } from '../../domain/types';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
+import { DiagnosticPanel } from './DiagnosticPanel';
 import styles from './Settings.module.css';
 import { WatchSettings } from './WatchSettings';
 
@@ -124,6 +125,8 @@ export function Settings({
       )}
 
       {watch !== undefined && <WatchSettings watch={watch} />}
+
+      <DiagnosticPanel />
 
       <section className={styles.section}>
         <p className="eyebrow">Données locales</p>

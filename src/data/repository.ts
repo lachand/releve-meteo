@@ -1,3 +1,5 @@
+import { recordDiagnostic } from './cache/diagnostics';
+import type { DiagnosticSource } from './cache/diagnostics';
 import { CACHE_TTL_MS } from '../domain/constants';
 import { departmentAt } from '../domain/departments';
 import type { Department } from '../domain/departments';
@@ -96,6 +98,7 @@ export async function getForecast(request: ForecastRequest): Promise<HttpResult<
       forecastDays: FORECAST_DAYS,
     });
 
+    recordDiagnostic('forecast', response, now);
     if (!response.ok) {
       if (cached !== null) {
         return {
@@ -119,6 +122,7 @@ export async function getForecast(request: ForecastRequest): Promise<HttpResult<
       fetchedAt: now,
     });
     if (!mapped.ok) {
+      recordDiagnostic('forecast', mapped, now);
       return mapped;
     }
 
@@ -175,6 +179,7 @@ async function throughCache<T>(input: {
   }
   return enqueue(`${input.kind}:${input.placeId}`, async () => {
     const result = await input.fetcher();
+    recordDiagnostic(input.kind as DiagnosticSource, result, Date.now());
     if (!result.ok) {
       if (cached !== null) {
         return {

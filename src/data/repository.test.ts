@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../tests/msw';
 import { deleteDbForTests } from './cache/db';
 import { resetMemoryDatasetStore, setDataset } from './cache/datasetStore';
+import { readDiagnostics, resetDiagnosticsForTests } from './cache/diagnostics';
 import { resetMemoryForecastStore, setCachedForecast } from './cache/forecastStore';
 import { resetMemoryGeocodingStore } from './cache/geocodingStore';
 import {
@@ -60,6 +61,8 @@ function forecastPayload(temperature: number) {
 }
 
 beforeEach(async () => {
+  localStorage.removeItem('meteo-fr:diagnostics');
+  resetDiagnosticsForTests();
   await deleteDbForTests();
   resetMemoryForecastStore();
   resetMemoryGeocodingStore();
@@ -180,6 +183,53 @@ describe('getForecast', () => {
     if (!result.ok) {
       expect(result.failure.kind).toBe('malformed');
     }
+  });
+});
+
+describe('journal de diagnostic', () => {
+  it('note la reussite de la prevision, puis son echec, chacun a part', async () => {
+    server.use(
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json(forecastPayload(12)),
+      ),
+    );
+    await getForecast({ place, models: ['arome'] });
+    const afterSuccess = readDiagnostics().forecast;
+    expect(afterSuccess.lastSuccess).not.toBeNull();
+    expect(afterSuccess.lastFailure).toBeNull();
+
+    server.use(http.get('https://api.open-meteo.com/v1/forecast', () => HttpResponse.error()));
+    await getForecast({ place, models: ['arome'], forceRefresh: true });
+    const afterFailure = readDiagnostics().forecast;
+    expect(afterFailure.lastSuccess).toBe(afterSuccess.lastSuccess);
+    expect(afterFailure.lastFailure?.kind).toBe('network');
+  });
+
+  it('note une reponse de prevision illisible comme un echec', async () => {
+    server.use(
+      http.get('https://api.open-meteo.com/v1/forecast', () =>
+        HttpResponse.json({ latitude: 45.49, longitude: 5.47 }),
+      ),
+    );
+    await getForecast({ place, models: ['arome'] });
+    expect(readDiagnostics().forecast.lastFailure?.kind).toBe('malformed');
+  });
+
+  it('note les jeux secondaires sous leur propre source, et rien quand le cache suffit', async () => {
+    let calls = 0;
+    server.use(
+      http.get('https://air-quality-api.open-meteo.com/v1/air-quality', () => {
+        calls += 1;
+        return HttpResponse.json({ hourly: { time: ['2026-09-28T00:00'], european_aqi: [10] } });
+      }),
+    );
+    await getAirQuality(place);
+    const first = readDiagnostics().airQuality.lastSuccess;
+    expect(first).not.toBeNull();
+    expect(readDiagnostics().forecast.lastSuccess).toBeNull();
+    await getAirQuality(place);
+    expect(calls).toBe(1);
+    expect(readDiagnostics().airQuality.lastSuccess).toBe(first);
   });
 });
 
