@@ -1,7 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { briefingAt } from '../../domain/briefing';
 import { bestDryWindow } from '../../domain/dryWindow';
-import { practicalIndices } from '../../domain/practicalIndices';
 import { solarOutlook } from '../../domain/solarOutlook';
 import { mountainOutlook } from '../../domain/mountainOutlook';
 import { briefingSentence } from '../briefingPresentation';
@@ -11,7 +10,6 @@ import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
 import { DryWindowPanel } from '../components/DryWindowPanel';
 import { MountainPanel } from '../components/MountainPanel';
-import { PracticalIndicesPanel } from '../components/PracticalIndicesPanel';
 import { shouldShowMountain } from '../mountainPresentation';
 import { HourlyStrip } from '../components/HourlyStrip';
 import { NowcastPanel } from '../components/NowcastPanel';
@@ -48,11 +46,6 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
         });
 
   const dryWindow = bestDryWindow({
-    points: cascade.points.filter((point) => point !== null),
-    now: vm.now,
-  });
-
-  const practical = practicalIndices({
     points: cascade.points.filter((point) => point !== null),
     now: vm.now,
   });
@@ -142,12 +135,6 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           today={vm.today}
         />
       </Section>
-
-      {practical !== null && (
-        <Collapsible id="practical" eyebrow="Au quotidien" title="Vélo, randonnée, linge, jardin">
-          <PracticalIndicesPanel indices={practical} windUnit={vm.windUnit} />
-        </Collapsible>
-      )}
 
       {solar !== null && vm.peakKwp !== null && (
         <Collapsible

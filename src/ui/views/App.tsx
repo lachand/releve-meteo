@@ -27,6 +27,7 @@ import { Settings } from '../components/Settings';
 import { Tabs } from '../components/Tabs';
 import type { TabItem } from '../components/Tabs';
 import { UpdateBanner } from '../components/UpdateBanner';
+import { forecastFailureSentence } from '../failurePresentation';
 import { formatCompact, formatLongDate } from '../format';
 import { PrintIcon } from '../tabIcons';
 import { useAppliedTheme } from '../hooks/useAppliedTheme';
@@ -143,6 +144,16 @@ export function App() {
   const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
+  // Copie perimee servie hors ligne : le releve est relu des que le reseau revient.
+  const forecastStale = forecastState?.status === 'ready' && forecastState.result.stale;
+  useEffect(() => {
+    if (!forecastStale) {
+      return;
+    }
+    const refresh = () => setPlace((current) => (current === null ? current : { ...current }));
+    window.addEventListener('online', refresh);
+    return () => window.removeEventListener('online', refresh);
+  }, [forecastStale]);
   // Le lieu de la prevision peut porter une altitude plus juste (terrain
   // d'Open-Meteo quand la position n'en donnait pas) : c'est lui qui sert
   // au terrain et au choix de la station de reference.
@@ -535,11 +546,7 @@ export function App() {
           {place !== null && forecastState?.status === 'error' && (
             <div className={styles.errorState} role="alert">
               <p className={styles.emptyTitle}>Prévision indisponible.</p>
-              <p>
-                Le service de prévision Open-Meteo ne répond pas
-                {forecastState.failure.kind === 'rate_limited' ? ' (quota atteint)' : ''}. Vérifiez
-                la connexion puis réessayez.
-              </p>
+              <p>{forecastFailureSentence(forecastState.failure, forecastState.failedAt)}</p>
               <button type="button" onClick={() => setPlace({ ...place })}>
                 Réessayer
               </button>
@@ -550,7 +557,8 @@ export function App() {
             <>
               {forecastState.result.stale && (
                 <p className={styles.staleBanner}>
-                  Hors ligne · Relevé du {formatFetchedAt(vm.bundle.fetchedAt)}
+                  Hors ligne · Relevé du {formatFetchedAt(vm.bundle.fetchedAt)}, se met à jour dès
+                  que le réseau revient
                 </p>
               )}
               <div

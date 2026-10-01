@@ -9,11 +9,13 @@ import { ensureStorageHeadroom } from '../../pwa/storage';
 export type ForecastState =
   | { readonly status: 'loading' }
   | { readonly status: 'ready'; readonly result: ForecastResult }
-  | { readonly status: 'error'; readonly failure: HttpFailure };
+  | { readonly status: 'error'; readonly failure: HttpFailure; readonly failedAt: number };
 
 interface Settled {
   readonly place: Place;
   readonly outcome: HttpResult<ForecastResult>;
+  /** Instant (epoch ms) ou l'echec a ete constate : base de l'heure de reprise annoncee. */
+  readonly settledAt: number;
 }
 
 /**
@@ -31,7 +33,7 @@ export function useForecast(place: Place | null): ForecastState | null {
     let cancelled = false;
     getForecast({ place, models: MODEL_ORDER }).then((outcome) => {
       if (!cancelled) {
-        setSettled({ place, outcome });
+        setSettled({ place, outcome, settledAt: Date.now() });
       }
       if (outcome.ok) {
         // Ecriture importante en cache : verifie le quota (SERVICE_WORKER.md 8).
@@ -51,5 +53,5 @@ export function useForecast(place: Place | null): ForecastState | null {
   }
   return settled.outcome.ok
     ? { status: 'ready', result: settled.outcome.value }
-    : { status: 'error', failure: settled.outcome.failure };
+    : { status: 'error', failure: settled.outcome.failure, failedAt: settled.settledAt };
 }
