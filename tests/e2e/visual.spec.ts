@@ -8,6 +8,13 @@ import { expect, test } from './fixtures';
 // Firefox et WebKit rendent le texte autrement et n'en ont pas. Pour les
 // mettre a jour apres un changement voulu :
 //   npx playwright test tests/e2e/visual.spec.ts --update-snapshots
+//
+// Tolerance : le Chromium du runner GitHub et celui du poste de reference ne
+// lissent pas le texte de la meme facon (premiere CI : environ 4 % de pixels
+// differents sur 8 captures sur 12, aucun decalage de mise en page). Un
+// ecart de couleur par pixel de 0,3 et 8 % de pixels laissent passer ce
+// lissage et attrapent toujours un bloc deplace, absent ou recolore.
+const TOLERANCE = { threshold: 0.3, maxDiffPixelRatio: 0.08 } as const;
 const VIEWS = [
   { key: 'jour', name: 'aujourdhui' },
   { key: 'modeles', name: 'modeles' },
@@ -34,7 +41,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
       await expect(page).toHaveScreenshot(`${view.name}-${colorScheme}.png`, {
         animations: 'disabled',
-        maxDiffPixelRatio: 0.02,
+        ...TOLERANCE,
       });
     });
   }
