@@ -45,7 +45,7 @@ describe('collectingSentence', () => {
     );
     expect(text).toContain('3 prévisions enregistrées depuis lundi 08h');
     expect(text).toContain('6 heures comparables');
-    expect(text).toContain('quand elle est ouverte');
+    expect(text).toContain('quand elle est ouverte, ou en arrière-plan si la veille est activée');
   });
 
   it('avoue qu il n y a rien encore', () => {

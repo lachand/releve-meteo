@@ -12,6 +12,12 @@ import styles from './Settings.module.css';
 const LIMITS =
   'C’est le navigateur qui choisit le moment : en général quelques fois par jour au plus, jamais sans réseau ni en économie d’énergie. Ce n’est pas une alerte en temps réel : la vigilance officielle reste la référence.';
 
+function lastRun(watch: BackgroundWatch): string {
+  return watch.lastRunUtcMs === null
+    ? 'Aucune veille menée pour l’instant.'
+    : `Dernière veille : ${formatDayHour(localIsoFromUtc(watch.lastRunUtcMs))}.`;
+}
+
 function statusText(watch: BackgroundWatch): string {
   switch (watch.status) {
     case null:
@@ -19,17 +25,15 @@ function statusText(watch: BackgroundWatch): string {
     case 'unsupported':
       return 'Ce navigateur ne permet pas la veille en arrière-plan : vos alertes sont évaluées à chaque ouverture du relevé. Chrome et Edge la permettent, une fois Relevé installé comme application.';
     case 'blocked':
-      return 'Les notifications de Relevé sont bloquées dans les réglages du navigateur : la veille ne peut pas vous prévenir. Autorisez-les pour ce site, puis revenez ici.';
+      return 'Les notifications de Relevé sont bloquées dans les réglages du navigateur : la veille ne peut pas vous prévenir. Autorisez-les pour ce site pour recevoir des alertes ; vous pouvez en attendant collecter les prévisions sans notification.';
     case 'needs-install':
       return 'Le navigateur n’accorde la veille qu’aux applications installées : installez Relevé (menu du navigateur, « Installer l’application »), puis activez-la depuis l’application.';
     case 'off':
-      return 'Relevé peut recharger de temps en temps la prévision de vos favoris et des lieux qui ont des alertes, et vous notifier une alerte personnelle franchie ou une vigilance Météo-France orange ou rouge, application fermée.';
+      return 'Relevé peut recharger de temps en temps la prévision de vos favoris et des lieux qui ont des alertes, et vous notifier une alerte personnelle franchie ou une vigilance Météo-France orange ou rouge, application fermée. Sans notification, Relevé peut aussi seulement enregistrer en arrière-plan les prévisions de vos favoris, pour noter les modèles à courte échéance.';
+    case 'collecting':
+      return `Collecte active, sans notification : Relevé enregistre en arrière-plan les prévisions de vos favoris pour noter les modèles à courte échéance, sans rien afficher. Vos alertes restent évaluées à chaque ouverture. ${lastRun(watch)}`;
     case 'on':
-      return `Veille active pour vos favoris et les lieux qui ont des alertes : alerte personnelle franchie, vigilance Météo-France orange ou rouge, avec le modèle retenu comme dans le relevé. ${
-        watch.lastRunUtcMs === null
-          ? 'Aucune veille menée pour l’instant.'
-          : `Dernière veille : ${formatDayHour(localIsoFromUtc(watch.lastRunUtcMs))}.`
-      }`;
+      return `Veille active pour vos favoris et les lieux qui ont des alertes : alerte personnelle franchie, vigilance Météo-France orange ou rouge, avec le modèle retenu comme dans le relevé. Elle enregistre aussi les prévisions pour noter les modèles à courte échéance. ${lastRun(watch)}`;
   }
 }
 
@@ -56,7 +60,27 @@ export function WatchSettings({ watch }: { readonly watch: BackgroundWatch }) {
           Activer la veille
         </button>
       )}
-      {watch.status === 'on' && (
+      {(watch.status === 'off' || watch.status === 'blocked') && (
+        <button
+          type="button"
+          className={styles.purgeButton}
+          onClick={watch.collect}
+          disabled={watch.busy}
+        >
+          Collecter sans notification
+        </button>
+      )}
+      {watch.status === 'collecting' && (
+        <button
+          type="button"
+          className={styles.purgeButton}
+          onClick={watch.allow}
+          disabled={watch.busy}
+        >
+          Autoriser les notifications
+        </button>
+      )}
+      {(watch.status === 'on' || watch.status === 'collecting') && (
         <button
           type="button"
           className={styles.purgeButton}

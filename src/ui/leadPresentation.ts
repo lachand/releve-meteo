@@ -32,8 +32,8 @@ export function leadHeadline(scores: LeadScores): string {
 
 export function collectingSentence(scores: LeadScores): string {
   if (scores.snapshots === 0 || scores.oldestIssuedAt === null) {
-    return `Aucune prévision enregistrée pour l’instant : l’application en garde une par heure quand elle est ouverte, puis la compare aux mesures. Il faut au moins ${SHORT_LEADS.minPairs} heures comparables par modèle et par échéance.`;
+    return `Aucune prévision enregistrée pour l’instant : l’application en garde une par heure quand elle est ouverte, ou en arrière-plan si la veille est activée dans les réglages, puis la compare aux mesures. Il faut au moins ${SHORT_LEADS.minPairs} heures comparables par modèle et par échéance.`;
   }
   const count = `${scores.snapshots} ${scores.snapshots === 1 ? 'prévision enregistrée' : 'prévisions enregistrées'}`;
-  return `En collecte : ${count} depuis ${formatDayHour(scores.oldestIssuedAt)}. Il faut au moins ${SHORT_LEADS.minPairs} heures comparables par modèle et par échéance ; l’application n’enregistre que quand elle est ouverte.`;
+  return `En collecte : ${count} depuis ${formatDayHour(scores.oldestIssuedAt)}. Il faut au moins ${SHORT_LEADS.minPairs} heures comparables par modèle et par échéance ; elle n’enregistre que quand elle est ouverte, ou en arrière-plan si la veille est activée dans les réglages.`;
 }

@@ -16,7 +16,9 @@ import {
 } from '../../domain/watch';
 import type { WatchEntry } from '../../domain/watch';
 import {
+  allowNotifications,
   disableWatch,
+  enableCollection,
   enableWatch,
   readWatchStatus,
   requestWatchRun,
@@ -38,7 +40,12 @@ export interface BackgroundWatch {
   readonly status: WatchStatus | null;
   readonly lastRunUtcMs: number | null;
   readonly busy: boolean;
+  /** Notifications et collecte : demande la permission de notifier, sur geste. */
   readonly enable: () => void;
+  /** Collecte des instantanes seule, sans demander la permission de notifier. */
+  readonly collect: () => void;
+  /** Demande la permission de notifier sur une collecte deja active. */
+  readonly allow: () => void;
   readonly disable: () => void;
 }
 
@@ -130,11 +137,13 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
   }, [refresh]);
 
   const on = status === 'on';
+  // Les lieux sont recopies des que la collecte tourne, notifications ou non.
+  const active = status === 'on' || status === 'collecting';
   const { place, terrain, verification, preferred, favourites, rules, windUnit } = inputs;
 
   // Recopie des lieux veilles, seulement quand la veille est active.
   useEffect(() => {
-    if (!on) {
+    if (!active) {
       return;
     }
     let cancelled = false;
@@ -154,7 +163,7 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
     return () => {
       cancelled = true;
     };
-  }, [on, place, terrain, verification, preferred, favourites, rules, windUnit]);
+  }, [active, place, terrain, verification, preferred, favourites, rules, windUnit]);
 
   // Deja montre dans la page : a ne pas notifier ensuite.
   const vigilance = inputs.vigilance;
@@ -194,9 +203,19 @@ export function useBackgroundWatch(inputs: WatchMirrorInputs): BackgroundWatch {
       }),
     [run],
   );
+  const collect = useCallback(
+    () =>
+      run(async () => {
+        const next = await enableCollection();
+        runAfterMirror.current = next === 'on' || next === 'collecting';
+        return next;
+      }),
+    [run],
+  );
+  const allow = useCallback(() => run(allowNotifications), [run]);
   const disable = useCallback(() => run(disableWatch), [run]);
   return useMemo(
-    () => ({ status, lastRunUtcMs, busy, enable, disable }),
-    [status, lastRunUtcMs, busy, enable, disable],
+    () => ({ status, lastRunUtcMs, busy, enable, collect, allow, disable }),
+    [status, lastRunUtcMs, busy, enable, collect, allow, disable],
   );
 }

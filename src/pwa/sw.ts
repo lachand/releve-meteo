@@ -1,5 +1,6 @@
 import { markNotified, readWatchState } from '../data/cache/watchStore';
 import { CACHE_PREFIX, TILE_CACHE_MAX_ENTRIES, TILE_TTL_MS, TILES_CACHE_NAME } from './cacheNames';
+import { recordWatchSnapshots } from './snapshotRun';
 import { collectWatchNotifications } from './watchRun';
 import { WATCH_DONE_MESSAGE, WATCH_RUN_MESSAGE, WATCH_TAG } from './watchTags';
 
@@ -103,23 +104,26 @@ self.addEventListener('message', (event) => {
 
 /*
  * Veille en arriere-plan (SERVICE_WORKER.md 9) : Periodic Background Sync,
- * au rythme choisi par le navigateur. Rien sans permission de
- * notification ni lieu veille.
+ * au rythme choisi par le navigateur. Rien sans lieu veille ; les
+ * notifications demandent en plus la permission, la collecte des
+ * instantanes non.
  */
 interface PeriodicSyncEvent extends ExtendableEvent {
   readonly tag: string;
 }
 
 async function runWatch(): Promise<void> {
-  if (Notification.permission !== 'granted') {
-    return;
-  }
   const state = await readWatchState();
   if (state.entries.length === 0) {
     return;
   }
   const now = new Date();
-  const notifications = await collectWatchNotifications(state, now);
+  // Collecte des instantanes de prevision (notes de 1 a 12 h) d'abord : elle
+  // ne depend pas de la permission de notification, et rien n'est affiche.
+  await recordWatchSnapshots(state.entries, now);
+  // Notifications seulement si la permission est accordee.
+  const notifications =
+    Notification.permission === 'granted' ? await collectWatchNotifications(state, now) : [];
   // Seules les notifications effectivement remises sont notees : si le
   // navigateur en refuse une (permission retiree entre-temps), elle sera
   // retentee a la prochaine veille.
