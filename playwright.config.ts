@@ -4,10 +4,15 @@ import { defineConfig, devices } from '@playwright/test';
 // mais un build utilisable existe hors de son cache habituel. CI ne
 // positionne pas cette variable et garde le telechargement normal.
 const chromiumExecutablePath = process.env.PW_CHROMIUM_PATH;
+// En CI : le Chromium complet (`channel: 'chromium'`, nouveau mode sans
+// interface), pas le « headless shell » par defaut. Dans ce dernier,
+// `periodicSync` existe mais `getTags()` echoue (UnknownError, permission
+// « prompt ») : la veille y parait toujours non prise en charge, ce qu'aucun
+// vrai navigateur ne fait.
 const chromiumLaunchOptions =
   chromiumExecutablePath !== undefined
     ? { launchOptions: { executablePath: chromiumExecutablePath } }
-    : {};
+    : { channel: 'chromium' };
 
 export default defineConfig({
   testDir: './tests/e2e',
