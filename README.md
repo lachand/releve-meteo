@@ -130,6 +130,8 @@ Toutes gratuites et sans clé :
 - [Meteostat](https://meteostat.net/) (CC BY-NC 4.0) : relevés horaires
   des stations, seules les sources d'observation étant retenues ;
 - [RainViewer](https://www.rainviewer.com/) : radar ;
+- [EUMETSAT](https://view.eumetsat.int/) (EUMETView) : éclairs observés par
+  l'imageur d'éclairs du satellite MTG ;
 - [Vigilance Météo-France](https://vigilance.meteofrance.fr/fr) (Licence
   Ouverte) : vigilance départementale, lue sans clé sur le jeu public
   d'[Opendatasoft](https://public.opendatasoft.com/explore/dataset/weatherref-france-vigilance-meteo-departement/)

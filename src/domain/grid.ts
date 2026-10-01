@@ -1,3 +1,5 @@
+import { thunderRiskOf } from './phenomena';
+import type { HourlyRisk } from './phenomena';
 import type { LocalIsoHour, ModelId } from './types';
 
 /*
@@ -50,6 +52,10 @@ export interface ForecastGrid {
   readonly windSpeed: GridSeries;
   /** Degres, direction d'ou vient le vent. */
   readonly windDirection: GridSeries;
+  /** J/kg : energie d'instabilite disponible, base de la carte d'orage. */
+  readonly cape: GridSeries;
+  /** Code meteo WMO du modele (95, 96, 99 : orage), null si absent. */
+  readonly weatherCode: GridSeries;
 }
 
 function round4(value: number): number {
@@ -112,6 +118,32 @@ export function lastCoveredIndex(grid: ForecastGrid): number {
     }
   }
   return -1;
+}
+
+/**
+ * Orage prevu sur chaque case a un instant : le meme critere que les episodes
+ * d'orage du lieu (code orage du modele, ou CAPE elevee avec de la pluie).
+ * `null` : le modele ne fournit ni CAPE ni code meteo pour la case, donc rien
+ * n'est dit ; `{ risk: null }` : donnees presentes, pas d'orage prevu.
+ */
+export function thunderCells(
+  grid: ForecastGrid,
+  index: number,
+): readonly ({ readonly risk: HourlyRisk | null; readonly cape: number | null } | null)[] {
+  const capes = grid.cape[index] ?? [];
+  const precipitation = grid.precipitation[index] ?? [];
+  const codes = grid.weatherCode[index] ?? [];
+  return grid.points.map((_, i) => {
+    const cape = capes[i] ?? null;
+    const weatherCode = codes[i] ?? null;
+    if (cape === null && weatherCode === null) {
+      return null;
+    }
+    return {
+      cape,
+      risk: thunderRiskOf({ cape, precipitation: precipitation[i] ?? null, weatherCode }),
+    };
+  });
 }
 
 /** Minimum et maximum d'une serie de grille, null ignores ; null si vide. */
@@ -199,6 +231,8 @@ export function spreadGrid(grids: readonly ForecastGrid[]): SpreadGrid | null {
       precipitation: spreadSeries(grids, (g) => g.precipitation, times, points),
       windSpeed: empty,
       windDirection: empty,
+      cape: empty,
+      weatherCode: empty,
     },
   };
 }

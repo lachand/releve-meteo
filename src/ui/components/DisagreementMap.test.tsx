@@ -41,6 +41,8 @@ function ready(): DatasetState<SpreadGrid> {
         precipitation: series(() => 0.3),
         windSpeed: series(() => null),
         windDirection: series(() => null),
+        cape: series(() => null),
+        weatherCode: series(() => null),
       },
     },
   };

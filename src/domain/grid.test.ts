@@ -6,6 +6,7 @@ import {
   gridPoints,
   lastCoveredIndex,
   spreadGrid,
+  thunderCells,
   valueRange,
 } from './grid';
 import type { ForecastGrid } from './grid';
@@ -24,6 +25,8 @@ function grid(temperature: readonly (readonly (number | null)[])[]): ForecastGri
     precipitation: temperature.map((row) => row.map(() => 0)),
     windSpeed: temperature.map((row) => row.map(() => 10)),
     windDirection: temperature.map((row) => row.map(() => 180)),
+    cape: temperature.map((row) => row.map(() => 0)),
+    weatherCode: temperature.map((row) => row.map(() => 0)),
   };
 }
 
@@ -107,6 +110,43 @@ describe('valueRange', () => {
   });
 });
 
+describe('thunderCells', () => {
+  const base = grid([[0, 0, 0, 0]]);
+  const four = { ...base, points: gridPoints(LYON, 3, 12.5).slice(0, 4) } as ForecastGrid;
+
+  it('applique le critere des episodes d orage, case par case', () => {
+    const cells = thunderCells(
+      {
+        ...four,
+        cape: [[2200, 700, 100, null]],
+        precipitation: [[2, 2, 2, 2]],
+        weatherCode: [[3, 3, 3, 96]],
+      },
+      0,
+    );
+    expect(cells[0]).toEqual({ cape: 2200, risk: { level: 'high', value: 2200 } });
+    expect(cells[1]).toEqual({ cape: 700, risk: { level: 'low', value: 700 } });
+    expect(cells[2]).toEqual({ cape: 100, risk: null });
+    expect(cells[3]).toEqual({ cape: null, risk: { level: 'high', value: null } });
+  });
+
+  it('ne dit rien d une case sans CAPE ni code meteo, et rien hors de la grille', () => {
+    const cells = thunderCells(
+      { ...four, cape: [[null, 900]], precipitation: [[1, 1]], weatherCode: [[null, null]] },
+      0,
+    );
+    expect(cells[0]).toBeNull();
+    expect(cells[1]).toEqual({ cape: 900, risk: { level: 'low', value: 900 } });
+    // Une pluie absente ne declenche pas d'orage : la CAPE seule ne suffit pas.
+    const dry = thunderCells(
+      { ...four, cape: [[3000]], precipitation: [[null]], weatherCode: [[3]] },
+      0,
+    );
+    expect(dry[0]).toEqual({ cape: 3000, risk: null });
+    expect(thunderCells(four, 9).every((cell) => cell === null)).toBe(true);
+  });
+});
+
 describe('spreadGrid', () => {
   const points = gridPoints(LYON, 3, 10);
   function grid(
@@ -124,6 +164,8 @@ describe('spreadGrid', () => {
       precipitation,
       windSpeed: temperature,
       windDirection: temperature,
+      cape: temperature,
+      weatherCode: temperature,
     } as ForecastGrid;
   }
   const flat = (value: number | null) => Array.from({ length: 9 }, () => value);
@@ -139,6 +181,8 @@ describe('spreadGrid', () => {
     expect(result?.grid.temperature[1]?.[4]).toBe(3.5);
     expect(result?.grid.times).toHaveLength(2);
     expect(result?.grid.points).toBe(points);
+    // Un ecart de CAPE n'a pas de sens ici : rien n'est affiche pour l'orage.
+    expect(result?.grid.cape[0]?.every((value) => value === null)).toBe(true);
   });
 
   it('calcule l ecart de pluie sur ses propres valeurs', () => {

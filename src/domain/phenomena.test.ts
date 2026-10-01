@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildHourlyTimeline, hourlyPoint } from '../../tests/factories';
 import type { HourlyValues } from '../../tests/factories';
-import { detectPhenomena, worstLevelByKind } from './phenomena';
+import { detectPhenomena, thunderRiskOf, worstLevelByKind } from './phenomena';
 import type { PhenomenonKind, RiskLevel } from './phenomena';
 import type { HourlyPoint, ModelId } from './types';
 
@@ -243,5 +243,23 @@ describe('worstLevelByKind', () => {
       series([{ windGust: 65 }, {}, {}, {}, { windGust: 105 }, {}, {}, {}, { windGust: 85 }]),
     );
     expect(worstLevelByKind(episodes)).toEqual({ strongWind: 'high' });
+  });
+});
+
+describe('thunderRiskOf, utilise aussi par la carte', () => {
+  it('rend le niveau et la CAPE qui le justifie', () => {
+    expect(thunderRiskOf({ cape: 1200, precipitation: 1, weatherCode: 3 })).toEqual({
+      level: 'moderate',
+      value: 1200,
+    });
+    expect(thunderRiskOf({ cape: null, precipitation: null, weatherCode: 96 })).toEqual({
+      level: 'high',
+      value: null,
+    });
+  });
+
+  it('ne dit rien quand rien ne justifie un orage', () => {
+    expect(thunderRiskOf({ cape: 300, precipitation: 2, weatherCode: 61 })).toBeNull();
+    expect(thunderRiskOf({ cape: null, precipitation: null, weatherCode: null })).toBeNull();
   });
 });

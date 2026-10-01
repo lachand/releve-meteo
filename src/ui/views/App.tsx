@@ -683,7 +683,8 @@ export function App() {
       <footer className={styles.footer}>
         <p>
           Prévisions Open-Meteo (Météo-France, DWD, ECMWF, NOAA), observations Meteostat, réanalyse
-          ERA5 et qualité de l’air Copernicus, radar RainViewer, fonds OpenStreetMap.
+          ERA5 et qualité de l’air Copernicus, radar RainViewer, éclairs EUMETSAT, fonds
+          OpenStreetMap.
         </p>
         <p>
           <a href="/sources.html">Sources, licences et méthode</a>

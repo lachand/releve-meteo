@@ -42,6 +42,8 @@ function ready(grid: Partial<ForecastGrid> = {}): DatasetState<ForecastGrid> {
       precipitation: series((t, p) => (t === 3 ? null : t === 2 && p < 3 ? 1.5 + p : 0)),
       windSpeed: series(() => 10),
       windDirection: series(() => 200),
+      cape: series((t, p) => (t === 3 ? null : t === 2 && p < 3 ? 600 + p * 800 : 100)),
+      weatherCode: series((t, p) => (t === 3 ? null : t === 2 && p === 2 ? 95 : 3)),
       ...grid,
     },
   };
@@ -142,6 +144,60 @@ describe('ForecastMap', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute('aria-pressed', 'true');
     expect(
       await screen.findByText(/Pluie prévue sur 3 cases/, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+  });
+  it("montre le potentiel d'orage prevu, avec la CAPE qui le justifie et ses limites", async () => {
+    const user = userEvent.setup();
+    render(<ForecastMap place={place} model="arome" state={ready()} now={NOW} />);
+    await user.click(screen.getByRole('button', { name: 'Orage' }));
+    expect(screen.getByRole('button', { name: 'Orage' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Aucun orage prévu sur les 9 cases.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Échéance de la carte' }), {
+      target: { value: '2' },
+    });
+    expect(
+      screen.getByText(/Orage prévu sur 3 cases sur 9, niveau le plus élevé : orage fort, CAPE/),
+    ).toHaveTextContent(/2\s?200 J\/kg/);
+    expect(screen.getByRole('list', { name: 'Légende du potentiel d’orage' })).toHaveTextContent(
+      'Orage possibleOrage probableOrage fort',
+    );
+    expect(screen.getByText(/C’est une prévision, pas une mesure/)).toBeInTheDocument();
+    expect(screen.getByText('prévu')).toBeInTheDocument();
+  });
+
+  it("dit quand le modele ne fournit ni CAPE ni code meteo, sans en faire une absence d'orage", async () => {
+    const user = userEvent.setup();
+    render(
+      <ForecastMap
+        place={place}
+        model="arome"
+        state={ready({ cape: series(() => null), weatherCode: series(() => null) })}
+        now={NOW}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Orage' }));
+    expect(
+      screen.getByText('Orage non fourni par le modèle à cette heure (ni CAPE ni code météo).'),
+    ).toBeInTheDocument();
+  });
+
+  it("dit l'orage sans CAPE quand le modele le code lui-meme", async () => {
+    const user = userEvent.setup();
+    render(
+      <ForecastMap
+        place={place}
+        model="arome"
+        state={ready({
+          cape: series(() => null),
+          weatherCode: series((t, p) => (t === 1 && p === 4 ? 96 : 3)),
+        })}
+        now={NOW}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Orage' }));
+    expect(
+      screen.getByText('Orage prévu sur 1 case sur 9, niveau le plus élevé : orage fort.'),
     ).toBeInTheDocument();
   });
 });
