@@ -16,7 +16,6 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.width
@@ -41,7 +40,7 @@ class MediumWidget : GlanceAppWidget() {
                 } else {
                     val roomy = LocalSize.current.height >= ROOMY_HEIGHT
                     val days = shown.place.days
-                    Row(modifier = GlanceModifier.fillMaxSize()) {
+                    Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                         Column(modifier = GlanceModifier.width(112.dp)) {
                             PlaceBlock(shown, nowMs, p, temperatureSize = 28.sp, iconSize = 28.dp, roomy = roomy)
                             if (roomy) {
@@ -57,19 +56,20 @@ class MediumWidget : GlanceAppWidget() {
                             }
                             // Sans jours a montrer, ou quand il y a la place, les heures a venir.
                             if (days.isEmpty() || roomy) {
-                                if (days.isNotEmpty()) Spacer(GlanceModifier.height(4.dp))
+                                if (days.isNotEmpty()) Divider(p)
+                                if (roomy) SectionCaption("Heures à venir", p)
                                 HoursRow(shown.place.hours, p)
                             }
                             if (roomy) {
                                 shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
-                                    Spacer(GlanceModifier.height(3.dp))
+                                    Divider(p)
                                     Label(it, 10.sp, p.ink, maxLines = 2)
                                 }
                             }
-                            Spacer(GlanceModifier.height(2.dp))
-                            Freshness(shown, nowMs, p)
                         }
                     }
+                    // Le pied reste en bas, sur toute la largeur, quelle que soit la hauteur donnee au widget.
+                    Freshness(shown, nowMs, p)
                 }
             }
         }

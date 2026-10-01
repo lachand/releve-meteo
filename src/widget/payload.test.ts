@@ -2,10 +2,12 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import forecastLyon from '../../tests/fixtures/live/forecast-lyon.json';
 import { server } from '../../tests/msw';
+import { blendDaily } from '../domain/dailyBlend';
 import type { WatchEntry } from '../domain/watch';
 import { loadEntryForecast } from '../pwa/watchRun';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import type { EntryForecast } from '../pwa/watchRun';
+import { weatherIcon } from './icon';
 import {
   WIDGET_DAYS,
   WIDGET_HOURS,
@@ -87,6 +89,51 @@ describe('widgetPlace', () => {
         expect(day.tempMax).toBeGreaterThanOrEqual(day.tempMin);
       }
     }
+  });
+
+  it('dit pour aujourd hui le temps des heures restantes, pas celui des heures passees', async () => {
+    const forecast = await forecastOf(LYON);
+    const withCode = (code: number | null): EntryForecast => ({
+      ...forecast,
+      cascade: {
+        ...forecast.cascade,
+        points: forecast.cascade.points.map((point) =>
+          point !== null && point.time.startsWith('2026-09-28')
+            ? { ...point, weatherCode: code }
+            : point,
+        ),
+      },
+    });
+    const clear = widgetPlace({ entry: LYON, forecast: withCode(0), now: NOW });
+    expect(clear.days[0]?.date).toBe('2026-09-28');
+    expect(clear.days[0]?.icon).toBe('clear');
+    expect(clear.days[0]?.label).toBe('Ciel dégagé');
+    const stormy = widgetPlace({ entry: LYON, forecast: withCode(95), now: NOW });
+    expect(stormy.days[0]?.icon).toBe('thunder');
+    // Les jours suivants gardent le temps du jour entier du modele.
+    expect(stormy.days[1]?.icon).toBe(clear.days[1]?.icon);
+  });
+
+  it('garde le temps du jour du modele quand aucune heure restante ne donne de code', async () => {
+    const forecast = await forecastOf(LYON);
+    const bare: EntryForecast = {
+      ...forecast,
+      cascade: {
+        ...forecast.cascade,
+        points: forecast.cascade.points.map((point) =>
+          point === null ? null : { ...point, weatherCode: null },
+        ),
+      },
+    };
+    const kept = widgetPlace({ entry: LYON, forecast: bare, now: NOW });
+    const daily = blendDaily({
+      bundle: forecast.bundle,
+      context: forecast.cascade.context,
+      now: NOW,
+      preferred: null,
+    })[0];
+    expect(kept.days[0]?.icon).toBe(weatherIcon(daily?.weatherCode ?? null, true));
+    expect(kept.days[0]?.date).toBe('2026-09-28');
   });
 
   it('ne donne aucun jour sans prevision quotidienne', async () => {

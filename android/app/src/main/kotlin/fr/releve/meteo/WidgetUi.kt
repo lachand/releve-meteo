@@ -12,7 +12,12 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import android.content.Context
+import androidx.glance.GlanceId
+import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
@@ -20,11 +25,13 @@ import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -38,13 +45,27 @@ import java.util.Locale
 typealias Ink = androidx.glance.unit.ColorProvider
 
 /** Les couleurs du carnet (DESIGN.md) : papier et encre. */
-class Palette(val paper: Ink, val ink: Ink, val faint: Ink, val margin: Ink, val rain: Ink)
+class Palette(
+    val paper: Ink,
+    val ink: Ink,
+    val faint: Ink,
+    val margin: Ink,
+    val rain: Ink,
+    /** Un fond un peu different du papier : la colonne d'aujourd'hui. */
+    val panel: Ink,
+    /** Les filets entre sections. */
+    val line: Ink,
+)
 
 private val LIGHT_PAPER = Color(0xFFF2EDE2)
 private val LIGHT_INK = Color(0xFF1C2733)
 private val LIGHT_FAINT = Color(0xFF5B6570)
 private val LIGHT_MARGIN = Color(0xFFAC4336)
 private val LIGHT_RAIN = Color(0xFF2F5D8A)
+private val LIGHT_PANEL = Color(0xFFE8E0CE)
+private val LIGHT_LINE = Color(0xFFD3CAB5)
+private val DARK_PANEL = Color(0xFF1D2630)
+private val DARK_LINE = Color(0xFF2B3642)
 private val DARK_PAPER = Color(0xFF131920)
 private val DARK_INK = Color(0xFFE8E1D2)
 private val DARK_FAINT = Color(0xFFA39A8B)
@@ -61,6 +82,8 @@ fun paletteOf(theme: WidgetTheme): Palette =
                 ColorProvider(day = LIGHT_FAINT, night = DARK_FAINT),
                 ColorProvider(day = LIGHT_MARGIN, night = DARK_MARGIN),
                 ColorProvider(day = LIGHT_RAIN, night = DARK_RAIN),
+                ColorProvider(day = LIGHT_PANEL, night = DARK_PANEL),
+                ColorProvider(day = LIGHT_LINE, night = DARK_LINE),
             )
         WidgetTheme.LIGHT ->
             Palette(
@@ -69,6 +92,8 @@ fun paletteOf(theme: WidgetTheme): Palette =
                 ColorProvider(day = LIGHT_FAINT, night = LIGHT_FAINT),
                 ColorProvider(day = LIGHT_MARGIN, night = LIGHT_MARGIN),
                 ColorProvider(day = LIGHT_RAIN, night = LIGHT_RAIN),
+                ColorProvider(day = LIGHT_PANEL, night = LIGHT_PANEL),
+                ColorProvider(day = LIGHT_LINE, night = LIGHT_LINE),
             )
         WidgetTheme.DARK ->
             Palette(
@@ -77,6 +102,8 @@ fun paletteOf(theme: WidgetTheme): Palette =
                 ColorProvider(day = DARK_FAINT, night = DARK_FAINT),
                 ColorProvider(day = DARK_MARGIN, night = DARK_MARGIN),
                 ColorProvider(day = DARK_RAIN, night = DARK_RAIN),
+                ColorProvider(day = DARK_PANEL, night = DARK_PANEL),
+                ColorProvider(day = DARK_LINE, night = DARK_LINE),
             )
     }
 
@@ -93,7 +120,7 @@ val COLUMN_GAP: Dp = 8.dp
  * ouvre l'application sur le lieu du widget (`link`), ou sans lieu quand il n'y en a pas.
  */
 @Composable
-fun WidgetFrame(link: String, p: Palette, content: @Composable () -> Unit) {
+fun WidgetFrame(link: String, p: Palette, content: @Composable ColumnScope.() -> Unit) {
     val context = LocalContext.current
     val intent =
         Intent(context, MainActivity::class.java).apply {
@@ -108,7 +135,7 @@ fun WidgetFrame(link: String, p: Palette, content: @Composable () -> Unit) {
                 .clickable(actionStartActivity(intent)),
     ) {
         Box(modifier = GlanceModifier.width(4.dp).fillMaxHeight().background(p.margin)) {}
-        Column(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
+        Column(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp)) {
             content()
         }
     }
@@ -187,17 +214,39 @@ fun PlaceBlock(
     }
 }
 
-/** La date de mise a jour ; un contenu ancien le dit, en rouge de marge, avec son age. */
+/** Un appui sur la ligne de mise a jour recalcule les widgets tout de suite. */
+class RefreshAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        WidgetScheduler.refreshNow(context)
+    }
+}
+
+/** La date de mise a jour (« ↻ » : un appui la recalcule) ; un contenu ancien le dit, en rouge de marge, avec son age. */
 @Composable
 fun Freshness(shown: ShownPlace, nowMs: Long, p: Palette) {
     val stale = WidgetFormat.isStale(shown.generatedAtMs, nowMs)
     Label(
-        WidgetFormat.freshness(shown.generatedAtMs, nowMs),
+        "↻ " + WidgetFormat.freshness(shown.generatedAtMs, nowMs),
         10.sp,
         if (stale) p.margin else p.faint,
         bold = stale,
         maxLines = 2,
+        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp).clickable(actionRunCallback<RefreshAction>()),
     )
+}
+
+/** Un filet entre deux sections. */
+@Composable
+fun Divider(p: Palette) {
+    Spacer(GlanceModifier.height(5.dp))
+    Box(modifier = GlanceModifier.fillMaxWidth().height(1.dp).background(p.line)) {}
+    Spacer(GlanceModifier.height(5.dp))
+}
+
+/** Le titre d'une section, en petites capitales : dit ce que les chiffres en dessous annoncent. */
+@Composable
+fun SectionCaption(text: String, p: Palette) {
+    Label(text.uppercase(Locale.FRANCE), 9.sp, p.faint, bold = true)
 }
 
 /** « Les 5 autres modèles s'écartent de 0,8 °C… » : le modele retenu n'est jamais dit seul quand il y a la place. */
@@ -220,13 +269,15 @@ fun HoursList(hours: List<WidgetHour>, p: Palette, count: Int = 4) {
     }
 }
 
-/** Les jours a venir en colonnes : le jour, l'icone du temps, le maximum, le minimum. Une valeur absente reste un tiret. */
+/** Les jours a venir en colonnes : le jour, l'icone du temps, le maximum, le minimum ; aujourd'hui en relief. */
 @Composable
 fun DaysStrip(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
     Row(modifier = GlanceModifier.fillMaxWidth()) {
-        days.forEach { day ->
-            Column(modifier = GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Label(WidgetFormat.dayName(day.date, nowMs), 10.sp, p.faint)
+        days.forEachIndexed { index, day ->
+            val today = index == 0 && WidgetFormat.dayName(day.date, nowMs) == "auj."
+            val column = if (today) GlanceModifier.defaultWeight().background(p.panel).cornerRadius(8.dp) else GlanceModifier.defaultWeight()
+            Column(modifier = column.padding(vertical = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Label(WidgetFormat.dayName(day.date, nowMs), 10.sp, if (today) p.ink else p.faint, bold = today)
                 if (WidgetIcons.drawable(day.icon) != null) {
                     WeatherIcon(day.icon, day.label, 22.dp)
                 } else {

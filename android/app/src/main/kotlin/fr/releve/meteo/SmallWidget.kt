@@ -35,14 +35,16 @@ class SmallWidget : GlanceAppWidget() {
                     if (roomy) {
                         Spacer(GlanceModifier.height(6.dp))
                         SpreadLine(shown, p)
-                        Spacer(GlanceModifier.height(6.dp))
+                        Divider(p)
+                        SectionCaption("Heures à venir", p)
                         HoursList(shown.place.hours, p)
                         shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
-                            Spacer(GlanceModifier.height(6.dp))
+                            Divider(p)
                             Label(it, 10.sp, p.ink, maxLines = 3)
                         }
                     }
-                    Spacer(GlanceModifier.height(4.dp))
+                    // Le pied reste en bas, quelle que soit la hauteur donnee au widget.
+                    Spacer(GlanceModifier.defaultWeight())
                     Freshness(shown, nowMs, p)
                 }
             }

@@ -1,13 +1,14 @@
 import { briefingAt } from '../domain/briefing';
 import { confidenceAt } from '../domain/confidence';
 import { blendDaily } from '../domain/dailyBlend';
+import { leadHoursFrom, localIsoFromUtc } from '../domain/time';
 import { dayDigest } from '../domain/dayDigest';
 import type { ConfidenceLevel, LocalIsoHour, ModelId, WeatherVariable } from '../domain/types';
 import type { WatchEntry } from '../domain/watch';
 import type { EntryForecast } from '../pwa/watchRun';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import { weatherCodeLabel } from '../ui/weatherCodePresentation';
-import { weatherIcon } from './icon';
+import { mostSevereWeather, weatherIcon } from './icon';
 import type { WidgetIconName } from './icon';
 
 /*
@@ -100,6 +101,7 @@ export function widgetPlace(input: {
   const { entry, forecast, now } = input;
   const { bundle, cascade } = forecast;
   const points = cascade.points.filter((point) => point !== null);
+  const today = localIsoFromUtc(now.getTime()).slice(0, 10);
   const nowPoint = cascade.nowIndex === -1 ? null : (cascade.points[cascade.nowIndex] ?? null);
   const briefing =
     nowPoint === null
@@ -152,15 +154,29 @@ export function widgetPlace(input: {
     day: dayDigest({ points, now }),
     days: blendDaily({ bundle, context: cascade.context, now, preferred: entry.preferred })
       .slice(0, WIDGET_DAYS)
-      .map((day): WidgetForecastDay => ({
-        date: day.date,
-        model: day.model,
-        tempMin: day.tempMin.value,
-        tempMax: day.tempMax.value,
-        rainMm: day.precipitationSum.value,
-        icon: weatherIcon(day.weatherCode, true),
-        label: weatherCodeLabel(day.weatherCode),
-      })),
+      .map((day): WidgetForecastDay => {
+        // Aujourd'hui : le temps des heures restantes, comme la phrase « Sur 24 h » ; le resume du
+        // jour d'un modele couvre aussi des heures deja passees. Sans code, celui du modele.
+        const code =
+          day.date === today
+            ? (mostSevereWeather(
+                points
+                  .filter(
+                    (point) => point.time.startsWith(today) && leadHoursFrom(now, point.time) >= -1,
+                  )
+                  .map((point) => point.weatherCode),
+              ) ?? day.weatherCode)
+            : day.weatherCode;
+        return {
+          date: day.date,
+          model: day.model,
+          tempMin: day.tempMin.value,
+          tempMax: day.tempMax.value,
+          rainMm: day.precipitationSum.value,
+          icon: weatherIcon(code, true),
+          label: weatherCodeLabel(code),
+        };
+      }),
   };
 }
 
