@@ -1,4 +1,5 @@
-import type { DiagnosticSource, SourceDiagnostic } from '../data/cache/diagnostics';
+import { DIAGNOSTIC_SOURCES } from '../data/cache/diagnostics';
+import type { DiagnosticSource, Diagnostics, SourceDiagnostic } from '../data/cache/diagnostics';
 import { localIsoFromUtc } from '../domain/time';
 import { formatDayHour } from './format';
 
@@ -11,6 +12,8 @@ export const DIAGNOSTIC_LABELS: Readonly<Record<DiagnosticSource, string>> = {
   airQuality: 'Qualité de l’air et pollens (CAMS)',
   nowcast: 'Pluie au quart d’heure (AROME)',
   grid: 'Cartes de prévision (Open-Meteo)',
+  normals: 'Normales 1991-2020 (réanalyse ERA5)',
+  marine: 'Mer et houle (Open-Meteo Marine)',
 };
 
 type Failure = NonNullable<SourceDiagnostic['lastFailure']>;
@@ -51,4 +54,37 @@ export function diagnosticSentences(entry: SourceDiagnostic): {
         ? null
         : `Dernier échec : ${at(entry.lastFailure.at)}, ${failureSentence(entry.lastFailure)}.`,
   };
+}
+
+export interface ReportContext {
+  readonly now: Date;
+  readonly userAgent: string;
+  readonly online: boolean;
+  /** Application installee (mode autonome) ou onglet de navigateur. */
+  readonly installed: boolean;
+  readonly language: string;
+}
+
+/**
+ * Rapport de diagnostic en texte, a coller dans un message : le contexte du
+ * navigateur et, pour chaque source, la derniere lecture reussie et le dernier
+ * echec. Aucun lieu, aucune cle, aucune adresse : seulement des heures et la
+ * nature des echecs.
+ */
+export function diagnosticReport(diagnostics: Diagnostics, context: ReportContext): string {
+  const lines = [
+    'Relevé, rapport de diagnostic',
+    `Établi le ${context.now.toISOString()}`,
+    `Navigateur : ${context.userAgent}`,
+    `Langue : ${context.language} ; réseau : ${context.online ? 'en ligne' : 'hors ligne'} ; ${context.installed ? 'application installée' : 'onglet de navigateur'}`,
+    '',
+  ];
+  for (const source of DIAGNOSTIC_SOURCES) {
+    const sentences = diagnosticSentences(diagnostics[source]);
+    lines.push(`${DIAGNOSTIC_LABELS[source]}`, `  ${sentences.success}`);
+    if (sentences.failure !== null) {
+      lines.push(`  ${sentences.failure}`);
+    }
+  }
+  return lines.join('\n');
 }

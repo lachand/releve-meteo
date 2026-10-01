@@ -3,12 +3,15 @@ import { briefingAt } from '../../domain/briefing';
 import { bestDryWindow } from '../../domain/dryWindow';
 import { solarOutlook } from '../../domain/solarOutlook';
 import { mountainOutlook } from '../../domain/mountainOutlook';
+import { anomalyAgainst } from '../../domain/normals';
 import { briefingSentence } from '../briefingPresentation';
+import { NORMALS_CAVEAT, normalSentence } from '../normalsPresentation';
 import { AirQualityPanel } from '../components/AirQualityPanel';
 import { AlertBanner, AlertRulesEditor } from '../components/Alerts';
 import { ConditionsPanel } from '../components/ConditionsPanel';
 import { DailyList } from '../components/DailyList';
 import { DryWindowPanel } from '../components/DryWindowPanel';
+import { MarinePanel } from '../components/MarinePanel';
 import { MountainPanel } from '../components/MountainPanel';
 import { shouldShowMountain } from '../mountainPresentation';
 import { HourlyStrip } from '../components/HourlyStrip';
@@ -43,6 +46,20 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
           index: cascade.nowIndex,
           active: { model: nowPoint.model, temperature: nowPoint.temperature.value },
           verdict: confidenceNow,
+        });
+
+  const todayDay = vm.days[0];
+  const normalLine =
+    todayDay === undefined || vm.todayNormal === null
+      ? null
+      : normalSentence({
+          model: todayDay.model,
+          forecastMax: todayDay.tempMax.value,
+          normal: vm.todayNormal,
+          anomaly: anomalyAgainst(
+            { tempMax: todayDay.tempMax.value, tempMin: todayDay.tempMin.value },
+            vm.todayNormal,
+          ),
         });
 
   const dryWindow = bestDryWindow({
@@ -143,6 +160,11 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
               </button>
             }
           >
+            {normalLine !== null && (
+              <p className={styles.normalLine}>
+                {normalLine} <span className={styles.quickNote}>{NORMALS_CAVEAT}</span>
+              </p>
+            )}
             <DailyList
               days={vm.days.slice(0, 5)}
               ensemble={vm.ensembleDays}
@@ -179,6 +201,12 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
                 <MountainPanel outlook={mountain} />
               </Collapsible>
             )}
+
+          {vm.marine !== null && (
+            <Collapsible id="marine" eyebrow="Littoral" title="Mer et houle" defaultOpen>
+              <MarinePanel state={vm.marine.state} outlook={vm.marine.outlook} />
+            </Collapsible>
+          )}
 
           <Collapsible id="conditions" eyebrow="Repères du jour" title="Soleil, rosée, gel">
             <ConditionsPanel nowPoint={nowPoint} today={vm.days[0] ?? null} />

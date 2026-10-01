@@ -130,3 +130,75 @@ export function valueRange(
   }
   return min === Infinity ? null : { min, max };
 }
+
+/**
+ * Modeles de la carte du desaccord : un modele fin de France, un global
+ * europeen, la reference de moyenne echeance et un modele americain. Quatre
+ * grilles de 81 points, donc 324 appels du quota libre : la carte ne se charge
+ * qu'a la demande.
+ */
+export const SPREAD_GRID_MODELS: readonly ModelId[] = ['arome_france', 'arpege', 'ecmwf', 'gfs'];
+
+export interface SpreadGrid {
+  /** Modeles dont les grilles ont servi, dans l'ordre. */
+  readonly models: readonly ModelId[];
+  /**
+   * Grille dont `temperature` et `precipitation` sont des ecarts (plus haut
+   * moins plus bas, en °C et en mm) ; vent a null. `model` est le premier.
+   */
+  readonly grid: ForecastGrid;
+}
+
+function spreadSeries(
+  grids: readonly ForecastGrid[],
+  pick: (grid: ForecastGrid) => GridSeries,
+  times: number,
+  points: number,
+): GridSeries {
+  return Array.from({ length: times }, (_, t) =>
+    Array.from({ length: points }, (_, p): number | null => {
+      const values = grids.flatMap((grid) => {
+        const value = pick(grid)[t]?.[p] ?? null;
+        return value === null ? [] : [value];
+      });
+      // Une case sans deux modeles n'a pas d'ecart : null, pas zero.
+      return values.length < 2 ? null : Math.max(...values) - Math.min(...values);
+    }),
+  );
+}
+
+/**
+ * Ecart entre les modeles sur chaque case et chaque heure. Les grilles doivent
+ * porter les memes points et les memes instants ; sinon, ou sous deux grilles,
+ * rien n'est compare.
+ */
+export function spreadGrid(grids: readonly ForecastGrid[]): SpreadGrid | null {
+  const [first] = grids;
+  if (first === undefined || grids.length < 2) {
+    return null;
+  }
+  const aligned = grids.every(
+    (grid) =>
+      grid.points.length === first.points.length &&
+      grid.times.length === first.times.length &&
+      grid.times.every((time, index) => time === first.times[index]),
+  );
+  if (!aligned) {
+    return null;
+  }
+  const times = first.times.length;
+  const points = first.points.length;
+  const empty: GridSeries = Array.from({ length: times }, () =>
+    Array.from({ length: points }, () => null),
+  );
+  return {
+    models: grids.map((grid) => grid.model),
+    grid: {
+      ...first,
+      temperature: spreadSeries(grids, (g) => g.temperature, times, points),
+      precipitation: spreadSeries(grids, (g) => g.precipitation, times, points),
+      windSpeed: empty,
+      windDirection: empty,
+    },
+  };
+}

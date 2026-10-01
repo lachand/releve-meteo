@@ -89,3 +89,18 @@ export function clearModelChoices(): void {
     // Rien a faire : le repli memoire est deja vide.
   }
 }
+
+/** Tous les choix enregistres, par lieu : pour la sauvegarde. */
+export function readAllModelChoices(): Readonly<Record<string, ModelId>> {
+  return readAll();
+}
+
+/** Remplace tous les choix : pour la restauration d'une sauvegarde. */
+export function writeAllModelChoices(choices: Readonly<Record<string, ModelId>>): void {
+  writeAll({ ...choices });
+}
+
+/** Un identifiant de modele du catalogue ? Pour valider une sauvegarde. */
+export function isKnownModelId(value: unknown): value is ModelId {
+  return isModelId(value);
+}

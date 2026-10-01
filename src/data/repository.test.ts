@@ -12,6 +12,7 @@ import {
   getEnsemble,
   getForecast,
   getForecastGrid,
+  getSpreadGrid,
   getNowcast,
   getStationReport,
   getVerifications,
@@ -701,6 +702,96 @@ describe('getForecastGrid', () => {
     await getForecastGrid(place, 'ecmwf');
     expect(requests).toHaveLength(2);
     expect(requests[1]?.searchParams.get('models')).toBe('ecmwf_ifs025');
+  });
+});
+
+describe('getSpreadGrid', () => {
+  const FORECAST = 'https://api.open-meteo.com/v1/forecast';
+  /** Chaque modele annonce une temperature differente : 10, 12, 15, 11 degres. */
+  const TEMPERATURES: Record<string, number> = {
+    meteofrance_arome_france: 10,
+    meteofrance_arpege_europe: 12,
+    ecmwf_ifs025: 15,
+    gfs_seamless: 11,
+  };
+
+  it('compare les grilles des quatre modeles et rend l ecart de chaque case', async () => {
+    server.use(
+      http.get(FORECAST, ({ request }) => {
+        const url = new URL(request.url);
+        const count = url.searchParams.get('latitude')?.split(',').length ?? 0;
+        const temperature = TEMPERATURES[url.searchParams.get('models') ?? ''] ?? 0;
+        return HttpResponse.json(
+          Array.from({ length: count }, () => ({
+            hourly: {
+              time: ['2026-09-28T16:00'],
+              temperature_2m: [temperature],
+              precipitation: [0],
+            },
+          })),
+        );
+      }),
+    );
+    const result = await getSpreadGrid(place);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.value.models).toEqual(['arome_france', 'arpege', 'ecmwf', 'gfs']);
+    expect(result.value.value.grid.temperature[0]?.[0]).toBe(5);
+    expect(result.value.stale).toBe(false);
+  });
+
+  it('ecarte un modele qui ne repond pas, tant qu il en reste deux', async () => {
+    server.use(
+      http.get(FORECAST, ({ request }) => {
+        const url = new URL(request.url);
+        const model = url.searchParams.get('models') ?? '';
+        if (model === 'gfs_seamless') {
+          return new HttpResponse(null, { status: 500 });
+        }
+        const count = url.searchParams.get('latitude')?.split(',').length ?? 0;
+        return HttpResponse.json(
+          Array.from({ length: count }, () => ({
+            hourly: {
+              time: ['2026-09-28T16:00'],
+              temperature_2m: [TEMPERATURES[model] ?? 0],
+              precipitation: [0],
+            },
+          })),
+        );
+      }),
+    );
+    const result = await getSpreadGrid(place);
+    expect(result.ok && result.value.value.models).toEqual(['arome_france', 'arpege', 'ecmwf']);
+  });
+
+  it('rend l echec quand moins de deux modeles repondent', async () => {
+    server.use(http.get(FORECAST, () => new HttpResponse(null, { status: 500 })));
+    const result = await getSpreadGrid(place);
+    expect(result.ok).toBe(false);
+  });
+
+  it('dit « moins de deux grilles » quand les grilles ne s alignent pas', async () => {
+    server.use(
+      http.get(FORECAST, ({ request }) => {
+        const url = new URL(request.url);
+        const model = url.searchParams.get('models') ?? '';
+        const count = url.searchParams.get('latitude')?.split(',').length ?? 0;
+        // Un instant different par modele : aucune grille ne s'aligne sur une autre.
+        return HttpResponse.json(
+          Array.from({ length: count }, () => ({
+            hourly: {
+              time: [
+                `2026-09-28T${String(10 + Object.keys(TEMPERATURES).indexOf(model)).padStart(2, '0')}:00`,
+              ],
+              temperature_2m: [1],
+              precipitation: [0],
+            },
+          })),
+        );
+      }),
+    );
+    const result = await getSpreadGrid(place);
+    expect(result).toMatchObject({ ok: false, failure: { kind: 'malformed' } });
   });
 });
 

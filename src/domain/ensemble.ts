@@ -1,3 +1,4 @@
+import { leadHoursFrom } from './time';
 import type { LocalIsoHour } from './types';
 
 /*
@@ -202,4 +203,53 @@ export function hourlyRainProbability(
     );
   }
   return result;
+}
+
+/** Fenetre de la pluie probable heure par heure, heures. */
+export const RAIN_OUTLOOK_HOURS = 72;
+
+export interface RainOutlookHour {
+  readonly time: LocalIsoHour;
+  /** Part des membres qui annoncent de la pluie (0,1 mm ou plus) cette heure, [0, 1]. */
+  readonly probability: number | null;
+  /** Cumul median des membres, mm ; null sans valeur. */
+  readonly median: number | null;
+  /** Cumul atteint ou depasse par 1 membre sur 10, mm : le cas defavorable plausible. */
+  readonly p90: number | null;
+  /** Membres ayant une valeur cette heure. */
+  readonly memberCount: number;
+}
+
+/**
+ * Pluie probable heure par heure sur les prochaines heures, d'apres les
+ * membres de l'ensemble. Une heure sans aucun membre reste vide (null), jamais
+ * comptee comme sechee.
+ */
+export function rainOutlook(input: {
+  readonly ensemble: EnsembleHourly;
+  readonly now: Date;
+  readonly hours?: number;
+}): readonly RainOutlookHour[] {
+  const { ensemble } = input;
+  const horizon = input.hours ?? RAIN_OUTLOOK_HOURS;
+  if (ensemble.precipitation.length === 0) {
+    return [];
+  }
+  return ensemble.timeline.flatMap((time, index): RainOutlookHour[] => {
+    const lead = leadHoursFrom(input.now, time);
+    if (lead < -1 || lead > horizon) {
+      return [];
+    }
+    const values = ensemble.precipitation.map((member) => member[index] ?? null);
+    const spread = quantiles(values);
+    return [
+      {
+        time,
+        probability: exceedanceProbability(values, 0.1),
+        median: spread?.median ?? null,
+        p90: spread?.p90 ?? null,
+        memberCount: values.filter((v) => v !== null).length,
+      },
+    ];
+  });
 }

@@ -338,3 +338,32 @@ test('la veille enregistre des instantanes de prevision meme sans permission de 
   expect(snapshot?.timeline[0]).toBe(parisHour(1));
   expect(snapshot?.temperature.arome?.[0]).toBe(21);
 });
+
+// Premiere visite sur une machine chargee : le service worker met longtemps a
+// installer son precache, bien plus que l'attente de la lecture initiale. L'etat
+// de la veille ne doit pas rester sur « non pris en charge » : il se relit des
+// que le worker est actif.
+test('les reglages se corrigent quand le service worker s active tard', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'Periodic Background Sync : Chromium seul');
+  await page.addInitScript(() => {
+    Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
+  });
+  await stubApis(page);
+  // Seules les requetes du service worker (son precache) sont ralenties.
+  await context.route('**/assets/**', async (route) => {
+    if (route.request().serviceWorker() !== null) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    await route.continue();
+  });
+  await page.goto(LYON_URL);
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  const status = page.getByRole('region', { name: 'Veille en arrière-plan' }).getByRole('status');
+  await expect(status).toContainText('n’accorde la veille qu’aux applications installées', {
+    timeout: 40000,
+  });
+});

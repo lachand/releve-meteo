@@ -1,3 +1,4 @@
+import { climateBody } from '../../../tests/fixtures/climate';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -78,8 +79,11 @@ function liveHandlers(options: { failForecast?: boolean; failVerification?: bool
         ? new HttpResponse(null, { status: 429 })
         : HttpResponse.json(live(previousRunsRaw)),
     ),
-    http.get('https://archive-api.open-meteo.com/v1/archive', () =>
-      HttpResponse.json(live(archiveRaw)),
+    http.get('https://archive-api.open-meteo.com/v1/archive', ({ request }) =>
+      // Les normales demandent des series quotidiennes ; la verification, des heures.
+      new URL(request.url).searchParams.has('daily')
+        ? HttpResponse.json(climateBody())
+        : HttpResponse.json(live(archiveRaw)),
     ),
     http.get('https://air-quality-api.open-meteo.com/v1/air-quality', () =>
       HttpResponse.json(live(airQualityRaw)),
@@ -445,6 +449,74 @@ describe('App', { timeout: 30000 }, () => {
     expect(await screen.findByText('Modèle retenu', {}, { timeout: 8000 })).toBeInTheDocument();
     expect(window.location.search).not.toContain('modele=');
   });
+
+  it('situe le maximum prevu par rapport a la normale 1991-2020, en la disant estimee', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    const line = await screen.findByText(
+      /au-dessus de la normale 1991-2020 \(18/,
+      {},
+      { timeout: 10000 },
+    );
+    expect(line.textContent).toMatch(/^[A-Z][\w -]+ prévoit un maximum de/);
+    expect(line.textContent).toContain('réanalyse ERA5');
+  }, 20000);
+
+  it('montre mer et houle pour un lieu du littoral, et rien pour un lieu a l interieur', async () => {
+    const hours = Array.from({ length: 72 }, (_, i) => {
+      const day = 28 + Math.floor(i / 24);
+      return `2026-09-${day}T${String(i % 24).padStart(2, '0')}:00`;
+    });
+    server.use(
+      ...liveHandlers(),
+      http.get('https://marine-api.open-meteo.com/v1/marine', () =>
+        HttpResponse.json({
+          hourly: {
+            time: hours,
+            wave_height: hours.map(() => 1.6),
+            wave_period: hours.map(() => 9),
+            wave_direction: hours.map(() => 300),
+          },
+        }),
+      ),
+    );
+    window.history.replaceState(null, '', '/?lat=48.3904&lon=-4.4861&nom=Brest&alt=30');
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: 'Mer et houle' }, { timeout: 10000 }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/^Mer agitée : vagues de 1,6/, {}, { timeout: 10000 }),
+    ).toBeInTheDocument();
+  }, 30000);
+
+  it('ne montre pas de mer pour un lieu a l interieur des terres', async () => {
+    server.use(...liveHandlers());
+    await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    expect(screen.queryByRole('heading', { name: 'Mer et houle' })).not.toBeInTheDocument();
+  }, 20000);
+
+  it('trace la probabilite de pluie heure par heure d apres l ensemble', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('tab', { name: 'Heure par heure' }));
+    const heading = await screen.findByRole(
+      'heading',
+      { name: 'Probabilité de pluie, heure par heure' },
+      { timeout: 15000 },
+    );
+    const section = heading.closest('section') as HTMLElement;
+    expect(
+      await within(section).findByRole(
+        'img',
+        { name: /Probabilité de pluie heure par heure/ },
+        { timeout: 15000 },
+      ),
+    ).toBeInTheDocument();
+  }, 30000);
 
   it('verifie les modeles contre la station la plus proche', async () => {
     server.use(...liveHandlers());

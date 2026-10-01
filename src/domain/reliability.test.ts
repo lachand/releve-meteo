@@ -5,6 +5,7 @@ import {
   PERIOD_BIAS,
   biasByPeriod,
   dailyErrors,
+  dailyLeaders,
   errorStats,
   matchSamples,
   pruneArchive,
@@ -413,5 +414,46 @@ describe('weeklyComparison', () => {
       { model: 'arpege', daily: days(22, 28, 1) },
     ]);
     expect(result?.recent?.model).toBe('arome');
+  });
+});
+
+describe('dailyLeaders', () => {
+  const day = (date: string, mae: number): DailyError => ({ date, mae, count: 24 });
+
+  it('designe, pour chaque jour, le modele le plus juste et son avance sur le suivant', () => {
+    const leaders = dailyLeaders([
+      { model: 'arome', daily: [day('2026-09-26', 1), day('2026-09-27', 2)] },
+      { model: 'arpege', daily: [day('2026-09-26', 1.5), day('2026-09-27', 0.5)] },
+      { model: 'gfs', daily: [day('2026-09-26', 3), day('2026-09-27', 0.9)] },
+    ]);
+    expect(leaders).toEqual([
+      { date: '2026-09-26', model: 'arome', mae: 1, lead: 0.5, compared: 3 },
+      { date: '2026-09-27', model: 'arpege', mae: 0.5, lead: 0.4, compared: 3 },
+    ]);
+  });
+
+  it('ne designe personne un jour ou un seul modele a une valeur, et trie par date', () => {
+    const leaders = dailyLeaders([
+      { model: 'arome', daily: [day('2026-09-28', 1), day('2026-09-26', 2)] },
+      { model: 'arpege', daily: [day('2026-09-26', 3)] },
+    ]);
+    expect(leaders.map((l) => l.date)).toEqual(['2026-09-26']);
+    expect(dailyLeaders([])).toEqual([]);
+  });
+
+  it('trie du plus ancien au plus recent meme quand les series arrivent a l envers', () => {
+    const leaders = dailyLeaders([
+      { model: 'arome', daily: [day('2026-09-27', 1), day('2026-09-26', 1)] },
+      { model: 'arpege', daily: [day('2026-09-27', 2), day('2026-09-26', 2)] },
+    ]);
+    expect(leaders.map((l) => l.date)).toEqual(['2026-09-26', '2026-09-27']);
+  });
+
+  it('en cas d egalite, garde le premier modele de la liste, avec une avance nulle', () => {
+    const [leader] = dailyLeaders([
+      { model: 'arome', daily: [day('2026-09-26', 1)] },
+      { model: 'arpege', daily: [day('2026-09-26', 1)] },
+    ]);
+    expect(leader).toMatchObject({ model: 'arome', lead: 0 });
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DIAGNOSTIC_SOURCES } from '../data/cache/diagnostics';
-import { DIAGNOSTIC_LABELS, diagnosticSentences } from './diagnosticPresentation';
+import type { Diagnostics } from '../data/cache/diagnostics';
+import { DIAGNOSTIC_LABELS, diagnosticReport, diagnosticSentences } from './diagnosticPresentation';
 
 const SUCCESS = Date.parse('2026-09-28T14:00:00Z');
 const FAILURE = Date.parse('2026-09-28T09:00:00Z');
@@ -46,5 +47,48 @@ describe('diagnosticSentences', () => {
     for (const source of DIAGNOSTIC_SOURCES) {
       expect(DIAGNOSTIC_LABELS[source].length).toBeGreaterThan(5);
     }
+  });
+});
+
+describe('diagnosticReport', () => {
+  const empty = { lastSuccess: null, lastFailure: null };
+  const diagnostics = Object.fromEntries(
+    DIAGNOSTIC_SOURCES.map((source) => [source, empty]),
+  ) as unknown as Diagnostics;
+  const context = {
+    now: new Date('2026-09-28T13:27:00Z'),
+    userAgent: 'Mozilla/5.0 (test)',
+    online: false,
+    installed: true,
+    language: 'fr-FR',
+  };
+
+  it('donne le contexte du navigateur puis chaque source, sans lieu ni cle', () => {
+    const report = diagnosticReport(
+      {
+        ...diagnostics,
+        forecast: {
+          lastSuccess: SUCCESS,
+          lastFailure: { at: FAILURE, kind: 'network', status: null },
+        },
+      },
+      context,
+    );
+    expect(report).toContain('Établi le 2026-09-28T13:27:00.000Z');
+    expect(report).toContain('Navigateur : Mozilla/5.0 (test)');
+    expect(report).toContain('hors ligne ; application installée');
+    expect(report).toContain(
+      'Prévisions (Open-Meteo)\n  Dernière lecture réussie : lundi 16h.\n  Dernier échec : lundi 11h, réseau injoignable.',
+    );
+    for (const source of DIAGNOSTIC_SOURCES) {
+      expect(report).toContain(DIAGNOSTIC_LABELS[source]);
+    }
+    expect(report).not.toMatch(/lat|lon|apikey/i);
+  });
+
+  it('dit onglet de navigateur et en ligne', () => {
+    expect(diagnosticReport(diagnostics, { ...context, online: true, installed: false })).toContain(
+      'en ligne ; onglet de navigateur',
+    );
   });
 });

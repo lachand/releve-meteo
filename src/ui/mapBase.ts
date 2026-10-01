@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import styles from './mapBase.module.css';
+import { OSM_TILE_URL } from './tileSource';
 
 /*
  * Fond de carte commun au radar et a la carte de prevision : tuiles
@@ -8,7 +9,6 @@ import styles from './mapBase.module.css';
  * touche jamais les couches de donnees posees par-dessus.
  */
 
-const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const BASE_PANE = 'fond';

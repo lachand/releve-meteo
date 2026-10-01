@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   RAIN_COLORS,
+  SPREAD_COLORS,
+  SPREAD_THRESHOLDS,
   TEMPERATURE_GRADIENT,
   rainClass,
   rainColor,
+  spreadColor,
   temperatureColor,
 } from './mapScales';
 
@@ -51,5 +54,23 @@ describe('temperatureColor', () => {
 
   it('expose le degrade de la legende', () => {
     expect(TEMPERATURE_GRADIENT).toMatch(/^linear-gradient\(to right, #2f5f8f, .*#a8392c\)$/);
+  });
+});
+
+describe('spreadColor', () => {
+  it('laisse sans couleur un accord, ou un ecart absent, jamais comme zero', () => {
+    expect(spreadColor(null, 'temperature')).toBeNull();
+    expect(spreadColor(0, 'temperature')).toBeNull();
+    expect(spreadColor(0.4, 'temperature')).toBeNull();
+    expect(spreadColor(0.05, 'rain')).toBeNull();
+  });
+
+  it('colore selon les seuils de la grandeur, du plus clair au plus fonce', () => {
+    expect(spreadColor(0.5, 'temperature')).toBe(SPREAD_COLORS[0]);
+    expect(spreadColor(2.5, 'temperature')).toBe(SPREAD_COLORS[2]);
+    expect(spreadColor(12, 'temperature')).toBe(SPREAD_COLORS[4]);
+    expect(spreadColor(0.5, 'rain')).toBe(SPREAD_COLORS[1]);
+    expect(SPREAD_THRESHOLDS.temperature).toHaveLength(SPREAD_COLORS.length);
+    expect(SPREAD_THRESHOLDS.rain).toHaveLength(SPREAD_COLORS.length);
   });
 });

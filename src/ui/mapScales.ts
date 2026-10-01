@@ -71,3 +71,34 @@ export function temperatureColor(
 
 /** Degrade CSS de la legende de temperature. */
 export const TEMPERATURE_GRADIENT = `linear-gradient(to right, ${TEMPERATURE_STOPS.join(', ')})`;
+
+/**
+ * Carte du desaccord : seuils de l'ecart entre modeles. Sous le premier, les
+ * modeles s'accordent et la case reste sans couleur (jamais peinte comme un
+ * ecart nul quand la valeur manque : une case sans ecart calcule est
+ * pointillee, comme ailleurs).
+ */
+export const SPREAD_THRESHOLDS = {
+  /** °C. */
+  temperature: [0.5, 1, 2, 3, 5],
+  /** mm sur l'heure. */
+  rain: [0.1, 0.5, 1, 2, 4],
+} as const;
+
+/** Lavis d'encre sepia, de l'ecart leger au desaccord franc. */
+export const SPREAD_COLORS = ['#eadfc6', '#d9b98a', '#c58a52', '#a8562f', '#7a2a1d'] as const;
+
+/** Couleur d'un ecart, ou null quand les modeles s'accordent (ou que l'ecart manque). */
+export function spreadColor(value: number | null, variable: 'temperature' | 'rain'): string | null {
+  if (value === null) {
+    return null;
+  }
+  const thresholds = SPREAD_THRESHOLDS[variable];
+  let klass: number | null = null;
+  thresholds.forEach((threshold, index) => {
+    if (value >= threshold) {
+      klass = index;
+    }
+  });
+  return klass === null ? null : (SPREAD_COLORS[klass] ?? null);
+}

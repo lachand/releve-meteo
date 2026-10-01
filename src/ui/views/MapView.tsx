@@ -1,5 +1,7 @@
-import { getForecastGrid } from '../../data/repository';
+import { useState } from 'react';
+import { getForecastGrid, getSpreadGrid } from '../../data/repository';
 import type { ModelId } from '../../domain/types';
+import { DisagreementMap } from '../components/DisagreementMap';
 import { FavouritesMap } from '../components/FavouritesMap';
 import { FavouritesTable } from '../components/FavouritesTable';
 import { ForecastMap } from '../components/ForecastMap';
@@ -18,6 +20,12 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
   const grid = useDataset(model === null ? null : `grid|${vm.place.id}|${model}`, () =>
     // `model` est non nul des que la cle l'est.
     getForecastGrid(vm.place, model as ModelId),
+  );
+
+  // Quatre grilles de 81 points : la carte du desaccord ne se charge qu'a la demande.
+  const [spreadRequested, setSpreadRequested] = useState(false);
+  const spread = useDataset(spreadRequested ? `spread|${vm.place.id}` : null, () =>
+    getSpreadGrid(vm.place),
   );
 
   const favourites = useFavouriteSnapshots(vm.favourites);
@@ -45,6 +53,15 @@ export function MapView({ vm }: { readonly vm: ForecastViewModel }) {
           <ForecastMap key={vm.place.id} place={vm.place} model={model} state={grid} now={vm.now} />
         </Section>
       )}
+      <Section eyebrow="Incertitude" title="Où les modèles se contredisent, 48 heures">
+        <DisagreementMap
+          place={vm.place}
+          now={vm.now}
+          state={spread}
+          requested={spreadRequested}
+          onRequest={() => setSpreadRequested(true)}
+        />
+      </Section>
       {favourites.length > 0 && (
         <Section eyebrow="Favoris" title="Mes lieux, en ce moment">
           <FavouritesMap snapshots={favourites} activePlaceId={vm.place.id} onOpen={vm.openPlace} />

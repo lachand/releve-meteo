@@ -6,8 +6,10 @@ import type { AlertHit } from '../../domain/alerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
-import type { EnsembleDay } from '../../domain/ensemble';
+import type { EnsembleDay, RainOutlookHour } from '../../domain/ensemble';
 import type { PhenomenonEpisode } from '../../domain/phenomena';
+import type { MarineHourly, WaveOutlook } from '../../domain/marine';
+import type { DayNormal } from '../../domain/normals';
 import type { RainCheck } from '../../domain/rainCheck';
 import type { StationCheck } from '../../domain/stationCheck';
 import type { StationTrace } from '../../domain/stationTrace';
@@ -46,6 +48,15 @@ export interface ForecastViewModel {
   readonly confidence: readonly ConfidenceVerdict[] | null;
   readonly days: readonly BlendedDay[];
   readonly ensembleDays: readonly EnsembleDay[] | null;
+  /** Pluie probable heure par heure sur 72 h, d'après l'ensemble ; null sans ensemble. */
+  readonly rainOutlook: readonly RainOutlookHour[] | null;
+  /** Normale 1991-2020 du jour (estimation ERA5) ; null tant qu'elle n'est pas lue. */
+  readonly todayNormal: DayNormal | null;
+  /** Mer et houle ; null hors du littoral. */
+  readonly marine: {
+    readonly state: DatasetState<MarineHourly>;
+    readonly outlook: WaveOutlook | null;
+  } | null;
   readonly ensembleMembers: number;
   readonly ensembleState: DatasetState<unknown>['status'];
   readonly verification: DatasetState<VerificationReport>;

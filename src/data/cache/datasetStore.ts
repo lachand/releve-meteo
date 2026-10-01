@@ -16,7 +16,9 @@ export type DatasetKind =
   | 'grid'
   | 'vigilance'
   | 'watch'
-  | 'snapshots';
+  | 'snapshots'
+  | 'normals'
+  | 'marine';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -43,6 +45,10 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   watch: 1,
   // Instantanes horaires de prevision au point d'une station (echeances courtes).
   snapshots: 1,
+  // Normales 1991-2020 du lieu : maxima et minima quotidiens (ERA5).
+  normals: 1,
+  // Vagues horaires (hauteur, periode, direction) pour le littoral.
+  marine: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

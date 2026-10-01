@@ -120,3 +120,8 @@
   font-style: italic;
   color: var(--encre-faible);
 }
+
+.normalLine {
+  margin: 0 0 var(--esp-3);
+  max-width: 48rem;
+}

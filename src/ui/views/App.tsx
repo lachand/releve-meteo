@@ -1,6 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getAirQuality,
+  getClimate,
+  getMarine,
   getEnsemble,
   getNowcast,
   getStationReport,
@@ -12,9 +14,11 @@ import type { AlertHit } from '../../domain/alerts';
 import { evaluateSpreadAlerts } from '../../domain/spreadAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import { blendDaily } from '../../domain/dailyBlend';
-import { dailyEnsemble } from '../../domain/ensemble';
+import { dailyEnsemble, rainOutlook } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
+import { waveOutlook } from '../../domain/marine';
+import { dayNormal } from '../../domain/normals';
 import { rainCheck } from '../../domain/rainCheck';
 import { stationCheck } from '../../domain/stationCheck';
 import { stationTrace } from '../../domain/stationTrace';
@@ -186,6 +190,14 @@ export function App() {
   const station = useDataset(bundle === null ? null : `station|${bundle.place.id}`, () =>
     getStationReport((bundle as ForecastBundle).place, MODEL_ORDER),
   );
+  // Les vagues ne concernent que le littoral.
+  const coastal = terrain?.kind === 'coastal';
+  const marine = useDataset(place !== null && coastal ? `marine|${place.id}` : null, () =>
+    getMarine(place as Place),
+  );
+  const climate = useDataset(place === null ? null : `normals|${place.id}`, () =>
+    getClimate(place as Place),
+  );
   const vigilance = useDataset(place === null ? null : `vigilance|${place.id}`, () =>
     getVigilance(place as Place),
   );
@@ -257,6 +269,8 @@ export function App() {
   }, []);
 
   const ensembleValue = ensemble.status === 'ready' ? ensemble.value : null;
+  const climateValue = climate.status === 'ready' ? climate.value : null;
+  const marineValue = marine.status === 'ready' ? marine.value : null;
   const ensembleDays = useMemo(
     () => (ensembleValue === null ? null : dailyEnsemble(ensembleValue)),
     [ensembleValue],
@@ -286,6 +300,14 @@ export function App() {
       confidence,
       days: blendDaily({ bundle, context: cascade.context, now, preferred }),
       ensembleDays: ensembleDays?.filter((day) => day.date >= today) ?? null,
+      rainOutlook: ensembleValue === null ? null : rainOutlook({ ensemble: ensembleValue, now }),
+      marine: coastal
+        ? {
+            state: marine,
+            outlook: marineValue === null ? null : waveOutlook({ series: marineValue, now }),
+          }
+        : null,
+      todayNormal: climateValue === null ? null : dayNormal(climateValue, today.slice(5)),
       ensembleMembers: ensembleValue?.temperature.length ?? 0,
       ensembleState: ensemble.status,
       verification,
@@ -360,6 +382,10 @@ export function App() {
     confidence,
     ensembleDays,
     ensembleValue,
+    climateValue,
+    marine,
+    marineValue,
+    coastal,
     ensemble.status,
     verification,
     airQuality,
@@ -511,6 +537,7 @@ export function App() {
           onSetWindUnit={preferences.setWindUnit}
           onSetTheme={preferences.setTheme}
           onSetQuickReading={preferences.setQuickReading}
+          onRestored={() => window.location.reload()}
           onSetPeakKwp={preferences.setPeakKwp}
           onPurge={preferences.purgeLocalData}
           onClose={() => setSettingsOpen(false)}
