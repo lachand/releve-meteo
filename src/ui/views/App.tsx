@@ -702,7 +702,11 @@ export function App() {
           OpenStreetMap.
         </p>
         <p>
+          <a href="/lire.html">Comment lire Relevé</a>
+          {' · '}
           <a href="/sources.html">Sources, licences et méthode</a>
+          {' · '}
+          <a href="/accessibilite.html">Accessibilité</a>
         </p>
       </footer>
     </div>

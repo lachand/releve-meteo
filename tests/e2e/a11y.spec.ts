@@ -49,6 +49,24 @@ test('axe : reglages', async ({ page }) => {
   expect(await violations(page)).toEqual([]);
 });
 
+// Pages statiques : lire, sources et accessibilite, en clair et en sombre.
+const STATIC_PAGES = [
+  { path: '/lire.html', heading: 'Comment lire Relevé' },
+  { path: '/sources.html', heading: 'Sources, licences et méthode' },
+  { path: '/accessibilite.html', heading: 'Accessibilité' },
+] as const;
+
+for (const theme of ['light', 'dark'] as const) {
+  for (const { path, heading } of STATIC_PAGES) {
+    test(`axe : page ${path}, theme ${theme}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    });
+  }
+}
+
 // Garde-fou du garde-fou : axe doit voir une vraie infraction, sinon un
 // resultat vide ne prouverait rien.
 test('axe detecte bien un bouton sans nom accessible', async ({ page }) => {

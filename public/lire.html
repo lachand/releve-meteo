@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comment lire Relevé : Relevé</title>
+    <meta
+      name="description"
+      content="Comment lire les pastilles de provenance, le modèle retenu, la confiance et les cartes de Relevé."
+    />
+    <style>
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Sans';
+        src: url('/fonts/plex-sans-600.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        src: url('/fonts/plex-mono-400.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/garamond-600-normal.woff2') format('woff2');
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/garamond-400-italic.woff2') format('woff2');
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
+      :root {
+        --papier: #f2ede2;
+        --papier-haut: #fbf8f1;
+        --grille: #d6ccb8;
+        --encre: #1c2733;
+        --encre-faible: #5b6570;
+        --marge: #ac4336;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --papier: #131920;
+          --papier-haut: #1a222b;
+          --grille: #2f3a45;
+          --encre: #e8e1d2;
+          --encre-faible: #a39a8b;
+          --marge: #e0715f;
+        }
+      }
+      body {
+        margin: 0;
+        background-color: var(--papier);
+        background-image:
+          repeating-linear-gradient(
+            0deg,
+            color-mix(in srgb, var(--grille) 45%, transparent) 0 1px,
+            transparent 1px 40px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--grille) 45%, transparent) 0 1px,
+            transparent 1px 40px
+          );
+        color: var(--encre);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 720px;
+        margin: 32px auto 80px;
+        padding: 40px 28px 56px;
+        background: var(--papier-haut);
+        border: 1px solid var(--grille);
+        border-left: 2px solid var(--marge);
+      }
+      h1,
+      h2 {
+        font-family: 'EB Garamond', Georgia, serif;
+        font-weight: 600;
+        line-height: 1.15;
+      }
+      h1 {
+        font-size: 2.4rem;
+        margin: 0;
+      }
+      p.lead {
+        font-family: 'EB Garamond', Georgia, serif;
+        font-style: italic;
+        font-size: 1.15rem;
+        color: var(--encre-faible);
+        margin-top: 6px;
+      }
+      section {
+        margin-top: 40px;
+      }
+      h2 {
+        font-size: 1.45rem;
+        border-bottom: 1px solid var(--encre);
+        padding-bottom: 6px;
+      }
+      dl {
+        margin: 0;
+      }
+      dt {
+        font-weight: 600;
+        margin-top: 16px;
+      }
+      dd {
+        margin: 4px 0 0;
+        color: var(--encre-faible);
+      }
+      ol li,
+      ul li {
+        margin-top: 8px;
+      }
+      code {
+        font-family: 'IBM Plex Mono', ui-monospace, monospace;
+        font-size: 0.9em;
+      }
+      a {
+        color: var(--encre);
+        text-decoration-color: var(--marge);
+        text-underline-offset: 0.2em;
+      }
+      .retour {
+        display: inline-block;
+        margin-top: 48px;
+        font-size: 0.9rem;
+      }
+      @media (max-width: 640px) {
+        main {
+          margin: 0;
+          border: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Comment lire Relevé</h1>
+      <p class="lead">
+        Chaque chiffre dit d’où il vient. Voici comment le lire, sans avoir à deviner.
+      </p>
+
+      <section>
+        <h2>Observé, estimé, prévu</h2>
+        <p>Une donnée n’a jamais le même statut selon qu’on l’a mesurée ou calculée :</p>
+        <ul>
+          <li>
+            <strong>Observé</strong> : une mesure réelle (une station, le radar, un satellite),
+            marquée d’une pastille pleine.
+          </li>
+          <li>
+            <strong>Estimé</strong> : un calcul sur le passé, comme une réanalyse, marqué d’une
+            pastille creuse et d’une encre affaiblie.
+          </li>
+          <li>
+            <strong>Prévu</strong> : ce qu’un modèle calcule pour plus tard, sans pastille, écrit en
+            encre normale, souvent en italique ou hachuré.
+          </li>
+        </ul>
+        <p>
+          Une donnée prévue n’est jamais présentée comme une mesure, et l’inverse non plus. Si un
+          écran mêle les deux, il les sépare.
+        </p>
+      </section>
+
+      <section>
+        <h2>Le modèle retenu</h2>
+        <p>
+          Plusieurs modèles de prévision sont comparés. Le tampon « Modèle retenu » nomme celui que
+          Relevé a choisi pour ce lieu et cette échéance, et une phrase en dit la raison : la
+          finesse de sa maille, son comportement en moyenne échéance, et surtout son erreur mesurée
+          près de chez vous quand elle existe. L’onglet « Modèles » détaille le classement, point
+          par point.
+        </p>
+        <p>
+          « Choix manuel » veut dire que vous avez imposé un modèle : la sélection automatique
+          reprend la main si ce modèle ne couvre plus l’instant, et l’écran le dit.
+        </p>
+        <p>
+          Quand le modèle retenu change au fil des heures, un filet vertical tireté le marque, avec
+          le nom du nouveau modèle. Le raccord n’est jamais lissé en silence.
+        </p>
+      </section>
+
+      <section>
+        <h2>La confiance</h2>
+        <p>
+          Elle mesure à quel point les autres modèles s’accordent avec le modèle retenu, au lieu et
+          à l’heure considérés. « AROME prévoit 14 °C, les autres s’en écartent de 0,8 °C :
+          confiance élevée » veut dire que les modèles se ressemblent. Elle se lit aussi dans le
+          trait : plein quand ils s’accordent, tireté puis pointillé quand ils divergent. Ce n’est
+          pas une probabilité que la prévision soit juste : c’est un accord entre calculs.
+        </p>
+      </section>
+
+      <section>
+        <h2>Les cartes</h2>
+        <dl>
+          <dt>Pluie observée (radar)</dt>
+          <dd>
+            Une observation : les deux dernières heures, image par image. Une éventuelle
+            extrapolation serait marquée « prévu ».
+          </dd>
+          <dt>Éclairs observés (satellite)</dt>
+          <dd>
+            L’imageur d’éclairs du satellite MTG voit la lumière des éclairs, dans les nuages comme
+            vers le sol, toutes les cinq minutes. Ce ne sont pas des impacts localisés au sol. Une
+            zone sans couleur veut dire qu’aucun éclair n’a été détecté, ou qu’aucune image n’a été
+            publiée.
+          </dd>
+          <dt>Pluie, température et orage prévus</dt>
+          <dd>
+            Ce que calcule le modèle retenu, une case tous les quelques kilomètres, sans lissage. La
+            couche « Orage » montre où le modèle prévoit de l’instabilité (code orage, ou énergie
+            convective élevée avec de la pluie) : une prévision, pas une position de la foudre.
+          </dd>
+          <dt>Où les modèles se contredisent</dt>
+          <dd>
+            L’écart entre le modèle le plus haut et le plus bas, case par case. Un grand écart dit
+            où la prévision est incertaine, pas qui a raison.
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h2>La fiabilité</h2>
+        <p>
+          Chaque modèle est comparé à ce qui s’est réellement produit près du lieu : la température
+          qu’il avait prévue la veille contre la mesure d’une station voisine. Le calendrier de
+          l’onglet « Fiabilité » dit, jour par jour, lequel a été le plus juste. Un modèle qui gagne
+          souvent n’est pas forcément le plus juste en moyenne. Cette vérification ne porte que sur
+          la température : elle ne dit rien des averses, où un modèle peut être meilleur.
+        </p>
+      </section>
+
+      <section>
+        <h2>Alertes et notifications</h2>
+        <p>
+          Sans serveur, Relevé ne peut pas vous prévenir à la seconde : les alertes sont évaluées à
+          chaque ouverture, et, là où le navigateur le permet (Chrome et Edge, application
+          installée), à chaque veille en arrière-plan, dont le navigateur choisit le rythme. La
+          vigilance officielle de Météo-France reste la référence pour tout risque pour les
+          personnes et les biens.
+        </p>
+      </section>
+
+      <section>
+        <h2>Ce que Relevé ne fait pas</h2>
+        <ul>
+          <li>Il ne donne pas de verdict d’usage (« bon pour le vélo ») : trop subjectif.</li>
+          <li>Il ne remplace ni la vigilance, ni un avis de navigation, ni un prévisionniste.</li>
+          <li>
+            Il ne corrige pas silencieusement une prévision : un biais connu est chiffré, la valeur
+            affichée reste celle du modèle nommé.
+          </li>
+        </ul>
+        <p>D’où viennent les données : <a href="/sources.html">sources, licences et méthode</a>.</p>
+      </section>
+      <a class="retour" href="/">Retour au relevé</a>
+    </main>
+  </body>
+</html>
