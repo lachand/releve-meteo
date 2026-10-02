@@ -3,6 +3,9 @@ package fr.releve.meteo
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -110,6 +113,13 @@ fun paletteOf(theme: WidgetTheme): Palette =
 /** Le texte de l'etat vide : rien n'est devine, on dit quoi faire. */
 const val EMPTY_TEXT = "Ouvrez Relevé et ajoutez un lieu en favori."
 
+/*
+ * Glance ne garde que les 10 premiers enfants d'un Row, d'une Column ou d'une Box : les suivants
+ * disparaissent sans erreur (c'est ainsi que la phrase « Sur 24 h » avait disparu). Chaque bloc
+ * ci-dessous est donc UN enfant, et les conteneurs qui les assemblent restent sous cette limite.
+ */
+const val CHILD_LIMIT = 10
+
 /** Hauteur a partir de laquelle un widget montre aussi l'ecart des autres modeles et les heures a venir. */
 val ROOMY_HEIGHT: Dp = 180.dp
 
@@ -196,21 +206,24 @@ fun PlaceBlock(
 ) {
     val stale = WidgetFormat.isStale(shown.generatedAtMs, nowMs)
     val now = shown.place.now
-    Label(shown.place.name.uppercase(Locale.FRANCE), 10.sp, p.faint, bold = true)
-    if (now == null) {
-        SmallText("Pas de prévision pour cette heure.", p)
-    } else {
-        Label(WidgetFormat.lead(now), 12.sp, p.faint)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Label(WidgetFormat.temperature(now.temperature), temperatureSize, if (stale) p.faint else p.ink, bold = true)
-            Spacer(GlanceModifier.width(6.dp))
-            WeatherIcon(now.icon, now.label, iconSize)
+    // Un seul enfant pour le conteneur parent (voir CHILD_LIMIT).
+    Column {
+        Label(shown.place.name.uppercase(Locale.FRANCE), 10.sp, p.faint, bold = true)
+        if (now == null) {
+            SmallText("Pas de prévision pour cette heure.", p)
+        } else {
+            Label(WidgetFormat.lead(now), 12.sp, p.faint)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Label(WidgetFormat.temperature(now.temperature), temperatureSize, if (stale) p.faint else p.ink, bold = true)
+                Spacer(GlanceModifier.width(6.dp))
+                WeatherIcon(now.icon, now.label, iconSize)
+            }
+            if (roomy) {
+                now.label?.let { Label(it, 10.sp, p.ink) }
+            }
+            // Une prevision, pas une mesure : la provenance est dite.
+            Label("prévu" + (WidgetFormat.confidence(now)?.let { " · $it" } ?: ""), 10.sp, p.faint, italic = true, maxLines = 2)
         }
-        if (roomy) {
-            now.label?.let { Label(it, 10.sp, p.ink) }
-        }
-        // Une prevision, pas une mesure : la provenance est dite.
-        Label("prévu" + (WidgetFormat.confidence(now)?.let { " · $it" } ?: ""), 10.sp, p.faint, italic = true, maxLines = 2)
     }
 }
 
@@ -235,12 +248,14 @@ fun Freshness(shown: ShownPlace, nowMs: Long, p: Palette) {
     )
 }
 
-/** Un filet entre deux sections. */
+/** Un filet entre deux sections : un seul enfant pour le conteneur parent. */
 @Composable
 fun Divider(p: Palette) {
-    Spacer(GlanceModifier.height(5.dp))
-    Box(modifier = GlanceModifier.fillMaxWidth().height(1.dp).background(p.line)) {}
-    Spacer(GlanceModifier.height(5.dp))
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Spacer(GlanceModifier.height(5.dp))
+        Box(modifier = GlanceModifier.fillMaxWidth().height(1.dp).background(p.line)) {}
+        Spacer(GlanceModifier.height(5.dp))
+    }
 }
 
 /** Le titre d'une section, en petites capitales : dit ce que les chiffres en dessous annoncent. */
@@ -252,19 +267,21 @@ fun SectionCaption(text: String, p: Palette) {
 /** « Les 5 autres modèles s'écartent de 0,8 °C… » : le modele retenu n'est jamais dit seul quand il y a la place. */
 @Composable
 fun SpreadLine(shown: ShownPlace, p: Palette) {
-    shown.place.now?.let { Label(WidgetFormat.spread(it), 10.sp, p.ink, maxLines = 4) }
+    shown.place.now?.let { Label(WidgetFormat.spread(it), 10.sp, p.ink, maxLines = 4, modifier = GlanceModifier.padding(top = 6.dp)) }
 }
 
-/** Les heures a venir en liste, de trois en trois : l'heure, la temperature, la pluie. Une valeur absente reste un tiret. */
+/** Les heures a venir en liste, de trois en trois : un seul enfant pour le conteneur parent. Une valeur absente reste un tiret. */
 @Composable
 fun HoursList(hours: List<WidgetHour>, p: Palette, count: Int = 4) {
-    hours.filterIndexed { index, _ -> index % 3 == 2 }.take(count).forEach { hour ->
-        Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 1.dp)) {
-            Label(WidgetFormat.hourLabel(hour.time), 11.sp, p.faint, modifier = GlanceModifier.width(30.dp))
-            Label(WidgetFormat.degrees(hour.temperature), 13.sp, p.ink, bold = true, modifier = GlanceModifier.width(36.dp))
-            val rain = WidgetFormat.rain(hour.precipitation)
-            val wet = rain != null && rain != "0"
-            Label(rain?.let { "$it mm" } ?: "–", 11.sp, if (wet) p.rain else p.faint, bold = wet)
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        hours.filterIndexed { index, _ -> index % 3 == 2 }.take(count).forEach { hour ->
+            Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 1.dp)) {
+                Label(WidgetFormat.hourLabel(hour.time), 11.sp, p.faint, modifier = GlanceModifier.width(30.dp))
+                Label(WidgetFormat.degrees(hour.temperature), 13.sp, p.ink, bold = true, modifier = GlanceModifier.width(36.dp))
+                val rain = WidgetFormat.rain(hour.precipitation)
+                val wet = rain != null && rain != "0"
+                Label(rain?.let { "$it mm" } ?: "–", 11.sp, if (wet) p.rain else p.faint, bold = wet)
+            }
         }
     }
 }
@@ -287,5 +304,21 @@ fun DaysStrip(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
                 Label(WidgetFormat.degrees(day.tempMin), 11.sp, p.faint)
             }
         }
+    }
+}
+
+/**
+ * Ce qu'un widget affiche, relu a chaque changement de `WidgetRevision`. Glance ne rappelle pas
+ * `provideGlance` quand une session est deja ouverte : une valeur lue avant `provideContent`
+ * resterait celle de l'ouverture (choix du lieu ou de l'apparence ignore, contenu ancien).
+ */
+class WidgetView(val shown: ShownPlace?, val nowMs: Long, val p: Palette)
+
+@Composable
+fun rememberWidgetView(context: Context, appWidgetId: Int): WidgetView {
+    val revision by WidgetRevision.value.collectAsState()
+    return remember(revision) {
+        val choice = WidgetConfig.load(context, appWidgetId)
+        WidgetView(pickPlace(WidgetStore.load(context), choice.placeId), System.currentTimeMillis(), paletteOf(choice.theme))
     }
 }

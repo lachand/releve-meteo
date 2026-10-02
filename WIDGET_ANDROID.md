@@ -66,6 +66,12 @@ Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l
 - Le stockage est partagé : l'application (une WebView) recopie un favori, la page des widgets (une autre WebView, sans paramètre) le relit dans IndexedDB (`SharedStorageTest`). C'était le point dont dépendait toute la variante.
 - Les deux essais partagent l'origine : ils remettent le stockage à zéro (`CleanStorage`), sinon les lieux de l'un deviennent ceux de l'autre.
 
+## Pièges Glance rencontrés
+
+- **10 enfants au plus** par `Row`, `Column` ou `Box` : les suivants disparaissent sans erreur (la phrase « Sur 24 h » avait ainsi disparu du grand widget). Chaque bloc de `WidgetUi.kt` est donc un seul enfant (`CHILD_LIMIT`), et un filet n'est pas trois éléments à plat.
+- **`provideGlance` n'est pas rappelé** quand une session est déjà ouverte : une valeur lue avant `provideContent` reste celle de l'ouverture. Le lieu, l'apparence et le contenu sont donc relus dans la composition (`rememberWidgetView`), qui se recompose à chaque `WidgetRevision` (choix modifié, nouveau contenu).
+- **Mises à jour de l'APK** : le code de version suit le numéro d'exécution de la CI (`GITHUB_RUN_NUMBER`) et la clé de debug est celle du dépôt, pour qu'un APK plus récent s'installe par-dessus le précédent.
+
 ## Limites connues et suite
 
 - **Pas encore essayé sur un appareil réel** : l'émulateur ne dit rien de la batterie, de Doze ni de la fréquence réelle de WorkManager (15 minutes au mieux, une heure demandée). À la charge de l'utilisateur, la première fois.

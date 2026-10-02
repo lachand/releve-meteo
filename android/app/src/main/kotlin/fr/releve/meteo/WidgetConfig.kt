@@ -40,6 +40,7 @@ object WidgetConfig {
             .putString("$appWidgetId.place", choice.placeId)
             .putString("$appWidgetId.theme", choice.theme.key)
             .apply()
+        WidgetRevision.bump()
     }
 
     fun forget(context: Context, appWidgetIds: IntArray) {

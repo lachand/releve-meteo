@@ -29,11 +29,12 @@ class MediumWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(250.dp, 110.dp), DpSize(250.dp, 200.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val choice = WidgetConfig.load(context, GlanceAppWidgetManager(context).getAppWidgetId(id))
-        val shown = pickPlace(WidgetStore.load(context), choice.placeId)
-        val nowMs = System.currentTimeMillis()
-        val p = paletteOf(choice.theme)
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
+            val view = rememberWidgetView(context, appWidgetId)
+            val shown = view.shown
+            val nowMs = view.nowMs
+            val p = view.p
             WidgetFrame(shown?.place?.link.orEmpty(), p) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT, p)
@@ -44,7 +45,6 @@ class MediumWidget : GlanceAppWidget() {
                         Column(modifier = GlanceModifier.width(112.dp)) {
                             PlaceBlock(shown, nowMs, p, temperatureSize = 28.sp, iconSize = 28.dp, roomy = roomy)
                             if (roomy) {
-                                Spacer(GlanceModifier.height(6.dp))
                                 SpreadLine(shown, p)
                             }
                         }

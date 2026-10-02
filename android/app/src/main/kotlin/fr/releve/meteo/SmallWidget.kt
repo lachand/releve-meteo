@@ -21,11 +21,12 @@ class SmallWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(110.dp, 220.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val choice = WidgetConfig.load(context, GlanceAppWidgetManager(context).getAppWidgetId(id))
-        val shown = pickPlace(WidgetStore.load(context), choice.placeId)
-        val nowMs = System.currentTimeMillis()
-        val p = paletteOf(choice.theme)
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
+            val view = rememberWidgetView(context, appWidgetId)
+            val shown = view.shown
+            val nowMs = view.nowMs
+            val p = view.p
             WidgetFrame(shown?.place?.link.orEmpty(), p) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT, p)
@@ -33,7 +34,6 @@ class SmallWidget : GlanceAppWidget() {
                     val roomy = LocalSize.current.height >= ROOMY_HEIGHT
                     PlaceBlock(shown, nowMs, p, roomy = roomy)
                     if (roomy) {
-                        Spacer(GlanceModifier.height(6.dp))
                         SpreadLine(shown, p)
                         Divider(p)
                         SectionCaption("Heures à venir", p)
