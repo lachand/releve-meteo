@@ -49,6 +49,10 @@ class WidgetWorkerTest {
         assertEquals(12, place.hours.size)
         // Les jours a venir : aujourd'hui et les suivants, un modele par jour.
         assertTrue("jours : ${place.days}", place.days.size >= 2)
+        // La courbe : une heure par heure, avec le modele de chacune ; le soleil et le vent du moment.
+        assertTrue("courbe : ${place.track.size}", place.track.size >= 12)
+        assertTrue(place.track.all { it.model.isNotEmpty() })
+        assertNotNull(place.sun?.sunrise)
         // Le clic sur le widget ouvre l'application sur ce lieu.
         assertTrue(place.link.startsWith("?lat=45.7578"))
         assertTrue("trop long : $elapsed ms", elapsed < 60_000)

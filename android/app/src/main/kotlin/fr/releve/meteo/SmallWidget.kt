@@ -1,7 +1,6 @@
 package fr.releve.meteo
 
 import android.content.Context
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -13,12 +12,15 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.height
 
-/** Petit widget (2 sur 2) : le bulletin d'un lieu, avec l'icone du temps. Le lieu et l'apparence se choisissent par widget. */
+/**
+ * Petit widget (2 sur 2 et plus) : le bulletin d'un lieu. On empile des blocs selon la hauteur
+ * donnee (voir Tiers) : l'essentiel ; puis les heures a venir ; puis les jours a venir. Jamais
+ * d'espace vide a la place d'un bloc : le pied (la ligne intelligente) reste en bas.
+ */
 class SmallWidget : GlanceAppWidget() {
-    // Etire en hauteur, le widget montre aussi l'ecart des autres modeles et les heures a venir.
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(110.dp, 220.dp)))
+    // La taille exacte : les blocs et la courbe suivent ce que l'utilisateur donne au widget.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
@@ -27,25 +29,26 @@ class SmallWidget : GlanceAppWidget() {
             val shown = view.shown
             val nowMs = view.nowMs
             val p = view.p
+            val height = LocalSize.current.height.value
             WidgetFrame(shown?.place?.link.orEmpty(), p) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT, p)
                 } else {
-                    val roomy = LocalSize.current.height >= ROOMY_HEIGHT
-                    PlaceBlock(shown, nowMs, p, roomy = roomy)
-                    if (roomy) {
-                        SpreadLine(shown, p)
+                    val tier = Tiers.small(height)
+                    PlaceBlock(shown, nowMs, p, temperatureSize = 44.sp, iconSize = 28.dp)
+                    if (tier >= 2) {
                         Divider(p)
                         SectionCaption("Heures à venir", p)
-                        HoursList(shown.place.hours, p)
-                        shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
-                            Divider(p)
-                            Label(it, 10.sp, p.ink, maxLines = 3)
-                        }
+                        HoursList(shown.place.hours, p, count = if (height >= 230f) 4 else 3)
+                    }
+                    if (tier >= 3 && shown.place.days.isNotEmpty()) {
+                        Divider(p)
+                        SectionCaption("Jours à venir", p)
+                        DaysList(shown.place.days, nowMs, p)
                     }
                     // Le pied reste en bas, quelle que soit la hauteur donnee au widget.
                     Spacer(GlanceModifier.defaultWeight())
-                    Footer(shown, nowMs, p, view.noteIndex, compact = !roomy)
+                    Footer(shown, nowMs, p, view.noteIndex, compact = tier == 1)
                 }
             }
         }

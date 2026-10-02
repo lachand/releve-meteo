@@ -12,6 +12,7 @@ import {
   WIDGET_DAYS,
   WIDGET_HOURS,
   WIDGET_PAYLOAD_VERSION,
+  WIDGET_TRACK_HOURS,
   widgetPayload,
   widgetPlace,
 } from './payload';
@@ -134,6 +135,68 @@ describe('widgetPlace', () => {
     })[0];
     expect(kept.days[0]?.icon).toBe(weatherIcon(daily?.weatherCode ?? null, true));
     expect(kept.days[0]?.date).toBe('2026-09-28');
+  });
+
+  it('donne le vent, les rafales et l humidite du moment, tels que le modele retenu les porte', async () => {
+    const forecast = await forecastOf(LYON);
+    const nowPoint = forecast.cascade.points[forecast.cascade.nowIndex];
+    const place = widgetPlace({ entry: LYON, forecast, now: NOW });
+    expect(place.now?.windSpeed).toBe(nowPoint?.windSpeed.value);
+    expect(place.now?.windGust).toBe(nowPoint?.windGust.value);
+    expect(place.now?.humidity).toBe(nowPoint?.humidity.value);
+    // Une valeur absente reste null, jamais zero.
+    const bare: EntryForecast = {
+      ...forecast,
+      cascade: {
+        ...forecast.cascade,
+        points: forecast.cascade.points.map((point, index) =>
+          point !== null && index === forecast.cascade.nowIndex
+            ? {
+                ...point,
+                windSpeed: { ...point.windSpeed, value: null },
+                windGust: { ...point.windGust, value: null },
+                humidity: { ...point.humidity, value: null },
+              }
+            : point,
+        ),
+      },
+    };
+    const missing = widgetPlace({ entry: LYON, forecast: bare, now: NOW });
+    expect(missing.now?.windSpeed).toBeNull();
+    expect(missing.now?.windGust).toBeNull();
+    expect(missing.now?.humidity).toBeNull();
+  });
+
+  it('donne l heure du lever et du coucher du soleil d aujourd hui', async () => {
+    const place = widgetPlace({ entry: LYON, forecast: await forecastOf(LYON), now: NOW });
+    expect(place.sun?.sunrise).toMatch(/^\d{2}:\d{2}$/);
+    expect(place.sun?.sunset).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it('donne la serie des 24 prochaines heures avec le modele de chaque heure', async () => {
+    const forecast = await forecastOf(LYON);
+    const place = widgetPlace({ entry: LYON, forecast, now: NOW });
+    expect(place.track.length).toBeGreaterThan(12);
+    expect(place.track.length).toBeLessThanOrEqual(WIDGET_TRACK_HOURS);
+    expect(place.track[0]?.time).toBe(place.now?.time);
+    const times = place.track.map((point) => point.time);
+    expect([...times].sort()).toEqual(times);
+    for (const point of place.track) {
+      expect(typeof point.model).toBe('string');
+      expect(point.temperature === null || typeof point.temperature === 'number').toBe(true);
+      expect(point.precipitation === null || typeof point.precipitation === 'number').toBe(true);
+    }
+  });
+
+  it('ne donne aucune serie quand la prevision ne couvre plus l heure en cours', async () => {
+    const forecast = await forecastOf(LYON);
+    const later = widgetPlace({
+      entry: LYON,
+      forecast: { ...forecast, cascade: { ...forecast.cascade, nowIndex: -1 } },
+      now: NOW,
+    });
+    expect(later.track).toEqual([]);
+    expect(later.sun).not.toBeUndefined();
   });
 
   it('ne donne aucun jour sans prevision quotidienne', async () => {

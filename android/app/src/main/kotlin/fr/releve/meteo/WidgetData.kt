@@ -24,7 +24,24 @@ data class WidgetNow(
     val icon: String? = null,
     /** « Partiellement nuageux » : le nom du temps, a dire avec l'icone. */
     val label: String? = null,
+    /** Vent moyen (km/h), rafales (km/h) et humidite (%) du moment ; null quand le modele retenu n'en donne pas. */
+    val windSpeed: Double? = null,
+    val windGust: Double? = null,
+    val humidity: Double? = null,
 )
+
+/** Une heure de la courbe : la valeur du modele retenu cette heure-la, et son nom. */
+@Serializable
+data class WidgetTrackPoint(
+    val time: String,
+    val model: String,
+    val temperature: Double? = null,
+    val precipitation: Double? = null,
+)
+
+/** Lever et coucher du soleil d'aujourd'hui, « 07:42 », heure de Paris. */
+@Serializable
+data class WidgetSun(val sunrise: String? = null, val sunset: String? = null)
 
 @Serializable
 data class WidgetHour(
@@ -78,6 +95,8 @@ data class WidgetPlace(
     val day: WidgetDay? = null,
     val days: List<WidgetForecastDay> = emptyList(),
     val notes: List<WidgetNote> = emptyList(),
+    val sun: WidgetSun? = null,
+    val track: List<WidgetTrackPoint> = emptyList(),
 )
 
 @Serializable

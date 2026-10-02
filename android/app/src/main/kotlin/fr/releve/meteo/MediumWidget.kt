@@ -2,7 +2,6 @@ package fr.releve.meteo
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -21,12 +20,14 @@ import androidx.glance.layout.height
 import androidx.glance.layout.width
 
 /**
- * Grand widget (4 sur 2) : le bulletin et l'icone du temps a gauche, les jours a venir a droite
- * (les heures a venir quand il n'y a pas de prevision quotidienne). Etire en hauteur, il ajoute
- * l'ecart des autres modeles, les heures et le resume des 24 heures.
+ * Grand widget (4 sur 2 et plus) : le bulletin a gauche, les jours a venir a droite. On empile des
+ * blocs selon la hauteur donnee (voir Tiers) : l'essentiel et les jours ; puis les heures, l'ecart
+ * des modeles et le vent ; puis la courbe de 24 h avec sa bande de modeles et les statistiques ;
+ * puis « Sur 24 h ». Jamais d'espace vide a la place d'un bloc.
  */
 class MediumWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(250.dp, 110.dp), DpSize(250.dp, 200.dp)))
+    // La taille exacte : les blocs et la courbe suivent ce que l'utilisateur donne au widget.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
@@ -35,17 +36,25 @@ class MediumWidget : GlanceAppWidget() {
             val shown = view.shown
             val nowMs = view.nowMs
             val p = view.p
+            val size = LocalSize.current
             WidgetFrame(shown?.place?.link.orEmpty(), p) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT, p)
                 } else {
-                    val roomy = LocalSize.current.height >= ROOMY_HEIGHT
+                    val tier = Tiers.medium(size.height.value)
                     val days = shown.place.days
+                    // La colonne de droite : la largeur moins la marge, les gouttieres et la colonne de gauche.
+                    val rightWidth = size.width.value - 150f
                     Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-                        Column(modifier = GlanceModifier.width(112.dp)) {
-                            PlaceBlock(shown, nowMs, p, temperatureSize = 28.sp, iconSize = 28.dp, roomy = roomy)
-                            if (roomy) {
+                        Column(modifier = GlanceModifier.width(118.dp)) {
+                            PlaceBlock(shown, nowMs, p, temperatureSize = 48.sp, iconSize = 28.dp)
+                            if (tier >= 2) {
                                 SpreadLine(shown, p)
+                                StatsList(shown.place.now, shown.place.sun, rows = if (tier >= 3) 4 else 2, p = p)
+                            }
+                            if (tier >= 4) {
+                                Spacer(GlanceModifier.height(8.dp))
+                                Sur24h(shown.place.day, p)
                             }
                         }
                         Spacer(GlanceModifier.width(COLUMN_GAP))
@@ -55,21 +64,19 @@ class MediumWidget : GlanceAppWidget() {
                                 Label(WidgetFormat.daysCaption(days), 9.sp, p.faint, italic = true)
                             }
                             // Sans jours a montrer, ou quand il y a la place, les heures a venir.
-                            if (days.isEmpty() || roomy) {
+                            if (days.isEmpty() || tier >= 2) {
                                 if (days.isNotEmpty()) Divider(p)
-                                if (roomy) SectionCaption("Heures à venir", p)
+                                if (tier >= 2) SectionCaption("Heures à venir", p)
                                 HoursRow(shown.place.hours, p)
                             }
-                            if (roomy) {
-                                shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
-                                    Divider(p)
-                                    Label(it, 10.sp, p.ink, maxLines = 2)
-                                }
+                            if (tier >= 3 && shown.place.track.isNotEmpty()) {
+                                Divider(p)
+                                ChartBlock(shown.place, rightWidth, if (tier >= 4) 78f else 60f, view)
                             }
                         }
                     }
                     // Le pied reste en bas, sur toute la largeur, quelle que soit la hauteur donnee au widget.
-                    Footer(shown, nowMs, p, view.noteIndex, compact = !roomy)
+                    Footer(shown, nowMs, p, view.noteIndex, compact = tier == 1)
                 }
             }
         }

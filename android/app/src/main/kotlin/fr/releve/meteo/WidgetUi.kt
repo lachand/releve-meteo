@@ -16,6 +16,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import android.content.Context
+import android.content.res.Configuration
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
@@ -27,6 +28,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
@@ -121,9 +123,6 @@ const val EMPTY_TEXT = "Ouvrez Relevé et ajoutez un lieu en favori."
  */
 const val CHILD_LIMIT = 10
 
-/** Hauteur a partir de laquelle un widget montre aussi l'ecart des autres modeles et les heures a venir. */
-val ROOMY_HEIGHT: Dp = 180.dp
-
 val COLUMN_GAP: Dp = 8.dp
 
 /**
@@ -193,37 +192,32 @@ fun WeatherIcon(icon: String?, label: String?, size: Dp) {
 }
 
 /**
- * Le bulletin d'un lieu : nom, « AROME prévoit », la temperature en grand avec l'icone du temps,
- * puis la provenance (prevu) et la confiance. Un contenu ancien est grise.
+ * Le bulletin d'un lieu : le nom, la temperature en grand avec l'icone du temps, le nom du temps,
+ * puis « AROME prévoit » et la confiance (provenance : une prevision, pas une mesure). Un contenu
+ * ancien est grise. Un seul enfant pour le conteneur parent (voir CHILD_LIMIT).
  */
 @Composable
 fun PlaceBlock(
     shown: ShownPlace,
     nowMs: Long,
     p: Palette,
-    temperatureSize: TextUnit = 30.sp,
+    temperatureSize: TextUnit = 52.sp,
     iconSize: Dp = 30.dp,
-    roomy: Boolean = false,
 ) {
     val stale = WidgetFormat.isStale(shown.generatedAtMs, nowMs)
     val now = shown.place.now
-    // Un seul enfant pour le conteneur parent (voir CHILD_LIMIT).
     Column {
         Label(shown.place.name.uppercase(Locale.FRANCE), 10.sp, p.faint, bold = true)
         if (now == null) {
             SmallText("Pas de prévision pour cette heure.", p)
         } else {
-            Label(WidgetFormat.lead(now), 12.sp, p.faint)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Label(WidgetFormat.temperature(now.temperature), temperatureSize, if (stale) p.faint else p.ink, bold = true)
+                Label(WidgetFormat.degrees(now.temperature), temperatureSize, if (stale) p.faint else p.ink)
                 Spacer(GlanceModifier.width(6.dp))
                 WeatherIcon(now.icon, now.label, iconSize)
             }
-            if (roomy) {
-                now.label?.let { Label(it, 10.sp, p.ink) }
-            }
-            // Une prevision, pas une mesure : la provenance est dite.
-            Label("prévu" + (WidgetFormat.confidence(now)?.let { " · $it" } ?: ""), 10.sp, p.faint, italic = true, maxLines = 2)
+            now.label?.let { Label(it, 12.sp, p.ink) }
+            Label(WidgetFormat.lead(now) + (WidgetFormat.confidence(now)?.let { " · $it" } ?: ""), 10.sp, p.faint, italic = true, maxLines = 2)
         }
     }
 }
@@ -358,23 +352,133 @@ fun DaysStrip(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
     }
 }
 
+/** Hauteur (dp) a partir de laquelle chaque widget ajoute un bloc : on empile des blocs, jamais du vide. */
+object Tiers {
+    /** Grand widget : 1 l'essentiel et les jours ; 2 + heures, ecart des modeles, vent ; 3 + courbe et statistiques ; 4 + « Sur 24 h ». */
+    fun medium(heightDp: Float): Int =
+        when {
+            heightDp >= 290f -> 4
+            heightDp >= 250f -> 3
+            heightDp >= 185f -> 2
+            else -> 1
+        }
+
+    /** Petit widget : 1 l'essentiel ; 2 + heures a venir ; 3 + jours a venir. */
+    fun small(heightDp: Float): Int =
+        when {
+            heightDp >= 290f -> 3
+            heightDp >= 190f -> 2
+            else -> 1
+        }
+}
+
+/** Une ligne « libelle ... valeur » sous un filet : un seul enfant. */
+@Composable
+private fun StatRow(label: String, value: String, p: Palette) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Box(modifier = GlanceModifier.fillMaxWidth().height(1.dp).background(p.line)) {}
+        Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp)) {
+            Label(label, 10.sp, p.faint, modifier = GlanceModifier.defaultWeight())
+            Label(value, 10.sp, p.ink)
+        }
+    }
+}
+
+/** Vent, rafales, humidite, soleil : jusqu'a `rows` lignes, et seulement celles dont la valeur existe. */
+@Composable
+fun StatsList(now: WidgetNow?, sun: WidgetSun?, rows: Int, p: Palette) {
+    val stats =
+        listOfNotNull(
+            WidgetFormat.kmh(now?.windSpeed)?.let { "Vent" to it },
+            WidgetFormat.kmh(now?.windGust)?.let { "Rafales" to it },
+            WidgetFormat.percent(now?.humidity)?.let { "Humidité" to it },
+            WidgetFormat.sunSpan(sun)?.let { "Soleil" to it },
+        ).take(rows)
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        stats.forEach { (label, value) -> StatRow(label, value, p) }
+    }
+}
+
+/** Le bloc « Sur 24 h » : etendue, pluie, rafales. */
+@Composable
+fun Sur24h(day: WidgetDay?, p: Palette) {
+    val lines = day?.let { WidgetFormat.dayLines(it) }.orEmpty()
+    if (lines.isEmpty()) return
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        SectionCaption("Sur 24 h", p)
+        lines.forEach { Label(it, 10.sp, p.ink) }
+    }
+}
+
+/** Les jours a venir en liste (petit widget haut) : le jour, l'icone, le maximum, le minimum ; aujourd'hui en relief. */
+@Composable
+fun DaysList(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        days.forEach { day ->
+            val today = WidgetFormat.dayName(day.date, nowMs) == "auj."
+            val row = if (today) GlanceModifier.fillMaxWidth().background(p.panel).cornerRadius(8.dp) else GlanceModifier.fillMaxWidth()
+            Row(modifier = row.padding(vertical = 1.dp, horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Label(WidgetFormat.dayName(day.date, nowMs), 10.sp, if (today) p.ink else p.faint, bold = today, modifier = GlanceModifier.width(28.dp))
+                if (WidgetIcons.drawable(day.icon) != null) {
+                    WeatherIcon(day.icon, day.label, 18.dp)
+                } else {
+                    Spacer(GlanceModifier.size(18.dp))
+                }
+                Spacer(GlanceModifier.width(4.dp))
+                Label(WidgetFormat.degrees(day.tempMax), 12.sp, p.ink, bold = true, modifier = GlanceModifier.width(28.dp))
+                Label(WidgetFormat.degrees(day.tempMin), 10.sp, p.faint)
+            }
+        }
+    }
+}
+
+/** La courbe de 24 h avec sa bande de modeles : la legende, puis l'image dessinee a la taille du bloc. Sans courbe possible, rien. */
+@Composable
+fun ChartBlock(place: WidgetPlace, widthDp: Float, heightDp: Float, view: WidgetView) {
+    val model = remember(place.track) { WidgetChartMath.build(place.track) } ?: return
+    val density = view.density
+    val bitmap =
+        remember(model, widthDp, heightDp, view.colors) {
+            WidgetChartRenderer.render(model, (widthDp * density).toInt(), (heightDp * density).toInt(), density, view.colors)
+        }
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        SectionCaption(WidgetChartMath.caption(model.runs), view.p)
+        Image(
+            provider = ImageProvider(bitmap),
+            contentDescription = "Température de l’heure en cours aux 24 heures suivantes, avec le modèle de chaque heure",
+            modifier = GlanceModifier.fillMaxWidth().height(heightDp.dp),
+            contentScale = ContentScale.FillBounds,
+        )
+    }
+}
+
 /**
  * Ce qu'un widget affiche, relu a chaque changement de `WidgetRevision`. Glance ne rappelle pas
  * `provideGlance` quand une session est deja ouverte : une valeur lue avant `provideContent`
  * resterait celle de l'ouverture (choix du lieu ou de l'apparence ignore, contenu ancien).
  */
-class WidgetView(val shown: ShownPlace?, val nowMs: Long, val p: Palette, val noteIndex: Int)
+class WidgetView(
+    val shown: ShownPlace?,
+    val nowMs: Long,
+    val p: Palette,
+    val noteIndex: Int,
+    val colors: ChartColors,
+    val density: Float,
+)
 
 @Composable
 fun rememberWidgetView(context: Context, appWidgetId: Int): WidgetView {
     val revision by WidgetRevision.value.collectAsState()
     return remember(revision) {
         val choice = WidgetConfig.load(context, appWidgetId)
+        val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         WidgetView(
-            pickPlace(WidgetStore.load(context), choice.placeId),
-            System.currentTimeMillis(),
-            paletteOf(choice.theme),
-            WidgetConfig.noteIndex(context, appWidgetId),
+            shown = pickPlace(WidgetStore.load(context), choice.placeId),
+            nowMs = System.currentTimeMillis(),
+            p = paletteOf(choice.theme),
+            noteIndex = WidgetConfig.noteIndex(context, appWidgetId),
+            colors = WidgetChartRenderer.colorsFor(choice.theme, night),
+            density = context.resources.displayMetrics.density,
         )
     }
 }
