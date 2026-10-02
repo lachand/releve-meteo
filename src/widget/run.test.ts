@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import forecastLyon from '../../tests/fixtures/live/forecast-lyon.json';
+import vigilanceRhone from '../../tests/fixtures/live/vigilance-rhone.json';
 import { server } from '../../tests/msw';
 import { deleteDbForTests } from '../data/cache/db';
 import { resetMemoryDatasetStore } from '../data/cache/datasetStore';
@@ -12,6 +13,20 @@ import { placeFromSearch, runWidget } from './run';
 
 const NOW = new Date('2026-09-28T13:27:00Z');
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+const VIGILANCE_URL =
+  'https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/weatherref-france-vigilance-meteo-departement/records';
+
+/** Bulletin du Rhone ou les orages du jour passent a `level`. */
+function rhoneWithStorms(level: number) {
+  return {
+    ...vigilanceRhone,
+    results: vigilanceRhone.results.map((record) =>
+      record.phenomenon_id === 3 && record.echeance === 'J'
+        ? { ...record, color_id: level }
+        : record,
+    ),
+  };
+}
 
 function entry(id: string, name: string, latitude = 45.7578): WatchEntry {
   return {
@@ -88,6 +103,50 @@ describe('runWidget', () => {
     );
     expect(payload.unreachable).toEqual(['p1']);
     expect(payload.places.length + payload.unreachable.length).toBe(WIDGET_MAX_PLACES);
+  });
+
+  it('lit la vigilance une fois par departement et la met dans les notes de chaque lieu', async () => {
+    let bulletins = 0;
+    server.use(
+      http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)),
+      http.get(VIGILANCE_URL, () => {
+        bulletins += 1;
+        return HttpResponse.json(rhoneWithStorms(3));
+      }),
+    );
+    const rhone = { code: '69', name: 'Rhône' };
+    await saveWatchEntries(
+      [
+        { ...entry('lyon', 'Lyon'), department: rhone },
+        { ...entry('villeurbanne', 'Villeurbanne'), department: rhone },
+        entry('sans', 'Sans departement'),
+      ],
+      'kmh',
+      NOW,
+    );
+    const payload = await runWidget('', NOW);
+    expect(bulletins).toBe(1);
+    const kinds = (id: string) =>
+      payload.places.find((place) => place.id === id)?.notes.map((note) => note.kind) ?? [];
+    expect(kinds('lyon')).toContain('vigilance');
+    expect(kinds('villeurbanne')).toContain('vigilance');
+    expect(kinds('sans')).not.toContain('vigilance');
+  });
+
+  it('ignore une vigilance illisible : le widget garde ses autres notes', async () => {
+    server.use(
+      http.get(FORECAST_URL, () => HttpResponse.json(forecastLyon)),
+      http.get(VIGILANCE_URL, () => new HttpResponse(null, { status: 500 })),
+    );
+    await saveWatchEntries(
+      [{ ...entry('lyon', 'Lyon'), department: { code: '69', name: 'Rhône' } }],
+      'kmh',
+      NOW,
+    );
+    const payload = await runWidget('', NOW);
+    expect(payload.places).toHaveLength(1);
+    expect(payload.places[0]?.notes.map((note) => note.kind)).not.toContain('vigilance');
+    expect(payload.places[0]?.notes.length).toBeGreaterThan(0);
   });
 
   it('prend le lieu de l adresse quand aucun lieu n a ete recopie', async () => {

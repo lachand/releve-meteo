@@ -27,6 +27,42 @@ class WidgetFormatTest {
     }
 
     @Test
+    fun theNoteCyclesAndComesBackToTheFirst() {
+        assertEquals(1, nextNoteIndex(0, 3))
+        assertEquals(2, nextNoteIndex(1, 3))
+        assertEquals(0, nextNoteIndex(2, 3))
+        assertEquals(0, nextNoteIndex(5, 0))
+        assertEquals(0, nextNoteIndex(0, 1))
+    }
+
+    @Test
+    fun theNoteShownIsRebasedWhenTheListChanged() {
+        val notes = listOf(WidgetNote("alert", "alert", "A", "a"), WidgetNote("rain", "info", "B", "b"))
+        assertEquals("A", noteAt(notes, 0)?.text)
+        assertEquals("B", noteAt(notes, 1)?.text)
+        assertEquals("A", noteAt(notes, 2)?.text)
+        assertEquals("B", noteAt(notes, -1)?.text)
+        assertNull(noteAt(emptyList(), 0))
+    }
+
+    @Test
+    fun theClockIsParisTime() {
+        // 2026-09-28 13:07 UTC = 15:07 a Paris (heure d'ete).
+        val ms = java.time.ZonedDateTime.of(2026, 9, 28, 13, 7, 0, 0, java.time.ZoneId.of("UTC")).toInstant().toEpochMilli()
+        assertEquals("15:07", WidgetFormat.clock(ms))
+    }
+
+    @Test
+    fun aContentWithNotesStillReadsWithout() {
+        val payload =
+            parsePayload(
+                "{\"version\":1,\"generatedAtMs\":1,\"places\":[{\"id\":\"a\",\"name\":\"Lyon\",\"notes\":[{\"kind\":\"rain\",\"level\":\"info\",\"text\":\"Pluie\",\"short\":\"P\"}]}]}",
+            )
+        assertEquals("Pluie", payload?.places?.single()?.notes?.single()?.text)
+        assertEquals(emptyList<WidgetNote>(), parsePayload("{\"version\":1,\"generatedAtMs\":1,\"places\":[{\"id\":\"a\",\"name\":\"Lyon\"}]}")?.places?.single()?.notes)
+    }
+
+    @Test
     fun aRemovedPlaceFallsBackToTheFirst() {
         val a = ShownPlace(WidgetPlace("a", "A"), 1)
         val b = ShownPlace(WidgetPlace("b", "B"), 1)

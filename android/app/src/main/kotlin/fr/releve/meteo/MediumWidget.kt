@@ -69,7 +69,7 @@ class MediumWidget : GlanceAppWidget() {
                         }
                     }
                     // Le pied reste en bas, sur toute la largeur, quelle que soit la hauteur donnee au widget.
-                    Freshness(shown, nowMs, p)
+                    Footer(shown, nowMs, p, view.noteIndex, compact = !roomy)
                 }
             }
         }

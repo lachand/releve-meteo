@@ -54,6 +54,19 @@ data class WidgetForecastDay(
     val label: String? = null,
 )
 
+/** Une note de la ligne du pied, choisie et redigee par la page : la plus importante d'abord. */
+@Serializable
+data class WidgetNote(
+    /** "alert", "vigilance", "phenomenon", "rain", "reliability" ou "spread". */
+    val kind: String,
+    /** "alert" : mise en avant ; "info" sinon. */
+    val level: String,
+    /** La phrase complete, source dite. */
+    val text: String,
+    /** Une version courte pour une ligne etroite. */
+    val short: String,
+)
+
 @Serializable
 data class WidgetPlace(
     val id: String,
@@ -64,6 +77,7 @@ data class WidgetPlace(
     val hours: List<WidgetHour> = emptyList(),
     val day: WidgetDay? = null,
     val days: List<WidgetForecastDay> = emptyList(),
+    val notes: List<WidgetNote> = emptyList(),
 )
 
 @Serializable

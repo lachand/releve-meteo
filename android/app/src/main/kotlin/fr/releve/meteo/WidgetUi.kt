@@ -19,6 +19,7 @@ import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
@@ -248,6 +249,56 @@ fun Freshness(shown: ShownPlace, nowMs: Long, p: Palette) {
     )
 }
 
+/** Un appui sur la note du pied : la suivante. */
+class NextNoteAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(glanceId)
+        val choice = WidgetConfig.load(context, appWidgetId)
+        val count = pickPlace(WidgetStore.load(context), choice.placeId)?.place?.notes?.size ?: 0
+        WidgetConfig.cycleNote(context, appWidgetId, count)
+    }
+}
+
+/**
+ * La ligne du pied. Un contenu ancien le dit d'abord (jamais une donnee ancienne presentee comme
+ * actuelle) ; sinon la note la plus importante du lieu, que la page a choisie et dont elle dit la
+ * source, et un appui passe a la suivante (« 2/5 ») ; sans note, l'heure de mise a jour. L'heure
+ * reste toujours touchable pour recalculer. `compact` : une ligne etroite, version courte.
+ */
+@Composable
+fun Footer(shown: ShownPlace, nowMs: Long, p: Palette, noteIndex: Int, compact: Boolean) {
+    val note = noteAt(shown.place.notes, noteIndex)
+    if (WidgetFormat.isStale(shown.generatedAtMs, nowMs) || note == null) {
+        Freshness(shown, nowMs, p)
+        return
+    }
+    val alert = note.level == "alert"
+    Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Label(
+            if (compact) note.short else note.text,
+            10.sp,
+            if (alert) p.margin else p.ink,
+            bold = alert,
+            maxLines = if (compact) 1 else 2,
+            modifier = GlanceModifier.defaultWeight().clickable(actionRunCallback<NextNoteAction>()),
+        )
+        if (!compact && shown.place.notes.size > 1) {
+            Label(
+                "  ${Math.floorMod(noteIndex, shown.place.notes.size) + 1}/${shown.place.notes.size} ›",
+                10.sp,
+                p.faint,
+                modifier = GlanceModifier.clickable(actionRunCallback<NextNoteAction>()),
+            )
+        }
+        Label(
+            "  ↻" + if (compact) "" else " ${WidgetFormat.clock(shown.generatedAtMs)}",
+            10.sp,
+            p.faint,
+            modifier = GlanceModifier.clickable(actionRunCallback<RefreshAction>()),
+        )
+    }
+}
+
 /** Un filet entre deux sections : un seul enfant pour le conteneur parent. */
 @Composable
 fun Divider(p: Palette) {
@@ -312,13 +363,18 @@ fun DaysStrip(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
  * `provideGlance` quand une session est deja ouverte : une valeur lue avant `provideContent`
  * resterait celle de l'ouverture (choix du lieu ou de l'apparence ignore, contenu ancien).
  */
-class WidgetView(val shown: ShownPlace?, val nowMs: Long, val p: Palette)
+class WidgetView(val shown: ShownPlace?, val nowMs: Long, val p: Palette, val noteIndex: Int)
 
 @Composable
 fun rememberWidgetView(context: Context, appWidgetId: Int): WidgetView {
     val revision by WidgetRevision.value.collectAsState()
     return remember(revision) {
         val choice = WidgetConfig.load(context, appWidgetId)
-        WidgetView(pickPlace(WidgetStore.load(context), choice.placeId), System.currentTimeMillis(), paletteOf(choice.theme))
+        WidgetView(
+            pickPlace(WidgetStore.load(context), choice.placeId),
+            System.currentTimeMillis(),
+            paletteOf(choice.theme),
+            WidgetConfig.noteIndex(context, appWidgetId),
+        )
     }
 }

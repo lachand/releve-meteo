@@ -114,6 +114,9 @@ object WidgetFormat {
     /** « mis à jour 15:10 », heure de Paris. */
     fun updatedAt(generatedAtMs: Long): String = "mis à jour ${CLOCK.format(Instant.ofEpochMilli(generatedAtMs))}"
 
+    /** « 08:00 », heure de Paris : l'heure du dernier calcul. */
+    fun clock(generatedAtMs: Long): String = CLOCK.format(Instant.ofEpochMilli(generatedAtMs))
+
     /** « il y a 5 h » : l'âge d'un contenu ancien. */
     fun age(generatedAtMs: Long, nowMs: Long): String {
         val minutes = ((nowMs - generatedAtMs) / 60_000).coerceAtLeast(0)

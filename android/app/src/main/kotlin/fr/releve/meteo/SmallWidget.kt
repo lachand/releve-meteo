@@ -45,7 +45,7 @@ class SmallWidget : GlanceAppWidget() {
                     }
                     // Le pied reste en bas, quelle que soit la hauteur donnee au widget.
                     Spacer(GlanceModifier.defaultWeight())
-                    Freshness(shown, nowMs, p)
+                    Footer(shown, nowMs, p, view.noteIndex, compact = !roomy)
                 }
             }
         }

@@ -4,11 +4,15 @@ import { blendDaily } from '../domain/dailyBlend';
 import { leadHoursFrom, localIsoFromUtc } from '../domain/time';
 import { dayDigest } from '../domain/dayDigest';
 import type { ConfidenceLevel, LocalIsoHour, ModelId, WeatherVariable } from '../domain/types';
+import type { VigilanceWarning } from '../domain/vigilance';
 import type { WatchEntry } from '../domain/watch';
+import type { Preferences } from '../domain/types';
 import type { EntryForecast } from '../pwa/watchRun';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import { weatherCodeLabel } from '../ui/weatherCodePresentation';
 import { mostSevereWeather, weatherIcon } from './icon';
+import { widgetNotes } from './notes';
+import type { WidgetNote } from './notes';
 import type { WidgetIconName } from './icon';
 
 /*
@@ -81,6 +85,8 @@ export interface WidgetPlace {
   readonly day: WidgetDay | null;
   /** Aujourd'hui et les jours suivants, vide sans prevision quotidienne. */
   readonly days: readonly WidgetForecastDay[];
+  /** La ligne du pied : des notes de la plus importante a la moins importante, vide s'il n'y en a pas. */
+  readonly notes: readonly WidgetNote[];
 }
 
 export interface WidgetPayload {
@@ -97,6 +103,9 @@ export function widgetPlace(input: {
   readonly entry: WatchEntry;
   readonly forecast: EntryForecast;
   readonly now: Date;
+  readonly windUnit?: Preferences['units']['wind'];
+  /** Vigilances Meteo-France du departement du lieu (jaunes a rouges), vide si inconnues. */
+  readonly vigilance?: readonly VigilanceWarning[];
 }): WidgetPlace {
   const { entry, forecast, now } = input;
   const { bundle, cascade } = forecast;
@@ -177,6 +186,13 @@ export function widgetPlace(input: {
           label: weatherCodeLabel(code),
         };
       }),
+    notes: widgetNotes({
+      entry,
+      forecast,
+      now,
+      windUnit: input.windUnit ?? 'kmh',
+      vigilance: input.vigilance ?? [],
+    }),
   };
 }
 
@@ -186,6 +202,9 @@ export function widgetPayload(input: {
   /** Prevision de chaque lieu, ou null quand elle n'a pas pu etre lue. */
   readonly forecasts: readonly (EntryForecast | null)[];
   readonly now: Date;
+  readonly windUnit?: Preferences['units']['wind'];
+  /** Vigilances de chaque lieu (meme ordre que `entries`), ou rien. */
+  readonly vigilances?: readonly (readonly VigilanceWarning[])[];
 }): WidgetPayload {
   const places: WidgetPlace[] = [];
   const unreachable: string[] = [];
@@ -194,7 +213,15 @@ export function widgetPayload(input: {
     if (forecast === null) {
       unreachable.push(entry.place.id);
     } else {
-      places.push(widgetPlace({ entry, forecast, now: input.now }));
+      places.push(
+        widgetPlace({
+          entry,
+          forecast,
+          now: input.now,
+          windUnit: input.windUnit,
+          vigilance: input.vigilances?.[index],
+        }),
+      );
     }
   });
   return {
