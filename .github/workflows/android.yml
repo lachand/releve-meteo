@@ -91,11 +91,21 @@ jobs:
           target: google_apis
           disable-animations: true
           working-directory: android
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          # Les rendus des widgets (WidgetScreenshotTest) sont enregistres dans Pictures/releve-widgets
+          # de l'emulateur : on les recupere avant son arret, meme si un test echoue.
+          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest ; status=$? ; mkdir -p widget-screens ; adb pull /sdcard/Pictures/releve-widgets widget-screens || true ; exit $status
 
       - name: Show the trial timing
         if: always()
         run: grep -rh "RELEVE_SPIKE\|testcase " android/app/build/outputs/androidTest-results 2>/dev/null | head -20 || true
+
+      - name: Upload the widget renderings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: widget-screens
+          path: android/widget-screens
+          if-no-files-found: warn
 
       - name: Upload the emulator test reports
         if: always()
