@@ -82,7 +82,8 @@ Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l
 - **APK de debug seulement** : pas de signature de publication. À faire avec le Play Store (compte, clé de signature conservée, fiche).
 - **Réglage** : lieu et apparence par widget (fait). Reste : plusieurs lieux sur un même widget.
 - **Géolocalisation** : demande minimale dans `MainActivity`.
-- **Service worker dans la WebView** : non traité spécifiquement ; la veille par notification reste celle du navigateur.
+- **Service worker dans la WebView** : non traité spécifiquement ; la veille du navigateur n'existe pas dans l'application.
+- **Notifications natives** : après chaque calcul horaire, `WidgetWorker` signale (`Notifier.kt`) les notes de niveau `alert` (règle franchie, vigilance orange ou rouge, phénomène violent) de chaque lieu veillé, une seule fois par lieu, nature et phrase courte (`NotifyRules`, testé en JVM) ; une alerte qui disparaît puis revient est signalée de nouveau. Réglage explicite dans Réglages (pont `ReleveAndroid.notificationsState` / `setNotifications`), autorisation `POST_NOTIFICATIONS` demandée seulement à l'activation (Android 13 et plus). Un appui ouvre le lieu. Limites dites à l'écran : pas de temps réel (calcul environ horaire, au choix d'Android), la vigilance officielle reste la référence.
 - **iOS** : hors périmètre (WidgetKit demanderait un autre habillage, un compte payant et un Mac).
 - **Quota Open-Meteo** : chaque appareil interroge depuis sa propre adresse, comme la page ; une fois par heure pour trois lieux reste très en dessous des limites gratuites.
 

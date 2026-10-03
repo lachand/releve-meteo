@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_NOTIFY } from '../../domain/weatherNotices';
@@ -53,6 +53,52 @@ describe('WatchSettings', () => {
       expect(screen.queryByRole('button', { name: 'Activer la veille' })).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'Mettre à jour les widgets' }));
       expect(refreshWidgets).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('notifications natives', () => {
+    afterEach(() => {
+      delete (window as unknown as { ReleveAndroid?: unknown }).ReleveAndroid;
+    });
+
+    function bridge(initial: 'on' | 'off' | 'denied') {
+      const state = { value: initial };
+      const setNotifications = vi.fn((on: boolean) => {
+        state.value = on ? 'on' : 'off';
+      });
+      (window as unknown as { ReleveAndroid?: unknown }).ReleveAndroid = {
+        refreshWidgets: vi.fn(),
+        notificationsState: () => state.value,
+        setNotifications,
+      };
+      return { setNotifications };
+    }
+
+    it('propose d activer, puis relit l etat quand l application le dit', async () => {
+      const { setNotifications } = bridge('off');
+      render(<WatchSettings watch={watch('unsupported')} />);
+      expect(screen.getAllByRole('status')[1]).toHaveTextContent(/Notifications coupées/);
+      await userEvent.click(screen.getByRole('button', { name: 'Activer les notifications' }));
+      expect(setNotifications).toHaveBeenCalledWith(true);
+      act(() => {
+        window.dispatchEvent(new Event('releve-notifications'));
+      });
+      expect(screen.getAllByRole('status')[1]).toHaveTextContent(/Notifications actives/);
+      await userEvent.click(screen.getByRole('button', { name: 'Couper les notifications' }));
+      expect(setNotifications).toHaveBeenLastCalledWith(false);
+    });
+
+    it('dit quand Android a refuse l autorisation', () => {
+      bridge('denied');
+      render(<WatchSettings watch={watch('unsupported')} />);
+      expect(screen.getAllByRole('status')[1]).toHaveTextContent(/refusées par Android/);
+    });
+
+    it('ne dit jamais temps reel et renvoie a la vigilance officielle', () => {
+      bridge('on');
+      render(<WatchSettings watch={watch('unsupported')} />);
+      expect(screen.getByText(/Ce n’est pas du temps réel/)).toBeInTheDocument();
+      expect(screen.getByText(/vigilance officielle de Météo-France/)).toBeInTheDocument();
     });
   });
 
