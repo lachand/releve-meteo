@@ -61,7 +61,7 @@ class MediumWidget : GlanceAppWidget() {
                         Column(modifier = GlanceModifier.defaultWeight()) {
                             if (days.isNotEmpty()) {
                                 DaysStrip(days, nowMs, p)
-                                Label(WidgetFormat.daysCaption(days), 9.sp, p.faint, italic = true)
+                                if (tier >= 2) Label(WidgetFormat.daysCaption(days), 9.sp, p.faint, italic = true)
                             }
                             // Sans jours a montrer, ou quand il y a la place, les heures a venir.
                             if (days.isEmpty() || tier >= 2) {

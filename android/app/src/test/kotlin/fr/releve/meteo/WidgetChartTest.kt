@@ -72,9 +72,12 @@ class WidgetChartTest {
     @Test
     fun theTiersStackBlocksWithTheHeight() {
         assertEquals(1, Tiers.medium(120f))
-        assertEquals(2, Tiers.medium(185f))
-        assertEquals(3, Tiers.medium(250f))
-        assertEquals(4, Tiers.medium(320f))
+        assertEquals(1, Tiers.medium(185f))
+        assertEquals(2, Tiers.medium(215f))
+        assertEquals(2, Tiers.medium(250f))
+        assertEquals(3, Tiers.medium(285f))
+        assertEquals(3, Tiers.medium(320f))
+        assertEquals(4, Tiers.medium(340f))
         assertEquals(1, Tiers.small(120f))
         assertEquals(2, Tiers.small(190f))
         assertEquals(3, Tiers.small(300f))

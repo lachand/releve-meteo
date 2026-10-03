@@ -203,6 +203,7 @@ fun PlaceBlock(
     p: Palette,
     temperatureSize: TextUnit = 52.sp,
     iconSize: Dp = 30.dp,
+    withLead: Boolean = true,
 ) {
     val stale = WidgetFormat.isStale(shown.generatedAtMs, nowMs)
     val now = shown.place.now
@@ -217,7 +218,9 @@ fun PlaceBlock(
                 WeatherIcon(now.icon, now.label, iconSize)
             }
             now.label?.let { Label(it, 12.sp, p.ink) }
-            Label(WidgetFormat.lead(now) + (WidgetFormat.confidence(now)?.let { " · $it" } ?: ""), 10.sp, p.faint, italic = true, maxLines = 2)
+            if (withLead) {
+                Label(WidgetFormat.lead(now) + (WidgetFormat.confidence(now)?.let { " · $it" } ?: ""), 10.sp, p.faint, italic = true, maxLines = 2)
+            }
         }
     }
 }
@@ -317,15 +320,17 @@ fun SpreadLine(shown: ShownPlace, p: Palette) {
 
 /** Les heures a venir en liste, de trois en trois : un seul enfant pour le conteneur parent. Une valeur absente reste un tiret. */
 @Composable
-fun HoursList(hours: List<WidgetHour>, p: Palette, count: Int = 4) {
+fun HoursList(hours: List<WidgetHour>, p: Palette, count: Int = 4, withRain: Boolean = true) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
         hours.filterIndexed { index, _ -> index % 3 == 2 }.take(count).forEach { hour ->
             Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 1.dp)) {
                 Label(WidgetFormat.hourLabel(hour.time), 11.sp, p.faint, modifier = GlanceModifier.width(30.dp))
                 Label(WidgetFormat.degrees(hour.temperature), 13.sp, p.ink, bold = true, modifier = GlanceModifier.width(36.dp))
-                val rain = WidgetFormat.rain(hour.precipitation)
-                val wet = rain != null && rain != "0"
-                Label(rain?.let { "$it mm" } ?: "–", 11.sp, if (wet) p.rain else p.faint, bold = wet)
+                if (withRain) {
+                    val rain = WidgetFormat.rain(hour.precipitation)
+                    val wet = rain != null && rain != "0"
+                    Label(rain?.let { "$it mm" } ?: "–", 11.sp, if (wet) p.rain else p.faint, bold = wet)
+                }
             }
         }
     }
@@ -357,9 +362,9 @@ object Tiers {
     /** Grand widget : 1 l'essentiel et les jours ; 2 + heures, ecart des modeles, vent ; 3 + courbe et statistiques ; 4 + « Sur 24 h ». */
     fun medium(heightDp: Float): Int =
         when {
-            heightDp >= 290f -> 4
-            heightDp >= 250f -> 3
-            heightDp >= 185f -> 2
+            heightDp >= 340f -> 4
+            heightDp >= 285f -> 3
+            heightDp >= 215f -> 2
             else -> 1
         }
 

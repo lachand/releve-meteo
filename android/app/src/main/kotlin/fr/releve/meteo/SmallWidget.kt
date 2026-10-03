@@ -30,16 +30,25 @@ class SmallWidget : GlanceAppWidget() {
             val nowMs = view.nowMs
             val p = view.p
             val height = LocalSize.current.height.value
+            // Un 2 sur 2 etroit : temperature et icone plus petites, sans pluie par heure, pied court.
+            val narrow = LocalSize.current.width.value < NARROW_DP
             WidgetFrame(shown?.place?.link.orEmpty(), p) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT, p)
                 } else {
                     val tier = Tiers.small(height)
-                    PlaceBlock(shown, nowMs, p, temperatureSize = 44.sp, iconSize = 28.dp)
+                    PlaceBlock(
+                        shown,
+                        nowMs,
+                        p,
+                        temperatureSize = if (narrow) 36.sp else 44.sp,
+                        iconSize = if (narrow) 22.dp else 28.dp,
+                        withLead = height >= LEAD_MIN_DP,
+                    )
                     if (tier >= 2) {
                         Divider(p)
                         SectionCaption("Heures à venir", p)
-                        HoursList(shown.place.hours, p, count = if (height >= 230f) 4 else 3)
+                        HoursList(shown.place.hours, p, count = if (height >= 230f) 4 else 3, withRain = !narrow)
                     }
                     if (tier >= 3 && shown.place.days.isNotEmpty()) {
                         Divider(p)
@@ -48,12 +57,15 @@ class SmallWidget : GlanceAppWidget() {
                     }
                     // Le pied reste en bas, quelle que soit la hauteur donnee au widget.
                     Spacer(GlanceModifier.defaultWeight())
-                    Footer(shown, nowMs, p, view.noteIndex, compact = tier == 1)
+                    Footer(shown, nowMs, p, view.noteIndex, compact = tier == 1 || narrow)
                 }
             }
         }
     }
 }
+
+private const val NARROW_DP = 140f
+private const val LEAD_MIN_DP = 150f
 
 class SmallWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SmallWidget()
