@@ -79,8 +79,10 @@ class WidgetChartTest {
         assertEquals(3, Tiers.medium(320f))
         assertEquals(4, Tiers.medium(340f))
         assertEquals(1, Tiers.small(120f))
-        assertEquals(2, Tiers.small(190f))
-        assertEquals(3, Tiers.small(300f))
+        assertEquals(1, Tiers.small(190f))
+        assertEquals(2, Tiers.small(230f))
+        assertEquals(2, Tiers.small(300f))
+        assertEquals(3, Tiers.small(350f))
     }
 
     @Test

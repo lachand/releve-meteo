@@ -371,8 +371,8 @@ object Tiers {
     /** Petit widget : 1 l'essentiel ; 2 + heures a venir ; 3 + jours a venir. */
     fun small(heightDp: Float): Int =
         when {
-            heightDp >= 290f -> 3
-            heightDp >= 190f -> 2
+            heightDp >= 350f -> 3
+            heightDp >= 230f -> 2
             else -> 1
         }
 }

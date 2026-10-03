@@ -42,7 +42,7 @@ class WidgetScreenshotTest {
     private class Case(val name: String, val widget: () -> GlanceAppWidget, val widthDp: Int, val heightDp: Int)
 
     private val cases =
-        listOf(110 to 110, 110 to 190, 110 to 300, 160 to 190, 160 to 300).map { (w, h) -> Case("petit-${w}x$h", { SmallWidget() }, w, h) } +
+        listOf(110 to 110, 110 to 230, 110 to 350, 160 to 230, 160 to 300, 160 to 350).map { (w, h) -> Case("petit-${w}x$h", { SmallWidget() }, w, h) } +
             listOf(300 to 110, 300 to 215, 300 to 285, 300 to 340, 300 to 400).map { (w, h) -> Case("grand-${w}x$h", { MediumWidget() }, w, h) }
 
     @Test

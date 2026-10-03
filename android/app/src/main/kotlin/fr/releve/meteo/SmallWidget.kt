@@ -48,7 +48,7 @@ class SmallWidget : GlanceAppWidget() {
                     if (tier >= 2) {
                         Divider(p)
                         SectionCaption("Heures à venir", p)
-                        HoursList(shown.place.hours, p, count = if (height >= 230f) 4 else 3, withRain = !narrow)
+                        HoursList(shown.place.hours, p, count = if (height >= 260f) 4 else 3, withRain = !narrow)
                     }
                     if (tier >= 3 && shown.place.days.isNotEmpty()) {
                         Divider(p)
