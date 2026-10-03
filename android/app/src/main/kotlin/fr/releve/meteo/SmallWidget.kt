@@ -1,7 +1,6 @@
 package fr.releve.meteo
 
 import android.content.Context
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -13,42 +12,60 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.height
 
-/** Petit widget (2 sur 2) : le bulletin d'un lieu, avec l'icone du temps. Le lieu et l'apparence se choisissent par widget. */
+/**
+ * Petit widget (2 sur 2 et plus) : le bulletin d'un lieu. On empile des blocs selon la hauteur
+ * donnee (voir Tiers) : l'essentiel ; puis les heures a venir ; puis les jours a venir. Jamais
+ * d'espace vide a la place d'un bloc : le pied (la ligne intelligente) reste en bas.
+ */
 class SmallWidget : GlanceAppWidget() {
-    // Etire en hauteur, le widget montre aussi l'ecart des autres modeles et les heures a venir.
-    override val sizeMode = SizeMode.Responsive(setOf(DpSize(110.dp, 110.dp), DpSize(110.dp, 220.dp)))
+    // La taille exacte : les blocs et la courbe suivent ce que l'utilisateur donne au widget.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val choice = WidgetConfig.load(context, GlanceAppWidgetManager(context).getAppWidgetId(id))
-        val shown = pickPlace(WidgetStore.load(context), choice.placeId)
-        val nowMs = System.currentTimeMillis()
-        val p = paletteOf(choice.theme)
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
+            val view = rememberWidgetView(context, appWidgetId)
+            val shown = view.shown
+            val nowMs = view.nowMs
+            val p = view.p
+            val height = LocalSize.current.height.value
+            // Un 2 sur 2 etroit : temperature et icone plus petites, sans pluie par heure, pied court.
+            val narrow = LocalSize.current.width.value < NARROW_DP
             WidgetFrame(shown?.place?.link.orEmpty(), p) {
                 if (shown == null) {
                     SmallText(EMPTY_TEXT, p)
                 } else {
-                    val roomy = LocalSize.current.height >= ROOMY_HEIGHT
-                    PlaceBlock(shown, nowMs, p, roomy = roomy)
-                    if (roomy) {
-                        Spacer(GlanceModifier.height(6.dp))
-                        SpreadLine(shown, p)
-                        Spacer(GlanceModifier.height(6.dp))
-                        HoursList(shown.place.hours, p)
-                        shown.place.day?.let { WidgetFormat.dayLine(it) }?.let {
-                            Spacer(GlanceModifier.height(6.dp))
-                            Label(it, 10.sp, p.ink, maxLines = 3)
-                        }
+                    val tier = Tiers.small(height)
+                    PlaceBlock(
+                        shown,
+                        nowMs,
+                        p,
+                        temperatureSize = if (narrow) 36.sp else 44.sp,
+                        iconSize = if (narrow) 22.dp else 28.dp,
+                        withLead = height >= LEAD_MIN_DP,
+                    )
+                    if (tier >= 2) {
+                        Divider(p)
+                        SectionCaption("Heures à venir", p)
+                        HoursList(shown.place.hours, p, count = if (height >= 260f) 4 else 3, withRain = !narrow)
                     }
-                    Spacer(GlanceModifier.height(4.dp))
-                    Freshness(shown, nowMs, p)
+                    if (tier >= 3 && shown.place.days.isNotEmpty()) {
+                        Divider(p)
+                        SectionCaption("Jours à venir", p)
+                        DaysList(shown.place.days, nowMs, p, withMin = !narrow)
+                    }
+                    // Le pied reste en bas, quelle que soit la hauteur donnee au widget.
+                    Spacer(GlanceModifier.defaultWeight())
+                    Footer(shown, nowMs, p, view.noteIndex, compact = tier == 1 || narrow)
                 }
             }
         }
     }
 }
+
+private const val NARROW_DP = 140f
+private const val LEAD_MIN_DP = 150f
 
 class SmallWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SmallWidget()

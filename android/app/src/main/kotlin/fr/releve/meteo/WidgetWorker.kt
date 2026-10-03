@@ -26,6 +26,8 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             return Result.failure()
         }
         WidgetStore.refreshWidgets(applicationContext)
+        // Les alertes nouvelles, application fermee : meme calcul que les widgets, signale ici.
+        Notifier.notify(applicationContext, WidgetStore.load(applicationContext).map { it.place })
         return Result.success()
     }
 

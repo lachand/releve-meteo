@@ -29,6 +29,8 @@ object WidgetStore {
             .edit()
             .putString(KEY_STATE, WidgetJson.encodeToString(StoredState.serializer(), merged))
             .apply()
+        WidgetConfig.resetNotes(context)
+        WidgetRevision.bump()
         return true
     }
 

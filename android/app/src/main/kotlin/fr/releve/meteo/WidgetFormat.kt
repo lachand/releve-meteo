@@ -114,6 +114,38 @@ object WidgetFormat {
     /** « mis à jour 15:10 », heure de Paris. */
     fun updatedAt(generatedAtMs: Long): String = "mis à jour ${CLOCK.format(Instant.ofEpochMilli(generatedAtMs))}"
 
+    /** « 14 km/h », ou null : une valeur absente n'est pas un zero. */
+    fun kmh(value: Double?): String? = value?.let { "${it.roundToInt()}${NBSP}km/h" }
+
+    /** « 82 % », ou null. */
+    fun percent(value: Double?): String? = value?.let { "${it.roundToInt()}$NBSP%" }
+
+    /** « 7:42 · 19:21 » depuis « 07:42 » et « 19:21 », ou null sans l'un des deux. */
+    fun sunSpan(sun: WidgetSun?): String? {
+        val rise = sun?.sunrise
+        val set = sun?.sunset
+        if (rise == null || set == null) return null
+        return "${rise.trimStart('0')} · ${set.trimStart('0')}"
+    }
+
+    /** Les lignes du bloc « Sur 24 h » : etendue, pluie, rafales ; une ligne absente n'est pas ecrite. */
+    fun dayLines(day: WidgetDay): List<String> {
+        val lines = mutableListOf<String>()
+        if (day.tempMin != null && day.tempMax != null) {
+            lines += "De ${day.tempMin.roundToInt()} à ${day.tempMax.roundToInt()}$NBSP°C"
+        }
+        if (day.rainMm != null) {
+            lines += if (day.rainMm == 0.0) "Pas de pluie" else "${oneDecimal(day.rainMm)}${NBSP}mm de pluie"
+        }
+        if (day.gustMax != null) {
+            lines += "Rafales jusqu’à ${day.gustMax.roundToInt()}${NBSP}km/h"
+        }
+        return lines
+    }
+
+    /** « 08:00 », heure de Paris : l'heure du dernier calcul. */
+    fun clock(generatedAtMs: Long): String = CLOCK.format(Instant.ofEpochMilli(generatedAtMs))
+
     /** « il y a 5 h » : l'âge d'un contenu ancien. */
     fun age(generatedAtMs: Long, nowMs: Long): String {
         val minutes = ((nowMs - generatedAtMs) / 60_000).coerceAtLeast(0)

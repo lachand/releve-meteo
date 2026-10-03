@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { weatherIcon } from './icon';
+import { mostSevereWeather, weatherIcon } from './icon';
 
 describe('weatherIcon', () => {
   it('rend le soleil le jour et la lune la nuit pour un ciel degage ou peu nuageux', () => {
@@ -36,5 +36,24 @@ describe('weatherIcon', () => {
   it('ne devine rien pour un code absent ou inconnu', () => {
     expect(weatherIcon(null, true)).toBeNull();
     expect(weatherIcon(42, true)).toBeNull();
+  });
+
+  describe('mostSevereWeather', () => {
+    it('garde le temps le plus marquant des heures donnees', () => {
+      expect(mostSevereWeather([0, 3, 61, 1])).toBe(61);
+      expect(mostSevereWeather([0, 95, 61])).toBe(95);
+      expect(mostSevereWeather([71, 61])).toBe(71);
+      expect(mostSevereWeather([1, 0])).toBe(1);
+    });
+
+    it('ignore les heures sans code ou de code inconnu, et ne rend rien sans heure utile', () => {
+      expect(mostSevereWeather([null, 3, null])).toBe(3);
+      expect(mostSevereWeather([null, 42])).toBeNull();
+      expect(mostSevereWeather([])).toBeNull();
+    });
+
+    it('prend la premiere heure a gravite egale', () => {
+      expect(mostSevereWeather([61, 63])).toBe(61);
+    });
   });
 });

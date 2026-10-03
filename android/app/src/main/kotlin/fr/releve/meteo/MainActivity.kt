@@ -77,6 +77,10 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIFICATIONS) {
+            Notifier.setEnabled(this, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+            tellPage()
+        }
         if (requestCode == REQUEST_LOCATION) {
             val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
             pendingGeolocation?.let { (origin, callback) -> callback.invoke(origin, granted, false) }
@@ -94,15 +98,37 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    /** La page relit l'etat des notifications quand il change. */
+    private fun tellPage() {
+        runOnUiThread { web.evaluateJavascript("window.dispatchEvent(new Event('releve-notifications'))", null) }
+    }
+
     /** Ce que la page peut demander a l'application. */
     private inner class Bridge {
         @JavascriptInterface
         fun refreshWidgets() {
             WidgetScheduler.refreshNow(applicationContext)
         }
+
+        /** « on », « off » ou « denied » (voulu mais refuse par Android). */
+        @JavascriptInterface
+        fun notificationsState(): String = Notifier.state(applicationContext)
+
+        @JavascriptInterface
+        fun setNotifications(on: Boolean) {
+            runOnUiThread {
+                if (on && !Notifier.permissionGranted(this@MainActivity)) {
+                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS)
+                } else {
+                    Notifier.setEnabled(this@MainActivity, on)
+                    tellPage()
+                }
+            }
+        }
     }
 
     private companion object {
         const val REQUEST_LOCATION = 1
+        const val REQUEST_NOTIFICATIONS = 2
     }
 }

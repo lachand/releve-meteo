@@ -54,6 +54,12 @@ WidgetStore garde le JSON (SharedPreferences), les widgets Glance se redessinent
 
 Chaque widget se règle séparément : à la pose, puis par appui long et « Réglages », un écran propose le **lieu** (parmi les six premiers lieux veillés, vos favoris d'abord) et l'**apparence** (automatique selon le téléphone, clair ou sombre). Le choix est gardé par identifiant de widget ; un lieu retiré des favoris laisse place au premier. Le temps du moment s'affiche par une **icône** (soleil, lune, nuages, brouillard, bruine, pluie, neige, orage) choisie par la page (`src/widget/icon.ts`, d'après le code WMO du modèle retenu) et dessinée en vectoriel ; sans code connu, aucune icône. Le grand widget montre les **jours à venir** (aujourd'hui et trois jours : icône, maximum, minimum), avec le modèle retenu pour chaque jour comme dans la vue « jours » de la page.
 
+**Ligne du pied (« ligne intelligente »)** : la page calcule, pour chaque lieu, des notes classées de la plus importante à la moins importante (`src/widget/notes.ts`) : vos alertes franchies, la vigilance Météo-France orange ou rouge (lue une fois par département), un phénomène violent à venir, la prochaine pluie sur 24 h (ou son absence), la fiabilité du modèle retenu ici (erreur moyenne mesurée sur 30 jours) et la fourchette des modèles. Le widget montre la première, en couleur d'alerte quand c'en est une ; un appui passe à la suivante (« 2/5 ›»), l'heure « ↻ 08:00 » recalcule. Chaque note dit sa source, une note qui ne s'applique pas n'existe pas, et un contenu de plus de trois heures montre d'abord son ancienneté (jamais une donnée ancienne présentée comme actuelle). Un nouveau calcul repart de la note la plus importante. En petite taille, la version courte de la note tient sur une ligne.
+
+**Style « carnet épuré » modulaire.** Le widget n'étire pas une mise en page : il empile des blocs selon la hauteur réellement donnée (`SizeMode.Exact`, paliers dans `Tiers`) et un bloc n'apparaît que s'il tient en entier, donc pas de vide. Grand widget : 1) l'essentiel et les jours ; 2) + les heures, l'écart des modèles, le vent et les rafales ; 3) + la courbe de 24 h avec sa bande de modèles, l'humidité et le soleil ; 4) + « Sur 24 h ». Petit widget : 1) l'essentiel ; 2) + les heures ; 3) + les jours. La courbe est dessinée en image par `WidgetChartRenderer` (température du modèle retenu, pluie en barres, une bande par modèle : le changement de modèle se voit sur la courbe) ; le calcul (`WidgetChartMath`) est testé côté JVM. Vent, rafales, humidité, soleil et la série de 24 heures viennent de la page (`wind*`, `humidity`, `sun`, `track` du contenu) ; une valeur absente n'est pas écrite.
+
+Mise en page : la ligne « ↻ mis à jour 19:42 » reste ancrée en bas du widget et, touchée, recalcule les widgets tout de suite (le reste du widget ouvre l'application sur le lieu). La colonne d'aujourd'hui est en relief dans la bande des jours, des filets et des légendes de section (« Heures à venir ») séparent les blocs quand il y a la place. L'icône d'aujourd'hui dit le temps des heures restantes de la journée (le plus marquant), pas celui du résumé du jour d'un modèle, qui couvre aussi des heures déjà passées.
+
 Les deux widgets s'adaptent à la taille donnée : étirés en hauteur, ils ajoutent la phrase de l'écart des autres modèles, les heures à venir (petit) et la phrase « Sur 24 h » (petit). Un clic sur un widget ouvre l'application sur le lieu du widget (`link` du contenu, repris par `MainActivity`, y compris application déjà ouverte). Dans l'application, le réglage de veille dit que ce sont les widgets qui rechargent la prévision et propose de les mettre à jour tout de suite.
 
 Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l'ordre). Sans favori, un lieu peut être passé dans l'adresse de la page (essai, premier lancement).
@@ -64,19 +70,26 @@ Lieux du widget : les favoris recopiés par l'application (trois au plus, dans l
 - Le stockage est partagé : l'application (une WebView) recopie un favori, la page des widgets (une autre WebView, sans paramètre) le relit dans IndexedDB (`SharedStorageTest`). C'était le point dont dépendait toute la variante.
 - Les deux essais partagent l'origine : ils remettent le stockage à zéro (`CleanStorage`), sinon les lieux de l'un deviennent ceux de l'autre.
 
+## Pièges Glance rencontrés
+
+- **10 enfants au plus** par `Row`, `Column` ou `Box` : les suivants disparaissent sans erreur (la phrase « Sur 24 h » avait ainsi disparu du grand widget). Chaque bloc de `WidgetUi.kt` est donc un seul enfant (`CHILD_LIMIT`), et un filet n'est pas trois éléments à plat.
+- **`provideGlance` n'est pas rappelé** quand une session est déjà ouverte : une valeur lue avant `provideContent` reste celle de l'ouverture. Le lieu, l'apparence et le contenu sont donc relus dans la composition (`rememberWidgetView`), qui se recompose à chaque `WidgetRevision` (choix modifié, nouveau contenu).
+- **Mises à jour de l'APK** : le code de version suit le numéro d'exécution de la CI (`GITHUB_RUN_NUMBER`) et la clé de debug est celle du dépôt, pour qu'un APK plus récent s'installe par-dessus le précédent.
+
 ## Limites connues et suite
 
 - **Pas encore essayé sur un appareil réel** : l'émulateur ne dit rien de la batterie, de Doze ni de la fréquence réelle de WorkManager (15 minutes au mieux, une heure demandée). À la charge de l'utilisateur, la première fois.
 - **APK de debug seulement** : pas de signature de publication. À faire avec le Play Store (compte, clé de signature conservée, fiche).
 - **Réglage** : lieu et apparence par widget (fait). Reste : plusieurs lieux sur un même widget.
 - **Géolocalisation** : demande minimale dans `MainActivity`.
-- **Service worker dans la WebView** : non traité spécifiquement ; la veille par notification reste celle du navigateur.
+- **Service worker dans la WebView** : non traité spécifiquement ; la veille du navigateur n'existe pas dans l'application.
+- **Notifications natives** : après chaque calcul horaire, `WidgetWorker` signale (`Notifier.kt`) les notes de niveau `alert` (règle franchie, vigilance orange ou rouge, phénomène violent) de chaque lieu veillé, une seule fois par lieu, nature et phrase courte (`NotifyRules`, testé en JVM) ; une alerte qui disparaît puis revient est signalée de nouveau. Réglage explicite dans Réglages (pont `ReleveAndroid.notificationsState` / `setNotifications`), autorisation `POST_NOTIFICATIONS` demandée seulement à l'activation (Android 13 et plus). Un appui ouvre le lieu. Limites dites à l'écran : pas de temps réel (calcul environ horaire, au choix d'Android), la vigilance officielle reste la référence.
 - **iOS** : hors périmètre (WidgetKit demanderait un autre habillage, un compte payant et un Mac).
 - **Quota Open-Meteo** : chaque appareil interroge depuis sa propre adresse, comme la page ; une fois par heure pour trois lieux reste très en dessous des limites gratuites.
 
 ## Construire et installer
 
-Depuis l'onglet Actions de GitHub : workflow « Android », artefact `releve-debug-apk`, à installer sur le téléphone (sources inconnues autorisées). En local (JDK 17 et SDK Android) :
+Sur le téléphone, depuis l'application GitHub : onglet « Releases » du dépôt, pré-publication « APK de test (debug) » (`apk-latest`), appui sur `releve-debug.apk`, puis installation (sources inconnues autorisées pour le navigateur ou le gestionnaire de fichiers). L'APK est signé par une clé de debug fixe du dépôt (`android/app/debug.keystore`, mot de passe standard d'Android : elle n'est pas secrète et n'est pas celle de la publication), pour qu'un nouvel APK s'installe par-dessus le précédent. Les APK construits avant cette clé portent des signatures de passage différentes : Android répond « package en conflit avec un package existant », et il faut désinstaller Relevé une seule fois (les favoris de l'application sont alors perdus, ceux du navigateur ne changent pas). Cette pré-publication est remplacée à chaque envoi qui construit l'APK. Sur ordinateur, l'artefact `releve-debug-apk` du workflow « Android » contient le même fichier, dans un zip. En local (JDK 17 et SDK Android) :
 
 ```
 npm run build

@@ -9,6 +9,8 @@ import {
   getVigilance,
   getVerifications,
 } from '../../data/repository';
+import { readLastPlace, writeLastPlace } from '../../data/cache/lastPlace';
+import { readPreferences } from '../../data/cache/preferences';
 import { evaluateAirAlerts } from '../../domain/airAlerts';
 import { evaluateAlerts } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
@@ -56,7 +58,8 @@ import { useServiceWorkerUpdate } from '../hooks/useServiceWorkerUpdate';
 import { useTerrain } from '../hooks/useTerrain';
 import { TERRAIN_KIND_LABELS } from '../modelPresentation';
 import { explainSelection } from '../selectionExplanation';
-import { parseSharedPlace, sharedModel, sharedPlaceSearch, sharedView } from '../sharedPlace';
+import { sharedModel, sharedPlaceSearch, sharedView } from '../sharedPlace';
+import { startingPlace } from '../startingPlace';
 import styles from './App.module.css';
 import { PHENOMENA_HORIZON_HOURS, TodayView } from './TodayView';
 import { VIEW_KEYS } from './viewModel';
@@ -147,13 +150,23 @@ function coordinates(place: Place): string {
 }
 
 export function App() {
-  const [place, setPlace] = useState<Place | null>(() => parseSharedPlace(window.location.search));
+  // L'adresse (lien partage, clic sur un widget) d'abord, puis le dernier lieu ouvert, puis le
+  // premier favori : l'application ne s'ouvre sur la recherche que quand rien n'est connu.
+  const [place, setPlace] = useState<Place | null>(() =>
+    startingPlace(window.location.search, readLastPlace(), readPreferences().favourites),
+  );
   const [view, setView] = useState<ViewKey>(initialView);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
   const { available: installAvailable, promptInstall } = useInstallPrompt();
   const [installDismissed, setInstallDismissed] = useState(false);
   const preferences = usePreferences();
+  // Le lieu ouvert est retenu : l'application rouvrira dessus.
+  useEffect(() => {
+    if (place !== null) {
+      writeLastPlace(place);
+    }
+  }, [place]);
   const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
