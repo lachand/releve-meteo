@@ -371,7 +371,7 @@ object Tiers {
     /** Petit widget : 1 l'essentiel ; 2 + heures a venir ; 3 + jours a venir. */
     fun small(heightDp: Float): Int =
         when {
-            heightDp >= 350f -> 3
+            heightDp >= 380f -> 3
             heightDp >= 230f -> 2
             else -> 1
         }
@@ -417,7 +417,7 @@ fun Sur24h(day: WidgetDay?, p: Palette) {
 
 /** Les jours a venir en liste (petit widget haut) : le jour, l'icone, le maximum, le minimum ; aujourd'hui en relief. */
 @Composable
-fun DaysList(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
+fun DaysList(days: List<WidgetForecastDay>, nowMs: Long, p: Palette, withMin: Boolean = true) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
         days.forEach { day ->
             val today = WidgetFormat.dayName(day.date, nowMs) == "auj."
@@ -431,7 +431,7 @@ fun DaysList(days: List<WidgetForecastDay>, nowMs: Long, p: Palette) {
                 }
                 Spacer(GlanceModifier.width(4.dp))
                 Label(WidgetFormat.degrees(day.tempMax), 12.sp, p.ink, bold = true, modifier = GlanceModifier.width(28.dp))
-                Label(WidgetFormat.degrees(day.tempMin), 10.sp, p.faint)
+                if (withMin) Label(WidgetFormat.degrees(day.tempMin), 10.sp, p.faint)
             }
         }
     }

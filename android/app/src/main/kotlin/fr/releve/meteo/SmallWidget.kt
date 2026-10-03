@@ -53,7 +53,7 @@ class SmallWidget : GlanceAppWidget() {
                     if (tier >= 3 && shown.place.days.isNotEmpty()) {
                         Divider(p)
                         SectionCaption("Jours à venir", p)
-                        DaysList(shown.place.days, nowMs, p)
+                        DaysList(shown.place.days, nowMs, p, withMin = !narrow)
                     }
                     // Le pied reste en bas, quelle que soit la hauteur donnee au widget.
                     Spacer(GlanceModifier.defaultWeight())
