@@ -9,7 +9,16 @@ import { resetMemoryDatasetStore } from '../../data/cache/datasetStore';
 import { resetMemoryForecastStore } from '../../data/cache/forecastStore';
 import { resetMemoryGeocodingStore } from '../../data/cache/geocodingStore';
 import { clearModelChoices } from '../../data/cache/modelChoice';
-import { resetMemoryPreferencesForTests } from '../../data/cache/preferences';
+import {
+  readLastPlace,
+  resetMemoryLastPlaceForTests,
+  writeLastPlace,
+} from '../../data/cache/lastPlace';
+import {
+  defaultPreferences,
+  resetMemoryPreferencesForTests,
+  writePreferences,
+} from '../../data/cache/preferences';
 import { recordSnapshot } from '../../data/cache/snapshotStore';
 import type { ForecastSnapshot } from '../../domain/leadScores';
 import type { LocalIsoHour } from '../../domain/types';
@@ -123,6 +132,7 @@ beforeEach(async () => {
   clearModelChoices();
   localStorage.clear();
   resetMemoryPreferencesForTests();
+  resetMemoryLastPlaceForTests();
   window.history.replaceState(null, '', '/');
 });
 
@@ -136,6 +146,54 @@ describe('App', { timeout: 30000 }, () => {
     render(<App />);
     expect(screen.getByText('Aucun lieu au carnet.')).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  it('retient le lieu ouvert et le rouvre au lancement suivant, sans adresse', async () => {
+    server.use(...liveHandlers({ failVerification: true }));
+    await openLyon();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+    expect(readLastPlace()?.name).toBe('Lyon');
+
+    // L'application est relancee : plus d'adresse, plus d'etat, seul le stockage reste.
+    cleanup();
+    window.history.replaceState(null, '', '/');
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+    expect(screen.queryByText('Aucun lieu au carnet.')).not.toBeInTheDocument();
+  });
+
+  it('ouvre le premier favori quand aucun lieu n a encore ete ouvert', async () => {
+    server.use(...liveHandlers({ failVerification: true }));
+    const lyon = {
+      id: '45.7578:4.8320',
+      name: 'Lyon',
+      latitude: 45.7578,
+      longitude: 4.832,
+      elevation: 170,
+      admin: 'Rhône',
+      alias: null,
+    };
+    writePreferences({ ...defaultPreferences(), favourites: [lyon] });
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+  });
+
+  it('laisse l adresse l emporter sur le dernier lieu : lien partage, clic sur un widget', async () => {
+    server.use(...liveHandlers({ failVerification: true }));
+    writeLastPlace({
+      id: '48.8566:2.3522',
+      name: 'Paris',
+      latitude: 48.8566,
+      longitude: 2.3522,
+      elevation: 35,
+      admin: 'Paris',
+      alias: null,
+    });
+    window.history.replaceState(null, '', '/?lat=45.7578&lon=4.832&nom=Lyon&alt=170');
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+    // Et le lieu de l'adresse devient le dernier lieu.
+    expect(readLastPlace()?.name).toBe('Lyon');
   });
 
   it('explique en trois lignes, avant tout lieu, d ou vient chaque valeur', () => {
