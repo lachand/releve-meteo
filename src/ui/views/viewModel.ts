@@ -4,6 +4,7 @@ import type { Nowcast } from '../../data/mappers/nowcastMapper';
 import type { StationReport, VigilanceReport } from '../../data/repository';
 import type { AlertHit } from '../../domain/alerts';
 import type { AirHit } from '../../domain/airAlerts';
+import type { ProbabilityHit } from '../../domain/probabilityAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { ConfidenceVerdict } from '../../domain/confidence';
 import type { BlendedDay } from '../../domain/dailyBlend';
@@ -104,6 +105,8 @@ export interface ForecastViewModel {
   readonly alertRules: readonly AlertRule[];
   readonly alertHits: readonly AlertHit[];
   readonly spreadHits: readonly SpreadHit[];
+  /** Regles en probabilite (part des membres de l'ensemble) atteintes. */
+  readonly probabilityHits: readonly ProbabilityHit[];
   /** Regles d'air, de pollens et d'UV depassees (prevision CAMS). */
   readonly airHits: readonly AirHit[];
   readonly addAlert: (rule: NewAlertRule) => void;

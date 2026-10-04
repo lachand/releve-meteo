@@ -55,6 +55,11 @@ export function isWeatherRule(rule: AlertRule): rule is WeatherAlertRule {
   return rule.kind !== 'air';
 }
 
+/** Regle de valeur : ni ecart entre modeles ni probabilite d'ensemble, evaluees ailleurs. */
+function isValueRule(rule: WeatherAlertRule): boolean {
+  return rule.kind === undefined || rule.kind === 'value';
+}
+
 function crosses(value: number, rule: WeatherAlertRule): boolean {
   return rule.comparator === 'lt' ? value < rule.threshold : value > rule.threshold;
 }
@@ -76,7 +81,7 @@ export function evaluateAlerts(input: {
   });
   return input.rules
     .filter(isWeatherRule)
-    .filter((rule) => rule.enabled && rule.placeId === input.placeId && rule.kind !== 'spread')
+    .filter((rule) => rule.enabled && rule.placeId === input.placeId && isValueRule(rule))
     .flatMap((rule): AlertHit[] => {
       const field = FIELD[rule.variable];
       const crossings = upcoming.flatMap((point): AlertCrossing[] => {

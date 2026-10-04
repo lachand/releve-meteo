@@ -4,6 +4,7 @@ import { AIR_DEFAULT_THRESHOLDS, AIR_VARIABLES } from '../../domain/airAlerts';
 import type { AirHit } from '../../domain/airAlerts';
 import { ALERT_HORIZON_HOURS } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
+import type { ProbabilityHit } from '../../domain/probabilityAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import type {
   AirVariable,
@@ -20,6 +21,7 @@ import {
   airHitSentence,
   alertUnit,
   hitSentence,
+  probabilityHitSentence,
   ruleSentence,
   spreadHitSentence,
 } from '../alertPresentation';
@@ -42,6 +44,7 @@ export function AlertBanner({
   hits,
   spreadHits = [],
   airHits = [],
+  probabilityHits = [],
   windUnit,
 }: {
   readonly hits: readonly AlertHit[];
@@ -49,9 +52,11 @@ export function AlertBanner({
   readonly spreadHits?: readonly SpreadHit[];
   /** Regles d'air, de pollens et d'UV depassees. */
   readonly airHits?: readonly AirHit[];
+  /** Regles en probabilite (part des membres de l'ensemble) atteintes. */
+  readonly probabilityHits?: readonly ProbabilityHit[];
   readonly windUnit: WindUnit;
 }) {
-  const total = hits.length + spreadHits.length + airHits.length;
+  const total = hits.length + spreadHits.length + airHits.length + probabilityHits.length;
   if (total === 0) {
     return null;
   }
@@ -70,6 +75,11 @@ export function AlertBanner({
           <li key={hit.rule.id}>
             <strong>{ruleSentence(hit.rule, windUnit)}</strong> : {spreadHitSentence(hit, windUnit)}
             .
+          </li>
+        ))}
+        {probabilityHits.map((hit) => (
+          <li key={hit.rule.id}>
+            <strong>{ruleSentence(hit.rule, windUnit)}</strong> : {probabilityHitSentence(hit)}.
           </li>
         ))}
         {airHits.map((hit) => (
@@ -103,13 +113,18 @@ export function AlertRulesEditor({
   onRemove,
 }: AlertRulesEditorProps) {
   const id = useId().replace(/:/g, '');
-  const [kind, setKind] = useState<'value' | 'spread' | 'air'>('value');
+  const [kind, setKind] = useState<'value' | 'spread' | 'probability' | 'air'>('value');
   const [variable, setVariable] = useState<WeatherVariable>('temperature');
   const [airVariable, setAirVariable] = useState<AirVariable>('uv');
   const [comparator, setComparator] = useState<AlertRule['comparator']>('lt');
   const [threshold, setThreshold] = useState('2');
+  const [probability, setProbability] = useState('40');
+  const probabilityValue = Number(probability.replace(',', '.'));
+  const probabilityValid =
+    kind !== 'probability' ||
+    (probability.trim() !== '' && probabilityValue > 0 && probabilityValue <= 100);
   const parsed = Number(threshold.replace(',', '.'));
-  const valid = threshold.trim() !== '' && Number.isFinite(parsed);
+  const valid = threshold.trim() !== '' && Number.isFinite(parsed) && probabilityValid;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -133,7 +148,17 @@ export function AlertRulesEditor({
     const rule: NewAlertRule =
       kind === 'spread'
         ? { placeId, variable, comparator: 'gt', threshold: converted, enabled: true, kind }
-        : { placeId, variable, comparator, threshold: converted, enabled: true };
+        : kind === 'probability'
+          ? {
+              placeId,
+              variable,
+              comparator,
+              threshold: converted,
+              enabled: true,
+              kind,
+              probability: Math.round(probabilityValue),
+            }
+          : { placeId, variable, comparator, threshold: converted, enabled: true };
     onAdd(rule);
   };
 
@@ -142,9 +167,11 @@ export function AlertRulesEditor({
       <p className={styles.note}>
         Évaluées à chaque ouverture du relevé, sur les {ALERT_HORIZON_HOURS} prochaines heures, avec
         le modèle retenu heure par heure ; une alerte « modèles en désaccord » compare à la place le
-        plus haut et le plus bas des modèles disponibles ; une alerte d’air, de pollens ou d’UV suit
-        la prévision CAMS Europe, toujours « au-dessus de ». Sans serveur, Relevé ne peut vous
-        prévenir application fermée que par la veille en arrière-plan, là où le navigateur la permet
+        plus haut et le plus bas des modèles disponibles ; une alerte en probabilité compte la part
+        des scénarios de l’ensemble ECMWF qui franchissent le seuil (une proportion de trajectoires
+        plausibles, pas un risque étalonné) ; une alerte d’air, de pollens ou d’UV suit la prévision
+        CAMS Europe, toujours « au-dessus de ». Sans serveur, Relevé ne peut vous prévenir
+        application fermée que par la veille en arrière-plan, là où le navigateur la permet
         (Réglages).
       </p>
 
@@ -178,7 +205,7 @@ export function AlertRulesEditor({
             id={`${id}-type`}
             value={kind}
             onChange={(event) => {
-              const next = event.target.value as 'value' | 'spread' | 'air';
+              const next = event.target.value as 'value' | 'spread' | 'probability' | 'air';
               setKind(next);
               if (next === 'air') {
                 setThreshold(String(AIR_DEFAULT_THRESHOLDS[airVariable]));
@@ -187,6 +214,7 @@ export function AlertRulesEditor({
           >
             <option value="value">Valeur franchie</option>
             <option value="spread">Modèles en désaccord</option>
+            <option value="probability">Probabilité (ensemble)</option>
             <option value="air">Air, pollens ou UV</option>
           </select>
         </label>
@@ -222,7 +250,7 @@ export function AlertRulesEditor({
             </select>
           )}
         </label>
-        {kind === 'value' && (
+        {(kind === 'value' || kind === 'probability') && (
           <label className={styles.field} htmlFor={`${id}-sens`}>
             <span>Sens</span>
             <select
@@ -253,6 +281,19 @@ export function AlertRulesEditor({
             onChange={(event) => setThreshold(event.target.value)}
           />
         </label>
+        {kind === 'probability' && (
+          <label className={styles.field} htmlFor={`${id}-proba`}>
+            <span>Au moins (% des scénarios)</span>
+            <input
+              id={`${id}-proba`}
+              type="text"
+              inputMode="decimal"
+              value={probability}
+              aria-invalid={!probabilityValid}
+              onChange={(event) => setProbability(event.target.value)}
+            />
+          </label>
+        )}
         <button type="submit" className={styles.add} disabled={!valid}>
           Ajouter
         </button>

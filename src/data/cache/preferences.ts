@@ -49,7 +49,14 @@ export function isAlertRule(value: unknown): value is AlertRule {
       : ALERT_VARIABLES.has(rule.variable) &&
         (rule.comparator === 'lt' || rule.comparator === 'gt') &&
         // Les regles enregistrees avant l'alerte d'ecart n'ont pas de `kind`.
-        (rule.kind === undefined || rule.kind === 'value' || rule.kind === 'spread'))
+        (rule.kind === undefined ||
+          rule.kind === 'value' ||
+          rule.kind === 'spread' ||
+          // Probabilite d'ensemble : un pourcentage lisible, sinon la regle est ecartee.
+          (rule.kind === 'probability' &&
+            typeof rule.probability === 'number' &&
+            rule.probability > 0 &&
+            rule.probability <= 100)))
   );
 }
 
