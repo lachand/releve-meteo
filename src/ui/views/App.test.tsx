@@ -19,6 +19,7 @@ import {
   resetMemoryPreferencesForTests,
   writePreferences,
 } from '../../data/cache/preferences';
+import { recordOutlook } from '../../data/cache/outlookStore';
 import { recordSnapshot } from '../../data/cache/snapshotStore';
 import type { ForecastSnapshot } from '../../domain/leadScores';
 import type { LocalIsoHour } from '../../domain/types';
@@ -330,6 +331,38 @@ describe('App', { timeout: 30000 }, () => {
     // Fleche droite : onglet suivant, motif ARIA des onglets.
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Cartes' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('garde la prevision sur l appareil et dit qu elle compare des demain', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('tab', { name: '15 jours' }));
+    expect(
+      await screen.findByText(/la comparaison apparaîtra dès qu’une prévision aura été gardée/),
+    ).toBeInTheDocument();
+  });
+
+  it('dit ce que la prevision a change depuis hier, d apres la prevision gardee', async () => {
+    server.use(...liveHandlers());
+    // Hier a la meme heure, Relevé annoncait un tout autre temps pour demain.
+    await recordOutlook(
+      '45.7485:4.8467',
+      {
+        issuedAt: FIXTURE_NOW.getTime() - 24 * 60 * 60 * 1000,
+        days: [{ date: '2026-09-29', model: 'arome', tempMax: -20, tempMin: -30, rain: 0 }],
+      },
+      FIXTURE_NOW,
+    );
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('tab', { name: '15 jours' }));
+    const section = (await screen.findByText('La prévision a bougé')).closest('section');
+    expect(section).not.toBeNull();
+    expect(
+      await within(section as HTMLElement).findByText(/(a|ont) bougé depuis la prévision gardée hier/),
+    ).toBeInTheDocument();
+    expect(within(section as HTMLElement).getByText(/mardi : maximum/)).toBeInTheDocument();
   });
 
   it('ouvre les cartes : radar observe et prevision du modele retenu sur la grille', async () => {

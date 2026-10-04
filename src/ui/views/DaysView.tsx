@@ -1,7 +1,9 @@
 import { windowTotal } from '../../domain/derived';
 import { DailyList } from '../components/DailyList';
+import { DriftPanel } from '../components/DriftPanel';
 import { EnsembleChart } from '../components/EnsembleChart';
 import { formatCompact } from '../format';
+import type { DriftState } from '../hooks/useForecastDrift';
 import { MODEL_LABELS } from '../modelPresentation';
 import { Section } from './Section';
 import styles from './Views.module.css';
@@ -28,10 +30,22 @@ function weekTotal(days: ForecastViewModel['days']): string | null {
     : `au moins ${amount}, ${sources} (${missing}\u00a0jour${missing > 1 ? 's' : ''} sans donnée)`;
 }
 
-export function DaysView({ vm }: { readonly vm: ForecastViewModel }) {
+export function DaysView({
+  vm,
+  drift = { status: 'idle' },
+}: {
+  readonly vm: ForecastViewModel;
+  /** Ce que la prevision a change depuis hier ; rien sans memoire de l'appareil. */
+  readonly drift?: DriftState;
+}) {
   const week = weekTotal(vm.days);
   return (
     <div className={styles.stack}>
+      {(drift.status === 'ready' || drift.status === 'collecting') && (
+        <Section eyebrow="Depuis hier" title="La prévision a bougé">
+          <DriftPanel state={drift} />
+        </Section>
+      )}
       <Section eyebrow="Jour par jour" title={`${vm.days.length} jours, modèle retenu chaque jour`}>
         {week !== null && (
           <p className={styles.lede}>Cumul de pluie prévu, aujourd’hui compris : {week}.</p>

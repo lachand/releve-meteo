@@ -52,6 +52,7 @@ import { useBackgroundWatch } from '../hooks/useBackgroundWatch';
 import { DaysIcon, HoursIcon, MapIcon, ModelsIcon, ReliabilityIcon, TodayIcon } from '../tabIcons';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
+import { useForecastDrift } from '../hooks/useForecastDrift';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useModelChoice } from '../hooks/useModelChoice';
@@ -445,6 +446,13 @@ export function App() {
     preferences.removeAlert,
   ]);
 
+  // Ce que la prevision a change depuis hier : gardee sur l'appareil, jamais envoyee.
+  const drift = useForecastDrift(
+    vm?.place.id ?? null,
+    vm?.bundle.fetchedAt ?? null,
+    vm?.days ?? null,
+  );
+
   const watch = useBackgroundWatch({
     place: bundle?.place ?? null,
     terrain,
@@ -699,7 +707,7 @@ export function App() {
                 >
                   {view === 'jour' && <TodayView vm={vm} />}
                   {view === 'heures' && <HoursView vm={vm} />}
-                  {view === 'jours' && <DaysView vm={vm} />}
+                  {view === 'jours' && <DaysView vm={vm} drift={drift} />}
                   {view === 'carte' && <MapView vm={vm} />}
                   {view === 'modeles' && <ModelsView vm={vm} />}
                   {view === 'fiabilite' && <ReliabilityView vm={vm} />}
