@@ -43,7 +43,7 @@ describe('calibrationVerdict', () => {
 describe('calibrationHeadline', () => {
   it('dit depuis quand et sur combien de jours, et ce qui est compare', () => {
     expect(calibrationHeadline(summary())).toMatch(
-      /^Depuis le dimanche 20 septembre 2026, 14 jours vérifiés sur cet appareil/,
+      /^Depuis le dimanche 20 septembre 2026, 14\sjours vérifiés sur cet appareil/,
     );
   });
 });

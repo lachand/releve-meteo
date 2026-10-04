@@ -1,4 +1,4 @@
-import { leadHoursFrom } from './time';
+import { utcMsFromLocalIso } from './time';
 import type { ConfidenceVerdict } from './confidence';
 import type { DayConfidence, DaySummary, OutlookIssue } from './forecastDrift';
 import type { JournalEntry } from './journal';
@@ -13,6 +13,8 @@ import type { LocalIsoHour, ModelId } from './types';
  * recalcule apres coup, et rien n'est dit avant d'avoir assez de jours : le
  * produit s'audite, il n'affirme pas sa confiance.
  */
+
+const HOUR_MS = 60 * 60 * 1000;
 
 export const CALIBRATION = {
   /** Jours gardes, au plus. */
@@ -65,7 +67,7 @@ export function calibrationRecordFrom(input: {
   const noon: LocalIsoHour = `${entry.date}T12:00`;
   let best: { issue: OutlookIssue; day: DaySummary; gap: number } | null = null;
   for (const issue of input.issues) {
-    const lead = leadHoursFrom(new Date(issue.issuedAt), noon);
+    const lead = (utcMsFromLocalIso(noon) - issue.issuedAt) / HOUR_MS;
     const gap = Math.abs(lead - CALIBRATION.targetLeadHours);
     const day = issue.days.find((d) => d.date === entry.date);
     if (
