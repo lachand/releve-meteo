@@ -1,0 +1,115 @@
+.panel {
+  display: grid;
+  gap: var(--esp-4);
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-size: var(--pas-m);
+}
+
+.muted {
+  margin: 0;
+  color: var(--encre-faible);
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-3);
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: var(--esp-1);
+  font-size: var(--pas-s);
+}
+
+.field input {
+  min-width: 6rem;
+  min-height: 2.75rem;
+  padding: 0 var(--esp-3);
+  font: inherit;
+  color: var(--encre);
+  background: var(--papier-creux);
+  border: var(--filet-encre);
+}
+
+.add {
+  min-height: 2.75rem;
+  padding: 0 var(--esp-4);
+  font: inherit;
+  cursor: pointer;
+  color: var(--papier-haut);
+  background: var(--encre);
+  border: var(--filet-encre);
+}
+
+.problem {
+  margin: 0;
+  color: var(--alerte);
+  font-size: var(--pas-s);
+}
+
+.models {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--pas-s);
+}
+
+.scroller {
+  position: relative;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pas-s);
+}
+
+.table thead th {
+  padding: var(--esp-2) var(--esp-3) var(--esp-2) 0;
+  border-bottom: var(--filet-encre);
+  font-family: var(--font-display);
+  font-size: var(--pas-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre-faible);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table tbody td,
+.table tbody th {
+  padding: var(--esp-2) var(--esp-3) var(--esp-2) 0;
+  border-bottom: 1px dotted var(--grille);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.remove {
+  min-height: 2.75rem;
+  padding: 0 var(--esp-3);
+  font: inherit;
+  cursor: pointer;
+  color: var(--encre-faible);
+  background: none;
+  border: none;
+  text-decoration: underline;
+}
+
+.caption {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-style: italic;
+  color: var(--encre-faible);
+}

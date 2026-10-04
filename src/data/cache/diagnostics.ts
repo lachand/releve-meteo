@@ -19,6 +19,7 @@ export const DIAGNOSTIC_SOURCES = [
   'normals',
   'marine',
   'lightning',
+  'previousDay',
 ] as const;
 
 export type DiagnosticSource = (typeof DIAGNOSTIC_SOURCES)[number];

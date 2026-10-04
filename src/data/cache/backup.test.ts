@@ -13,6 +13,7 @@ import {
 import { deleteDbForTests } from './db';
 import { resetMemoryDatasetStore } from './datasetStore';
 import { clearModelChoices, readAllModelChoices, writeModelChoice } from './modelChoice';
+import { readOwnReadings, writeOwnReadings } from './ownReadingsStore';
 import {
   addAlert,
   addFavourite,
@@ -99,7 +100,12 @@ describe('parseBackup', () => {
       notify: { ...DEFAULT_NOTIFY, risks: true, mode: 'instant', hour: 6 },
     });
     expect(backup.dropped).toBe(0);
-    expect(summarizeBackup(backup)).toEqual({ favourites: 1, alerts: 1, modelChoices: 1 });
+    expect(summarizeBackup(backup)).toEqual({
+      favourites: 1,
+      alerts: 1,
+      modelChoices: 1,
+      ownReadings: 0,
+    });
   });
 
   it('refuse ce qui n est pas une sauvegarde de Relevé, sans rien appliquer', () => {
@@ -170,6 +176,27 @@ describe('parseBackup', () => {
   });
 });
 
+describe('parseBackup, Mon relevé', () => {
+  it('relit les saisies valides et ecarte les autres, un ancien fichier n en a pas', () => {
+    const good = { placeId: 'lyon', date: '2026-09-27', tempMax: 21, tempMin: null, rain: null };
+    const text = JSON.stringify({
+      ...JSON.parse(fullBackupText()),
+      ownReadings: [good, { placeId: 'lyon', date: 'hier' }],
+    });
+    const parsed = parseBackup(text);
+    expect(parsed.ok && parsed.backup.ownReadings).toEqual([good]);
+    expect(parsed.ok && parsed.backup.dropped).toBe(1);
+
+    const { ownReadings: _removed, ...legacy } = JSON.parse(fullBackupText()) as Record<
+      string,
+      unknown
+    >;
+    const old = parseBackup(JSON.stringify(legacy));
+    expect(old.ok && old.backup.ownReadings).toEqual([]);
+    expect(old.ok && old.backup.dropped).toBe(0);
+  });
+});
+
 describe('collectBackup et restoreBackup', () => {
   it('sauvegarde l etat local puis le restaure sur un autre appareil, cles d API gardees', async () => {
     const preferences = addAlert(addFavourite(defaultPreferences(), LYON).preferences, FROST);
@@ -177,6 +204,8 @@ describe('collectBackup et restoreBackup', () => {
     writeModelChoice(LYON.id, 'ecmwf');
     await saveWatchDigest(true, NOW);
     await saveWatchNotify({ ...DEFAULT_NOTIFY, rain: true, hour: 8 }, NOW);
+    const reading = { placeId: LYON.id, date: '2026-09-27', tempMax: 21, tempMin: null, rain: 2 };
+    writeOwnReadings([reading]);
 
     const text = JSON.stringify(await collectBackup(NOW));
     expect(text).not.toContain('cle-appareil-1');
@@ -198,6 +227,8 @@ describe('collectBackup et restoreBackup', () => {
     expect(restored.alerts).toEqual([FROST]);
     expect(restored.apiKeys.vigilance).toBe('cle-appareil-2');
     expect(readAllModelChoices()).toEqual({ [LYON.id]: 'ecmwf' });
+    // Vos mesures saisies suivent la sauvegarde : rien ne peut les recalculer.
+    expect(readOwnReadings()).toEqual([reading]);
     const watch = await readWatchState();
     expect(watch.digest).toBe(true);
     expect(watch.notify).toEqual({ ...DEFAULT_NOTIFY, rain: true, hour: 8 });

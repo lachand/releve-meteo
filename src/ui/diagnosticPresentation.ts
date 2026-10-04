@@ -15,6 +15,7 @@ export const DIAGNOSTIC_LABELS: Readonly<Record<DiagnosticSource, string>> = {
   normals: 'Normales 1991-2020 (réanalyse ERA5)',
   marine: 'Mer et houle (Open-Meteo Marine)',
   lightning: 'Foudre observée (EUMETSAT, satellite MTG)',
+  previousDay: 'Prévisions de la veille (Open-Meteo Previous Runs)',
 };
 
 type Failure = NonNullable<SourceDiagnostic['lastFailure']>;

@@ -21,7 +21,8 @@ export type DatasetKind =
   | 'marine'
   | 'journal'
   | 'outlooks'
-  | 'calibration';
+  | 'calibration'
+  | 'previousDay';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -59,6 +60,8 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   outlooks: 1,
   // Confiance dite contre erreur mesuree, un enregistrement par jour verifie (domain/calibration.ts).
   calibration: 1,
+  // Previsions horaires de la veille de chaque modele au point du lieu, 30 jours (Mon relevé).
+  previousDay: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

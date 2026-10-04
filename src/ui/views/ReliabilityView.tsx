@@ -1,16 +1,22 @@
 import { CalibrationPanel } from '../components/CalibrationPanel';
+import { MODEL_ORDER } from '../../domain/models';
 import { JournalPanel } from '../components/JournalPanel';
 import { LeadScoresPanel } from '../components/LeadScoresPanel';
+import { OwnReadingsPanel } from '../components/OwnReadingsPanel';
 import { RainCheckPanel } from '../components/RainCheckPanel';
 import { ReliabilityPanel } from '../components/ReliabilityPanel';
 import { StationCheckPanel } from '../components/StationCheck';
 import { StationTraceChart } from '../components/StationTraceChart';
 import { YesterdayPanel } from '../components/YesterdayPanel';
+import { useOwnReadings } from '../hooks/useOwnReadings';
 import { Section } from './Section';
 import styles from './Views.module.css';
 import type { ForecastViewModel } from './viewModel';
 
 export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
+  const ownReadings = useOwnReadings();
+  // Les modeles dont on dispose ici : ceux dont on compare la prevision de la veille a vos mesures.
+  const models = MODEL_ORDER.filter((model) => vm.bundle.series[model] !== undefined);
   return (
     <div className={styles.stack}>
       <Section eyebrow="Contrôle au réel" title="Le dernier relevé face aux modèles">
@@ -39,6 +45,9 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
           review={vm.yesterday}
           activeModel={vm.cascade.activeModel}
         />
+      </Section>
+      <Section eyebrow="Chez vous" title="Mon relevé : vos mesures face aux modèles">
+        <OwnReadingsPanel place={vm.place} models={models} today={vm.today} store={ownReadings} />
       </Section>
       <Section eyebrow="Carnet de bord" title="Journal des prévisions">
         <JournalPanel
