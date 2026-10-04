@@ -84,6 +84,13 @@ describe('mergeOutlooks', () => {
   });
 });
 
+describe('mergeOutlooks, sans prevision gardee', () => {
+  it('part d une liste vide quand rien n est garde ou que le contenu n est pas une liste', () => {
+    expect(mergeOutlooks(undefined, issue(0, []), NOW)).toHaveLength(1);
+    expect(mergeOutlooks('abime', issue(0, []), NOW)).toHaveLength(1);
+  });
+});
+
 describe('isOutlookIssue', () => {
   it('rejette un enregistrement mal forme', () => {
     expect(isOutlookIssue(issue(1, [day('2026-10-04')]))).toBe(true);
@@ -92,6 +99,8 @@ describe('isOutlookIssue', () => {
       false,
     );
     expect(isOutlookIssue(null)).toBe(false);
+    expect(isOutlookIssue({ issuedAt: 1, days: [null] })).toBe(false);
+    expect(isOutlookIssue({ issuedAt: 1, days: ['demain'] })).toBe(false);
     // La confiance est facultative, mais doit etre un niveau connu.
     expect(isOutlookIssue(issue(1, [day('2026-10-04', { confidence: 'low' })]))).toBe(true);
     expect(isOutlookIssue(issue(1, [day('2026-10-04', { confidence: null })]))).toBe(true);

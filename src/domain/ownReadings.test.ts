@@ -128,6 +128,63 @@ describe('predictionFor', () => {
   });
 });
 
+describe('compareReadings, plusieurs jours et instruments', () => {
+  const today = '2026-10-05';
+  const two: PreviousDaySeries = {
+    timeline: [...hours('2026-10-03'), ...hours('2026-10-04')],
+    temperature: { arome: [...ramp(9, 21), ...ramp(8, 18)], gfs: [...ramp(6, 17), ...ramp(5, 15)] },
+    precipitation: { arome: Array.from({ length: 48 }, () => 0.1) },
+  };
+
+  it('moyenne les ecarts sur tous les jours compares', () => {
+    const result = compareReadings({
+      readings: [
+        reading('2026-10-04', { tempMax: 18, tempMin: 8, rain: null }),
+        reading('2026-10-03', { tempMax: 20, tempMin: 10, rain: null }),
+      ],
+      series: two,
+      today,
+    });
+    expect(result.compared).toBe(2);
+    // AROME : |21-20|, |9-10|, |18-18|, |8-8| : 4 valeurs, ecart moyen 0,5.
+    expect(result.models[0]?.temperature).toEqual({ values: 4, mae: 0.5, bias: 0 });
+  });
+
+  it('departage a l ordre habituel deux modeles sans temperature comparable', () => {
+    const rainBoth: PreviousDaySeries = {
+      ...two,
+      precipitation: {
+        gfs: Array.from({ length: 48 }, () => 0.1),
+        arome: Array.from({ length: 48 }, () => 0.1),
+      },
+    };
+    const result = compareReadings({
+      readings: [reading('2026-10-03', { tempMax: null, tempMin: null, rain: 2 })],
+      series: rainBoth,
+      today,
+    });
+    expect(result.models.map((m) => m.model)).toEqual(['arome', 'gfs']);
+  });
+
+  it('classe apres les autres un modele sans temperature comparable, et laisse de cote un jour sans prevision', () => {
+    const result = compareReadings({
+      readings: [
+        reading('2026-10-03', { tempMax: null, tempMin: null, rain: 2 }),
+        // Dans la fenetre, mais absent de la serie : laisse de cote.
+        reading('2026-09-20'),
+      ],
+      series: two,
+      today,
+    });
+    expect(result.compared).toBe(1);
+    expect(result.skipped).toBe(1);
+    // GFS n'a pas de pluie : sans valeur comparable, il n'a pas de ligne de classement.
+    expect(result.models.map((m) => m.model)).toEqual(['arome']);
+    expect(result.models[0]?.temperature).toBeNull();
+    expect(result.days[0]?.models.map((m) => m.model)).toEqual(['arome', 'gfs']);
+  });
+});
+
 describe('compareReadings', () => {
   const today = '2026-10-04';
   const s = series(

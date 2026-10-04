@@ -74,7 +74,9 @@ export interface ProbabilityHit {
 }
 
 /** Regle d'ensemble active : de type probabilite, avec un pourcentage lisible. */
-export function isProbabilityRule(rule: AlertRule): rule is WeatherAlertRule {
+export function isProbabilityRule(
+  rule: AlertRule,
+): rule is WeatherAlertRule & { readonly probability: number } {
   return (
     isWeatherRule(rule) &&
     rule.kind === 'probability' &&
@@ -105,7 +107,7 @@ export function evaluateProbabilityAlerts(input: {
     .filter((rule) => rule.enabled && rule.placeId === input.placeId)
     .flatMap((rule): ProbabilityHit[] => {
       const members = membersOf(ensemble, rule.variable);
-      const wanted = rule.probability ?? 0;
+      const wanted = rule.probability;
       const hours = upcoming.flatMap(
         ({ time, index }): (ProbabilityCrossing & { atLeast: boolean })[] => {
           const { crossing, known } = countAt(

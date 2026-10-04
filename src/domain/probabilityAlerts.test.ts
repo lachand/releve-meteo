@@ -57,6 +57,70 @@ describe('memberShare', () => {
   });
 });
 
+describe('evaluateProbabilityAlerts, valeurs absentes', () => {
+  it('saute une heure sans aucun membre et ne compte pas un membre sans valeur comme un franchissement', () => {
+    const members = [
+      [3, null, -1, null],
+      [3, null, -2, 1],
+      [3, null, null, 1],
+      // Un membre sans aucune valeur n'entre pas dans le compte.
+      [null, null, null, null],
+    ];
+    const hits = evaluateProbabilityAlerts({
+      rules: [rule({ probability: 50 })],
+      placeId: TEST_PLACE.id,
+      ensemble: ensemble(members),
+      now: NOW,
+    });
+    // Heure 1 : aucun membre, ignoree. Heure 2 : 2 membres sur 2 ayant une valeur sont sous 0.
+    expect(hits[0]?.first).toEqual({ time: TIMELINE[2], share: 1 });
+    expect(hits[0]?.hours).toBe(1);
+    // Au moins une fois : 2 membres sur 3.
+    expect(hits[0]?.anyTime).toBeCloseTo(2 / 3);
+  });
+});
+
+describe('evaluateProbabilityAlerts, pic plus tard', () => {
+  it('retient l heure ou la part monte le plus haut, pas la premiere atteinte', () => {
+    const members = [
+      [3, -1, -1, 3],
+      [3, -1, -1, 3],
+      [3, 3, -1, 3],
+      [3, 3, -1, 3],
+      [3, 3, 3, 3],
+    ];
+    const hits = evaluateProbabilityAlerts({
+      rules: [rule({ probability: 40 })],
+      placeId: TEST_PLACE.id,
+      ensemble: ensemble(members),
+      now: NOW,
+    });
+    expect(hits[0]?.first).toEqual({ time: TIMELINE[1], share: 0.4 });
+    expect(hits[0]?.peak).toEqual({ time: TIMELINE[2], share: 0.8 });
+  });
+});
+
+describe('evaluateProbabilityAlerts, pic', () => {
+  it('garde la premiere heure la plus haute quand la part redescend ensuite', () => {
+    const members = [
+      [3, -1, -1, 3],
+      [3, -1, -1, 3],
+      [3, -1, 3, 3],
+      [3, 3, 3, 3],
+      [3, 3, 3, 3],
+    ];
+    const hits = evaluateProbabilityAlerts({
+      rules: [rule({ probability: 40 })],
+      placeId: TEST_PLACE.id,
+      ensemble: ensemble(members),
+      now: NOW,
+    });
+    // Heure 1 : 3 membres sur 5 ; heure 2 : 2 sur 5 (toujours dans la limite de 40 %).
+    expect(hits[0]?.peak).toEqual({ time: TIMELINE[1], share: 0.6 });
+    expect(hits[0]?.hours).toBe(2);
+  });
+});
+
 describe('evaluateProbabilityAlerts', () => {
   it('se declenche quand assez de membres franchissent le seuil la meme heure', () => {
     const hits = evaluateProbabilityAlerts({

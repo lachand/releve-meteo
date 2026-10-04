@@ -160,6 +160,13 @@ describe('isCalibrationRecord et mergeCalibration', () => {
   });
 });
 
+describe('mergeCalibration, sans enregistrement lisible', () => {
+  it('part d une liste vide quand rien n est garde ou que le contenu n est pas une liste', () => {
+    expect(mergeCalibration(undefined, record('2026-10-04', 'high', 1))).toHaveLength(1);
+    expect(mergeCalibration('abime', record('2026-10-04', 'high', 1))).toHaveLength(1);
+  });
+});
+
 describe('calibrationSummary', () => {
   const days = (level: CalibrationRecord['level'], errors: readonly number[]) =>
     errors.map((error, i) => record(`2026-09-${String(10 + i).padStart(2, '0')}`, level, error));

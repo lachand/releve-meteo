@@ -256,39 +256,45 @@ export function compareReadings(input: {
       days.push({ date: reading.date, reading, predictions });
     }
   }
-  const comparisons: ModelComparison[] = models.flatMap((model): ModelComparison[] => {
-    const temperature: number[] = [];
-    const rain: number[] = [];
-    for (const day of days) {
-      const prediction = day.predictions.get(model);
-      if (prediction === undefined) {
-        continue;
-      }
+  // Ecarts prevu moins mesure, par modele : une valeur par champ saisi et par jour compare.
+  const errors = new Map<ModelId, { temperature: number[]; rain: number[] }>();
+  for (const day of days) {
+    for (const [model, prediction] of day.predictions) {
+      const own = errors.get(model) ?? { temperature: [], rain: [] };
       if (day.reading.tempMax !== null && prediction.tempMax !== null) {
-        temperature.push(prediction.tempMax - day.reading.tempMax);
+        own.temperature.push(prediction.tempMax - day.reading.tempMax);
       }
       if (day.reading.tempMin !== null && prediction.tempMin !== null) {
-        temperature.push(prediction.tempMin - day.reading.tempMin);
+        own.temperature.push(prediction.tempMin - day.reading.tempMin);
       }
       if (day.reading.rain !== null && prediction.rain !== null) {
-        rain.push(prediction.rain - day.reading.rain);
+        own.rain.push(prediction.rain - day.reading.rain);
       }
+      errors.set(model, own);
     }
-    const result = { model, temperature: stats(temperature), rain: stats(rain) };
-    return result.temperature === null && result.rain === null ? [] : [result];
-  });
+  }
+  const comparisons: ModelComparison[] = [...errors.entries()].flatMap(
+    ([model, own]): ModelComparison[] => {
+      const result = { model, temperature: stats(own.temperature), rain: stats(own.rain) };
+      return result.temperature === null && result.rain === null ? [] : [result];
+    },
+  );
   const order = (c: ModelComparison) => c.temperature?.mae ?? Number.POSITIVE_INFINITY;
   const ranked = [...comparisons].sort(
     (a, b) => order(a) - order(b) || MODEL_ORDER.indexOf(a.model) - MODEL_ORDER.indexOf(b.model),
   );
-  const rank = new Map(ranked.map((c, index) => [c.model, index]));
+  // Ordre des jours : les modeles classes d'abord, puis ceux sans ecart comparable (dans l'ordre habituel).
+  const ranking = [
+    ...ranked.map((c) => c.model),
+    ...models.filter((model) => !ranked.some((c) => c.model === model)),
+  ];
   return {
     days: days.map((day) => ({
       date: day.date,
       reading: day.reading,
       models: [...day.predictions.entries()]
         .map(([model, prediction]) => ({ model, prediction }))
-        .sort((a, b) => (rank.get(a.model) ?? 99) - (rank.get(b.model) ?? 99)),
+        .sort((a, b) => ranking.indexOf(a.model) - ranking.indexOf(b.model)),
     })),
     models: ranked,
     compared: days.length,
