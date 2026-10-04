@@ -32,6 +32,11 @@ export const DRIFT = {
 
 const HOUR_MS = 60 * 60 * 1000;
 
+/** Confiance de la temperature d'un jour, telle que Relevé l'a dite (jamais « indisponible » : absente). */
+export type DayConfidence = 'high' | 'medium' | 'low';
+
+const DAY_CONFIDENCES: readonly unknown[] = ['high', 'medium', 'low'];
+
 /** Ce qu'un jour annoncait : valeurs absentes gardees absentes. */
 export interface DaySummary {
   readonly date: string; // 'YYYY-MM-DD'
@@ -41,6 +46,8 @@ export interface DaySummary {
   readonly tempMin: number | null;
   /** Cumul de pluie du jour, mm. */
   readonly rain: number | null;
+  /** Confiance dite pour la temperature de ce jour, ou absente (anciens enregistrements, modeles seuls). */
+  readonly confidence?: DayConfidence | null;
 }
 
 /** Une prevision gardee : l'instant ou elle a ete lue, et les jours qu'elle annoncait. */
@@ -49,13 +56,17 @@ export interface OutlookIssue {
   readonly days: readonly DaySummary[];
 }
 
-export function summarizeDays(days: readonly BlendedDay[]): readonly DaySummary[] {
+export function summarizeDays(
+  days: readonly BlendedDay[],
+  confidenceOf: (date: string) => DayConfidence | null = () => null,
+): readonly DaySummary[] {
   return days.map((day) => ({
     date: day.date,
     model: day.model,
     tempMax: day.tempMax.value,
     tempMin: day.tempMin.value,
     rain: day.precipitationSum.value,
+    confidence: confidenceOf(day.date),
   }));
 }
 
@@ -74,7 +85,10 @@ function isDaySummary(value: unknown): value is DaySummary {
     (MODEL_ORDER as readonly unknown[]).includes(day.model) &&
     isNullableNumber(day.tempMax) &&
     isNullableNumber(day.tempMin) &&
-    isNullableNumber(day.rain)
+    isNullableNumber(day.rain) &&
+    (day.confidence === undefined ||
+      day.confidence === null ||
+      DAY_CONFIDENCES.includes(day.confidence))
   );
 }
 

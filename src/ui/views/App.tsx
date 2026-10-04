@@ -19,7 +19,9 @@ import { evaluateSpreadAlerts } from '../../domain/spreadAlerts';
 import type { AirHit } from '../../domain/airAlerts';
 import type { ProbabilityHit } from '../../domain/probabilityAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
+import { temperatureConfidenceOn } from '../../domain/calibration';
 import { blendDaily } from '../../domain/dailyBlend';
+import { summarizeDays } from '../../domain/forecastDrift';
 import { dailyEnsemble, rainOutlook, temperatureSpaghetti } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
@@ -447,11 +449,17 @@ export function App() {
   ]);
 
   // Ce que la prevision a change depuis hier : gardee sur l'appareil, jamais envoyee.
-  const drift = useForecastDrift(
-    vm?.place.id ?? null,
-    vm?.bundle.fetchedAt ?? null,
-    vm?.days ?? null,
+  // Chaque jour garde aussi la confiance dite pour sa temperature : elle sert a l'auditer.
+  const daySummaries = useMemo(
+    () =>
+      vm === null
+        ? null
+        : summarizeDays(vm.days, (date) =>
+            temperatureConfidenceOn(date, vm.bundle.timeline, vm.confidence ?? []),
+          ),
+    [vm],
   );
+  const drift = useForecastDrift(vm?.place.id ?? null, vm?.bundle.fetchedAt ?? null, daySummaries);
 
   const watch = useBackgroundWatch({
     place: bundle?.place ?? null,

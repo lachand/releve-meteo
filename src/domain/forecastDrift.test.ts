@@ -34,8 +34,28 @@ describe('summarizeDays', () => {
       },
     ] as unknown as readonly BlendedDay[];
     expect(summarizeDays(blended)).toEqual([
-      { date: '2026-10-04', model: 'arome', tempMax: 17.5, tempMin: null, rain: null },
+      {
+        date: '2026-10-04',
+        model: 'arome',
+        tempMax: 17.5,
+        tempMin: null,
+        rain: null,
+        confidence: null,
+      },
     ]);
+  });
+
+  it('garde la confiance dite pour chaque jour', () => {
+    const blended = [
+      {
+        date: '2026-10-04',
+        model: 'arome',
+        tempMax: { value: 17 },
+        tempMin: { value: 9 },
+        precipitationSum: { value: 0 },
+      },
+    ] as unknown as readonly BlendedDay[];
+    expect(summarizeDays(blended, () => 'high')[0]?.confidence).toBe('high');
   });
 });
 
@@ -72,6 +92,12 @@ describe('isOutlookIssue', () => {
       false,
     );
     expect(isOutlookIssue(null)).toBe(false);
+    // La confiance est facultative, mais doit etre un niveau connu.
+    expect(isOutlookIssue(issue(1, [day('2026-10-04', { confidence: 'low' })]))).toBe(true);
+    expect(isOutlookIssue(issue(1, [day('2026-10-04', { confidence: null })]))).toBe(true);
+    expect(
+      isOutlookIssue({ issuedAt: 1, days: [{ ...day('2026-10-04'), confidence: 'tres haute' }] }),
+    ).toBe(false);
   });
 });
 

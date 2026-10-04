@@ -1,0 +1,37 @@
+.panel {
+  display: grid;
+  gap: var(--esp-3);
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-size: var(--pas-m);
+}
+
+.muted {
+  margin: 0;
+  color: var(--encre-faible);
+}
+
+.levels {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--pas-s);
+}
+
+.verdict {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-style: italic;
+}
+
+.caption {
+  margin: 0;
+  font-family: var(--font-titre);
+  font-style: italic;
+  color: var(--encre-faible);
+}

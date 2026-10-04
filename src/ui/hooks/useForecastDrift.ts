@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { recordOutlook } from '../../data/cache/outlookStore';
-import { driftOf, pickReference, summarizeDays } from '../../domain/forecastDrift';
-import type { Drift } from '../../domain/forecastDrift';
-import type { BlendedDay } from '../../domain/dailyBlend';
+import { driftOf, pickReference } from '../../domain/forecastDrift';
+import type { DaySummary, Drift } from '../../domain/forecastDrift';
 
 /**
  * Ce que la prevision a change depuis la veille : « idle » sans prevision,
@@ -28,10 +27,9 @@ interface Settled {
 export function useForecastDrift(
   placeId: string | null,
   fetchedAt: number | null,
-  days: readonly BlendedDay[] | null,
+  summaries: readonly DaySummary[] | null,
 ): DriftState {
   const [settled, setSettled] = useState<Settled | null>(null);
-  const summaries = useMemo(() => (days === null ? null : summarizeDays(days)), [days]);
   const key = placeId === null || fetchedAt === null ? null : `${placeId}|${fetchedAt}`;
 
   useEffect(() => {

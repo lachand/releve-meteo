@@ -1,3 +1,4 @@
+import { CalibrationPanel } from '../components/CalibrationPanel';
 import { JournalPanel } from '../components/JournalPanel';
 import { LeadScoresPanel } from '../components/LeadScoresPanel';
 import { RainCheckPanel } from '../components/RainCheckPanel';
@@ -41,6 +42,14 @@ export function ReliabilityView({ vm }: { readonly vm: ForecastViewModel }) {
       </Section>
       <Section eyebrow="Carnet de bord" title="Journal des prévisions">
         <JournalPanel
+          placeId={vm.place.id}
+          refreshKey={
+            vm.station.status === 'ready' ? String(vm.station.fetchedAt) : vm.station.status
+          }
+        />
+      </Section>
+      <Section eyebrow="Confiance vérifiée" title="La confiance annoncée a-t-elle été juste ?">
+        <CalibrationPanel
           placeId={vm.place.id}
           refreshKey={
             vm.station.status === 'ready' ? String(vm.station.fetchedAt) : vm.station.status

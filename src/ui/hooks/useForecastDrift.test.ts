@@ -3,22 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { recordOutlook } from '../../data/cache/outlookStore';
 import { deleteDbForTests } from '../../data/cache/db';
 import { resetMemoryDatasetStore } from '../../data/cache/datasetStore';
-import type { BlendedDay } from '../../domain/dailyBlend';
+import type { DaySummary } from '../../domain/forecastDrift';
 import { useForecastDrift } from './useForecastDrift';
 
 const NOW = new Date('2026-10-03T19:30:00Z');
 const HOUR = 60 * 60 * 1000;
 
-function blended(tempMax: number): readonly BlendedDay[] {
-  return [
-    {
-      date: '2026-10-04',
-      model: 'arome',
-      tempMax: { value: tempMax },
-      tempMin: { value: 8 },
-      precipitationSum: { value: 0 },
-    },
-  ] as unknown as readonly BlendedDay[];
+function summaries(tempMax: number): readonly DaySummary[] {
+  return [{ date: '2026-10-04', model: 'arome', tempMax, tempMin: 8, rain: 0, confidence: 'high' }];
 }
 
 beforeEach(async () => {
@@ -39,7 +31,7 @@ describe('useForecastDrift', () => {
   });
 
   it('collecte au premier jour, puis compare a la prevision gardee la veille', async () => {
-    const days = blended(21);
+    const days = summaries(21);
     const first = renderHook(() => useForecastDrift('lyon', NOW.getTime(), days));
     await waitFor(() => expect(first.result.current.status).toBe('collecting'));
 

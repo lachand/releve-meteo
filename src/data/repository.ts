@@ -42,6 +42,7 @@ import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
 import { getCachedPlaces, normalizeQuery, setCachedPlaces } from './cache/geocodingStore';
 import { getCachedForecast, setCachedForecast } from './cache/forecastStore';
+import { recordCalibration } from './cache/calibrationStore';
 import { recordJournal } from './cache/journalStore';
 import { loadSnapshots, recordSnapshot } from './cache/snapshotStore';
 import { mapNowcast } from './mappers/nowcastMapper';
@@ -400,7 +401,10 @@ export async function getStationReport(
         now: new Date(now),
       });
       if (review !== null) {
-        await recordJournal(place.id, journalEntryFrom(review, match.station.name), new Date(now));
+        const entry = journalEntryFrom(review, match.station.name);
+        await recordJournal(place.id, entry, new Date(now));
+        // La confiance dite la veille face a l'erreur mesuree : la confiance s'audite.
+        await recordCalibration(place.id, entry, new Date(now));
       }
       return {
         ok: true,
