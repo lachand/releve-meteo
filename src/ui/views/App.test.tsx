@@ -360,7 +360,9 @@ describe('App', { timeout: 30000 }, () => {
     const section = (await screen.findByText('La prévision a bougé')).closest('section');
     expect(section).not.toBeNull();
     expect(
-      await within(section as HTMLElement).findByText(/(a|ont) bougé depuis la prévision gardée hier/),
+      await within(section as HTMLElement).findByText(
+        /(a|ont) bougé depuis la prévision gardée hier/,
+      ),
     ).toBeInTheDocument();
     expect(within(section as HTMLElement).getByText(/mardi : maximum/)).toBeInTheDocument();
   });
