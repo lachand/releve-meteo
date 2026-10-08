@@ -258,6 +258,8 @@ PWA installable  oui
 
 Budget de poids : JS initial inférieur à 200 ko gzip, CSS inférieur à 30 ko gzip. Dépassement égale échec du build.
 
+Une page posée ne bouge plus (`tests/e2e/idle.spec.ts`). Une boucle de rendu (un effet qui change l'état dont il dépend, ou une dépendance dont l'identité change à chaque rendu) ne casse aucune assertion fonctionnelle, mais occupe le processeur en permanence : batterie du téléphone, graphiques recréés plusieurs fois par seconde, analyse axe quatre à vingt fois plus lente (c'est ainsi qu'elle a été vue, le 2026-10-08, avec « La prévision a bougé »). Le test demande à chaque onglet, hors la carte dont les tuiles changent légitimement le DOM, de se poser : rester 1,5 s sans la moindre modification du DOM, dans les 20 s. L'échec liste les éléments qui bougent. Au niveau des hooks, les tests de `useDataset` (même objet d'un rendu à l'autre) et de `useForecastDrift` (une seule écriture quand l'appelant reconstruit son tableau à chaque rendu) gardent la cause connue. Quand un test axe devient lent, chercher d'abord ce qui bouge sur une page posée, avant d'allonger son délai.
+
 ### 6.5 Régression du service worker
 
 Test Playwright dédié, indispensable dès le lot 3 :

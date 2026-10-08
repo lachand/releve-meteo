@@ -25,7 +25,8 @@ interface Settling {
   readonly top: string[];
 }
 
-for (const view of ['jour', 'heures', 'fiabilite'] as const) {
+// La carte est exclue : ses tuiles et ses couches changent legitimement le DOM.
+for (const view of ['jour', 'heures', 'jours', 'modeles', 'fiabilite'] as const) {
   test(`au repos, l'onglet ${view} se pose et ne modifie plus le DOM`, async ({ page }) => {
     await stubApis(page);
     await page.goto(LYON_URL.replace('/?', `/?vue=${view}&`));
