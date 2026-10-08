@@ -238,4 +238,16 @@ class WidgetFormatTest {
         assertEquals("font/woff2", WebAssets.mime("fonts/plex.woff2"))
         assertEquals("application/octet-stream", WebAssets.mime("x.bin"))
     }
+
+    @Test
+    fun theWorkerRetriesOnlyWhenNothingCouldBeComputed() {
+        val place = WidgetPlace(id = "a", name = "A")
+        // Aucun lieu calcule, un injoignable : le reseau ou la source manquait, on reessaie.
+        assertTrue(noPlaceComputed(WidgetPayload(1, 0L, emptyList(), listOf("a"))))
+        // Au moins un lieu calcule : le contenu est bon, pas de nouvel essai.
+        assertFalse(noPlaceComputed(WidgetPayload(1, 0L, listOf(place), listOf("b"))))
+        assertFalse(noPlaceComputed(WidgetPayload(1, 0L, listOf(place), emptyList())))
+        // Rien a calculer (aucun lieu veille) : ce n'est pas un echec.
+        assertFalse(noPlaceComputed(WidgetPayload(1, 0L, emptyList(), emptyList())))
+    }
 }

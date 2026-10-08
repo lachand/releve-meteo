@@ -117,6 +117,13 @@ data class StoredState(
     val places: Map<String, StoredPlace> = emptyMap(),
 )
 
+/**
+ * Aucun lieu n'a pu etre calcule alors qu'il y en avait a calculer : le reseau ou la source a manque.
+ * Attendre l'heure suivante laisserait le widget sur un contenu qui vieillit ; un nouvel essai, avec
+ * attente, est utile. Sans lieu du tout (rien a calculer), ce n'est pas un echec.
+ */
+fun noPlaceComputed(payload: WidgetPayload): Boolean = payload.places.isEmpty() && payload.unreachable.isNotEmpty()
+
 /** Version du contenu que ce code sait lire : un contenu d'une autre version est refuse, pas devine. */
 const val SUPPORTED_PAYLOAD_VERSION = 1
 

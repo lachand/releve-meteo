@@ -29,6 +29,9 @@ async function violations(page: Page): Promise<string[]> {
 for (const theme of ['light', 'dark'] as const) {
   for (const view of VIEWS) {
     test(`axe : onglet ${view}, theme ${theme}`, async ({ page }) => {
+      // L'analyse axe de l'onglet Heures (neuf sections, grands tableaux) prend 21 a 23 s sous
+      // Firefox et WebKit en CI, pour un delai de 30 s : on triple le delai, aucune regle n'est desactivee.
+      test.slow();
       await page.emulateMedia({ colorScheme: theme });
       await stubApis(page);
       await page.goto(LYON_URL.replace('/?', `/?vue=${view}&`));
