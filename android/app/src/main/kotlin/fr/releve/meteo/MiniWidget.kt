@@ -16,7 +16,6 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxWidth
@@ -100,39 +99,36 @@ private fun MiniContent(view: WidgetView, widthDp: Float, heightDp: Float) {
                     WeatherIcon(now.icon, now.label, plan.iconDp.dp)
                 }
             }
-            // Sous la temperature : du vide, puis la ligne du bas. Un contenu ancien se recalcule en touchant toute
-            // cette zone, pas seulement la ligne (qui ne fait que 10 dp de haut : une cible trop petite).
-            val below = GlanceModifier.fillMaxWidth().defaultWeight()
-            Column(
-                modifier =
-                    if (stale && now != null) {
-                        below.clickable(actionRunCallback<RefreshAction>()).semantics { contentDescription = REFRESH_DESCRIPTION }
-                    } else {
-                        below
-                    },
-            ) {
-                Spacer(GlanceModifier.defaultWeight())
-                if (plan.showSource) Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    when {
-                        // Pas de prevision pour cette heure : rien n'est devine.
-                        now == null ->
-                            Label("pas de prévision", MiniLayout.MODEL_SP.sp, p.faint, italic = true, maxLines = 2, modifier = GlanceModifier.defaultWeight())
-                        // Contenu ancien : son age, en rouge de marge, a la place du modele.
-                        stale ->
-                            Label(
-                                "↻ ${WidgetFormat.ageShort(shown.generatedAtMs, nowMs)}",
-                                MiniLayout.MODEL_SP.sp,
-                                p.margin,
-                                bold = true,
-                                modifier = GlanceModifier.defaultWeight(),
-                            )
-                        // Le modele, en italique : c'est une prevision, pas une mesure.
-                        else ->
-                            Label(WidgetFormat.modelShort(now.model), MiniLayout.MODEL_SP.sp, p.faint, italic = true, modifier = GlanceModifier.defaultWeight())
-                    }
-                    // Sans ligne du lieu (case minuscule), le point d'alerte passe sur la ligne du modele.
-                    if (alert && !plan.showName) Label("●", MiniLayout.NAME_SP.sp, p.margin)
+            // Un contenu ancien se recalcule en touchant la ligne du bas et le vide au-dessus d'elle (la ligne seule
+            // ne fait que 10 dp de haut : une cible trop petite). Pas de colonne a poids autour : elle ne garantit
+            // pas sa hauteur a la ligne du bas (le vide se calcule sans elle) et la coupait dans les petites cases.
+            val refresh =
+                if (stale && now != null) {
+                    GlanceModifier.clickable(actionRunCallback<RefreshAction>()).semantics { contentDescription = REFRESH_DESCRIPTION }
+                } else {
+                    GlanceModifier
                 }
+            Spacer(GlanceModifier.fillMaxWidth().defaultWeight().then(refresh))
+            if (plan.showSource) Row(modifier = GlanceModifier.fillMaxWidth().then(refresh), verticalAlignment = Alignment.CenterVertically) {
+                when {
+                    // Pas de prevision pour cette heure : rien n'est devine.
+                    now == null ->
+                        Label("pas de prévision", MiniLayout.MODEL_SP.sp, p.faint, italic = true, maxLines = 2, modifier = GlanceModifier.defaultWeight())
+                    // Contenu ancien : son age, en rouge de marge, a la place du modele.
+                    stale ->
+                        Label(
+                            "↻ ${WidgetFormat.ageShort(shown.generatedAtMs, nowMs)}",
+                            MiniLayout.MODEL_SP.sp,
+                            p.margin,
+                            bold = true,
+                            modifier = GlanceModifier.defaultWeight(),
+                        )
+                    // Le modele, en italique : c'est une prevision, pas une mesure.
+                    else ->
+                        Label(WidgetFormat.modelShort(now.model), MiniLayout.MODEL_SP.sp, p.faint, italic = true, modifier = GlanceModifier.defaultWeight())
+                }
+                // Sans ligne du lieu (case minuscule), le point d'alerte passe sur la ligne du modele.
+                if (alert && !plan.showName) Label("●", MiniLayout.NAME_SP.sp, p.margin)
             }
         }
     }

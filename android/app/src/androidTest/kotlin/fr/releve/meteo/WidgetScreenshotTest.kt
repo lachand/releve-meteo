@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
@@ -39,6 +40,11 @@ class WidgetScreenshotTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val target: Context = instrumentation.targetContext
 
+    private companion object {
+        /** Une ligne du bas entiere fait au moins 5 dp (capitales de 8 sp) ; une ligne coupee par le bas, moins de 4. */
+        const val MIN_BOTTOM_LINE_DP = 4
+    }
+
     private class Case(val name: String, val widget: () -> GlanceAppWidget, val widthDp: Int, val heightDp: Int, val fontScale: Float = 1f)
 
     private val classic =
@@ -68,9 +74,17 @@ class WidgetScreenshotTest {
                 for (night in listOf(true, false)) {
                     expected += 1
                     val bitmap = render(case, night)
-                    assertTrue("rendu vide : ${case.name} (${variant.key})", hasContent(bitmap))
                     val suffix = if (variant == WidgetScreenshotFixture.Variant.NORMAL) "" else "-${variant.key}"
+                    // L'image d'abord : un rendu qui echoue reste visible dans l'artefact.
                     save(bitmap, "${case.name}$suffix-${if (night) "sombre" else "clair"}.png")
+                    assertTrue("rendu vide : ${case.name} (${variant.key})", hasContent(bitmap))
+                    if (case.name.startsWith("mini-")) {
+                        // La ligne du bas de la vignette dit d'ou vient la temperature : coupee, elle ne dirait plus rien.
+                        val density = target.resources.displayMetrics.density
+                        val band = lastInkRun(bitmap, ((MiniLayout.BAR_DP + 1) * density).toInt())
+                        val needed = (MIN_BOTTOM_LINE_DP * density).toInt()
+                        assertTrue("ligne du bas coupee : ${case.name}$suffix (${band} px dessines, ${needed} attendus)", band >= needed)
+                    }
                     rendered += 1
                 }
             }
@@ -112,6 +126,35 @@ class WidgetScreenshotTest {
         }
         return bitmap
     }
+
+    /**
+     * Hauteur, en pixels, de la derniere bande de lignes qui portent de l'encre (le bas du texte le plus bas),
+     * hors de la barre de marge. Un texte coupe par le bas laisse une bande de quelques pixels seulement.
+     */
+    private fun lastInkRun(bitmap: Bitmap, leftPx: Int): Int {
+        val background = bitmap.getPixel(bitmap.width - 2, bitmap.height / 2)
+        var run = 0
+        var last = 0
+        for (y in 0 until bitmap.height) {
+            var ink = false
+            for (x in leftPx until bitmap.width - 1) {
+                if (differs(bitmap.getPixel(x, y), background)) {
+                    ink = true
+                    break
+                }
+            }
+            if (ink) {
+                run += 1
+                last = run
+            } else {
+                run = 0
+            }
+        }
+        return last
+    }
+
+    private fun differs(a: Int, b: Int): Boolean =
+        Math.abs(Color.red(a) - Color.red(b)) + Math.abs(Color.green(a) - Color.green(b)) + Math.abs(Color.blue(a) - Color.blue(b)) > 60
 
     /** Plus d'une couleur : un widget qui n'a rien dessine est un echec, pas une image blanche a juger. */
     private fun hasContent(bitmap: Bitmap): Boolean {
