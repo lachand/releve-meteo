@@ -4,12 +4,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.floor
 
 class MiniWidgetTest {
     private val nbsp = " "
 
-    private fun plan(width: Float, height: Float, text: String = "14°", icon: Boolean = true, alert: Boolean = false) =
-        MiniLayout.plan(width, height, text, hasIcon = icon, alert = alert)
+    private fun plan(width: Float, height: Float, text: String = "14°", icon: Boolean = true, alert: Boolean = false, fontScale: Float = 1f) =
+        MiniLayout.plan(width, height, text, hasIcon = icon, alert = alert, fontScale = fontScale)
 
     @Test
     fun aTypicalCellKeepsTheNameTheTemperatureAndTheIcon() {
@@ -30,26 +31,34 @@ class MiniWidgetTest {
 
     @Test
     fun theSmallestCellDropsTheIconBeforeAnythingElse() {
+        // L'icone coute de la largeur a la temperature : sans elle, la temperature grandit et la ligne du lieu reste.
         val p = plan(57f, 57f)
         assertFalse(p.showIcon)
         assertTrue(p.showName)
-        assertEquals(23, p.temperatureSp)
+        assertEquals(19, p.temperatureSp)
         assertEquals(7, p.nameChars)
     }
 
     @Test
-    fun aShortCellShrinksTheTemperatureBeforeDroppingTheIcon() {
+    fun aShortCellKeepsTheIconWhenItIsNotWhatLimitsTheTemperature() {
+        // Ici la hauteur limite : retirer l'icone ne ferait pas grandir la temperature, elle reste.
         val p = plan(72f, 57f)
         assertTrue(p.showIcon)
-        assertEquals(23, p.temperatureSp)
+        assertTrue(p.showName)
+        assertEquals(19, p.temperatureSp)
+        // Plus basse encore : la ligne du lieu part, l'icone reste.
+        val low = plan(72f, 40f)
+        assertTrue(low.showIcon)
+        assertFalse(low.showName)
+        assertEquals(16, low.temperatureSp)
     }
 
     @Test
     fun aNegativeTemperatureIsWiderSoTheIconGoesFirst() {
         val p = plan(72f, 72f, text = "-12°")
         assertFalse(p.showIcon)
-        assertEquals(31, p.temperatureSp)
-        assertEquals(23, plan(57f, 57f, text = "-12°").temperatureSp)
+        assertEquals(30, p.temperatureSp)
+        assertEquals(19, plan(57f, 57f, text = "-12°").temperatureSp)
     }
 
     @Test
@@ -57,21 +66,55 @@ class MiniWidgetTest {
         val p = plan(40f, 40f)
         assertFalse(p.showIcon)
         assertFalse(p.showName)
-        assertEquals(17, p.temperatureSp)
+        assertEquals(16, p.temperatureSp)
     }
 
     @Test
     fun withoutAnIconTheTemperatureTakesTheRoom() {
-        assertEquals(34, plan(72f, 72f, icon = false).temperatureSp)
+        assertEquals(30, plan(72f, 72f, icon = false).temperatureSp)
         assertFalse(plan(72f, 72f, icon = false).showIcon)
         // Une valeur absente est un tiret, jamais un zero.
-        assertEquals(34, plan(72f, 72f, text = "–", icon = false).temperatureSp)
+        assertEquals(30, plan(72f, 72f, text = "–", icon = false).temperatureSp)
     }
 
     @Test
     fun theAlertDotTakesRoomOnThePlaceLine() {
         assertEquals(8, plan(72f, 72f, alert = true).nameChars)
         assertEquals(9, plan(72f, 72f, alert = false).nameChars)
+    }
+
+    @Test
+    fun aLargerSystemFontShrinksTheTemperatureAndDropsWhatNoLongerFits() {
+        // Les textes sont en sp : a 130 %, la place qui suffisait a 100 % ne suffit plus.
+        val larger = plan(72f, 72f, fontScale = 1.3f)
+        assertEquals(19, larger.temperatureSp)
+        assertTrue(larger.showIcon)
+        assertTrue(larger.showName)
+        assertEquals(7, larger.nameChars)
+        // A 200 %, ni la ligne du lieu ni l'icone ne tiennent plus.
+        val largest = plan(72f, 72f, fontScale = 2f)
+        assertEquals(15, largest.temperatureSp)
+        assertFalse(largest.showName)
+        assertFalse(largest.showIcon)
+        // Une grande case garde tout a 130 %.
+        val roomy = plan(90f, 90f, fontScale = 1.3f)
+        assertEquals(29, roomy.temperatureSp)
+        assertTrue(roomy.showIcon)
+        assertTrue(roomy.showName)
+    }
+
+    @Test
+    fun theSystemFontScaleIsClampedBetweenOneAndTwo() {
+        // Une police reduite ne promet pas plus de place qu'on n'en a mesure ; au-dela de 2, Android ne va pas.
+        assertEquals(plan(72f, 72f), plan(72f, 72f, fontScale = 0.85f))
+        assertEquals(plan(72f, 72f, fontScale = 2f), plan(72f, 72f, fontScale = 3f))
+    }
+
+    @Test
+    fun theFloorIsJudgedOnScreenNotInSp() {
+        // A l'echelle 2, 8 sp font 16 dp a l'ecran : la meme hauteur que le plancher de 16 sp a l'echelle 1.
+        assertEquals(10, plan(57f, 57f, fontScale = 2f).temperatureSp)
+        assertEquals(8, plan(40f, 40f, text = "-12°", alert = true, fontScale = 2f).temperatureSp)
     }
 
     @Test
@@ -83,16 +126,31 @@ class MiniWidgetTest {
                 for (text in listOf("14°", "-12°", "8°", "–")) {
                     for (icon in listOf(true, false)) {
                         for (alert in listOf(true, false)) {
-                            val p = plan(width.toFloat(), height.toFloat(), text, icon, alert)
-                            val where = "${width}x$height $text icone=$icon alerte=$alert"
-                            assertTrue(where, p.showSource)
-                            assertTrue(where, p.temperatureSp in 16..34)
-                            assertTrue(where, p.nameChars >= 3)
-                            // Ordre d'abandon : la ligne du lieu ne part qu'apres l'icone.
-                            if (!p.showName) assertFalse(where, p.showIcon)
+                            for (fontScale in listOf(1f, 1.3f, 2f)) {
+                                val p = plan(width.toFloat(), height.toFloat(), text, icon, alert, fontScale)
+                                val where = "${width}x$height $text icone=$icon alerte=$alert police=$fontScale"
+                                assertTrue(where, p.showSource)
+                                assertTrue(where, p.temperatureSp in floor(16f / fontScale).toInt()..34)
+                                assertTrue(where, p.nameChars >= 3)
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @Test
+    fun theTextsAlwaysFitTheHeightOfTheCell() {
+        // Le defaut vu sur les captures : une ligne du bas coupee. Les trois lignes, a 1,33 fois leur corps
+        // (hauteur mesuree avec Roboto), tiennent dans toute case qui n'est pas minuscule.
+        for (width in 57..130 step 5) {
+            for (height in 57..130 step 5) {
+                val p = plan(width.toFloat(), height.toFloat())
+                val lines = MiniLayout.MODEL_SP + p.temperatureSp + if (p.showName) MiniLayout.NAME_SP else 0
+                val needed = lines * 1.33f
+                val room = height - 2f * MiniLayout.PADDING_V_DP
+                assertTrue("${width}x$height : $needed dp pour $room dp", needed <= room)
             }
         }
     }

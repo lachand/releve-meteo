@@ -39,7 +39,7 @@ class WidgetScreenshotTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val target: Context = instrumentation.targetContext
 
-    private class Case(val name: String, val widget: () -> GlanceAppWidget, val widthDp: Int, val heightDp: Int)
+    private class Case(val name: String, val widget: () -> GlanceAppWidget, val widthDp: Int, val heightDp: Int, val fontScale: Float = 1f)
 
     private val classic =
         listOf(110 to 110, 110 to 230, 110 to 380, 160 to 230, 160 to 300, 160 to 380).map { (w, h) -> Case("petit-${w}x$h", { SmallWidget() }, w, h) } +
@@ -47,7 +47,13 @@ class WidgetScreenshotTest {
 
     // La vignette : une case fait en pratique 57 a 90 dp de cote selon le lanceur.
     private val mini =
-        listOf(57 to 57, 72 to 72, 72 to 90, 90 to 90).map { (w, h) -> Case("mini-${w}x$h", { MiniWidget() }, w, h) }
+        listOf(57 to 57, 72 to 57, 72 to 72, 72 to 90, 90 to 90).map { (w, h) -> Case("mini-${w}x$h", { MiniWidget() }, w, h) }
+
+    // La police du telephone agrandie (130 % et 200 %) : la vignette doit encore tout dire, sur moins de place.
+    private val miniLargeFont =
+        listOf(Triple(72, 72, 1.3f), Triple(90, 90, 1.3f), Triple(57, 57, 2f)).map { (w, h, scale) ->
+            Case("mini-${w}x$h-police${(scale * 100).toInt()}", { MiniWidget() }, w, h, scale)
+        }
 
     @Test
     fun theWidgetsComposeAtSeveralSizesInBothThemes() {
@@ -57,7 +63,7 @@ class WidgetScreenshotTest {
             assertTrue("contenu illisible", WidgetStore.save(target, WidgetScreenshotFixture.json(variant)))
             // Les deux grands widgets avec le contenu normal ; la vignette avec les trois (alerte, nom long
             // et temperature negative ; contenu ancien), car c'est elle qui manque de place.
-            val cases = if (variant == WidgetScreenshotFixture.Variant.NORMAL) classic + mini else mini
+            val cases = if (variant == WidgetScreenshotFixture.Variant.NORMAL) classic + mini + miniLargeFont else mini
             for (case in cases) {
                 for (night in listOf(true, false)) {
                     expected += 1
@@ -72,15 +78,16 @@ class WidgetScreenshotTest {
         assertTrue(rendered == expected)
     }
 
-    private fun contextFor(night: Boolean): Context {
+    private fun contextFor(night: Boolean, fontScale: Float): Context {
         val config = Configuration(target.resources.configuration)
+        config.fontScale = fontScale
         config.uiMode = (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
             if (night) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
         return target.createConfigurationContext(config)
     }
 
     private fun render(case: Case, night: Boolean): Bitmap {
-        val context = contextFor(night)
+        val context = contextFor(night, case.fontScale)
         // SizeMode.Exact lit la taille dans les options du widget : minimum et maximum identiques.
         val options =
             Bundle().apply {
