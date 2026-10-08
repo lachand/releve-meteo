@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { recordOutlook } from '../../data/cache/outlookStore';
 import { driftOf, pickReference } from '../../domain/forecastDrift';
 import type { DaySummary, Drift } from '../../domain/forecastDrift';
@@ -31,14 +31,20 @@ export function useForecastDrift(
 ): DriftState {
   const [settled, setSettled] = useState<Settled | null>(null);
   const key = placeId === null || fetchedAt === null ? null : `${placeId}|${fetchedAt}`;
+  // Le contenu des resumes, pas l'identite du tableau : l'appelant le reconstruit a chaque rendu, et
+  // chaque ecriture ci-dessous change l'etat, donc relance un rendu. Dependre de l'identite bouclait
+  // sans fin (une dizaine de rendus par seconde, une ecriture a chaque fois, tous les graphiques recrees).
+  const content = summaries === null ? null : JSON.stringify(summaries);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- le tableau ne se renouvelle qu'avec son contenu.
+  const stable = useMemo(() => summaries, [content]);
 
   useEffect(() => {
-    if (key === null || placeId === null || fetchedAt === null || summaries === null) {
+    if (key === null || placeId === null || fetchedAt === null || stable === null) {
       return;
     }
     let cancelled = false;
     const now = new Date();
-    void recordOutlook(placeId, { issuedAt: fetchedAt, days: summaries }, now).then((issues) => {
+    void recordOutlook(placeId, { issuedAt: fetchedAt, days: stable }, now).then((issues) => {
       if (cancelled) {
         return;
       }
@@ -48,15 +54,15 @@ export function useForecastDrift(
         state:
           reference === null
             ? { status: 'collecting' }
-            : { status: 'ready', drift: driftOf({ current: summaries, reference, now }), now },
+            : { status: 'ready', drift: driftOf({ current: stable, reference, now }), now },
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [key, placeId, fetchedAt, summaries]);
+  }, [key, placeId, fetchedAt, stable]);
 
-  if (key === null || summaries === null) {
+  if (key === null || stable === null) {
     return { status: 'idle' };
   }
   return settled?.key === key ? settled.state : { status: 'loading' };

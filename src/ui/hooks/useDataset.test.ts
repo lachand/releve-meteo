@@ -19,6 +19,26 @@ function deferred(): {
 }
 
 describe('useDataset', () => {
+  it('rend le meme objet d un rendu a l autre tant que rien n a change', async () => {
+    // Regression : un objet neuf a chaque rendu faisait recalculer tout ce qui en depend
+    // (selection des modeles, vue du jour) et recreer les graphiques a chaque rendu de l'application.
+    const first = deferred();
+    const loader = () => first.promise;
+    const { result, rerender } = renderHook(() => useDataset('lyon', loader));
+    const loading = result.current;
+    rerender();
+    expect(result.current).toBe(loading);
+
+    await act(async () => {
+      first.resolve({ ok: true, value: { value: 'donnee', fetchedAt: 123, stale: false } });
+      await first.promise;
+    });
+    const ready = result.current;
+    expect(ready.status).toBe('ready');
+    rerender();
+    expect(result.current).toBe(ready);
+  });
+
   it("reste 'idle' et n appelle pas le chargeur quand la cle est nulle", () => {
     let calls = 0;
     const loader = () => {

@@ -680,10 +680,18 @@ describe('App', { timeout: 30000 }, () => {
       { timeout: 8000 },
     );
     const section = heading.closest('section') as HTMLElement;
+    // Le titre est la, le panneau non : il arrive avec son module (Chart.js compris), charge a la
+    // demande. Meme delai que le titre : la seconde par defaut echouait une fois sur trois, meme seul.
     expect(
-      await within(section).findByText(/Aujourd’hui : environ .* kWh estimés/),
+      await within(section).findByText(
+        /Aujourd’hui : environ .* kWh estimés/,
+        {},
+        { timeout: 8000 },
+      ),
     ).toBeInTheDocument();
-    expect(await within(section).findByText(/Estimation, pas une mesure/)).toBeInTheDocument();
+    expect(
+      await within(section).findByText(/Estimation, pas une mesure/, {}, { timeout: 8000 }),
+    ).toBeInTheDocument();
   }, 20000);
 
   it('imprime le releve en feuille de registre, avec sa date et ce que les valeurs sont', async () => {

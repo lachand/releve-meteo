@@ -29,8 +29,11 @@ async function violations(page: Page): Promise<string[]> {
 for (const theme of ['light', 'dark'] as const) {
   for (const view of VIEWS) {
     test(`axe : onglet ${view}, theme ${theme}`, async ({ page }) => {
-      // L'analyse axe de l'onglet Heures (neuf sections, grands tableaux) prend 21 a 23 s sous
-      // Firefox et WebKit en CI, pour un delai de 30 s : on triple le delai, aucune regle n'est desactivee.
+      // L'analyse axe de l'onglet Heures (neuf sections, grands tableaux, 5 000 noeuds) est la plus
+      // longue de l'application : 5 s sous Chromium, plus sous WebKit et Firefox en CI. On triple le
+      // delai par prudence ; aucune regle n'est desactivee. Elle depassait meme 90 s sous WebKit tant
+      // qu'une boucle de rendu occupait la page au repos (voir idle.spec.ts) : si elle redevient lente,
+      // chercher d'abord ce qui bouge sur une page posee, pas rallonger le delai.
       test.slow();
       await page.emulateMedia({ colorScheme: theme });
       await stubApis(page);
