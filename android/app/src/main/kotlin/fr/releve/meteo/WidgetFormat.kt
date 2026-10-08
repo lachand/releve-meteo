@@ -143,6 +143,44 @@ object WidgetFormat {
         return lines
     }
 
+    /** « 5 h », « 40 min », « 2 j » : l'age d'un contenu ancien, en peu de place. */
+    fun ageShort(generatedAtMs: Long, nowMs: Long): String {
+        val minutes = ((nowMs - generatedAtMs) / 60_000).coerceAtLeast(0)
+        return when {
+            minutes < 60 -> "$minutes${NBSP}min"
+            minutes < 48 * 60 -> "${minutes / 60}${NBSP}h"
+            else -> "${minutes / (24 * 60)}${NBSP}j"
+        }
+    }
+
+    /** Le nom du lieu en capitales, coupe a `maxChars` lettres avec « … » quand il est plus long. */
+    fun fitName(name: String, maxChars: Int): String {
+        val upper = name.uppercase(Locale.FRANCE)
+        if (upper.length <= maxChars) return upper
+        return upper.take((maxChars - 1).coerceAtLeast(1)).trimEnd(' ', '-', '\'') + "…"
+    }
+
+    /** Le modele sur une vignette : « AROME FR » plutot que « AROME France », qui ne tient pas. */
+    fun modelShort(id: String): String = if (id == "arome_france") "AROME FR" else modelLabel(id)
+
+    /**
+     * Ce que la vignette dit a l'oreille (lecteur d'ecran) : tout ce qu'elle ne peut pas ecrire, la
+     * confiance, l'alerte et l'age compris. « Virieu : AROME prévoit 14 °C, couvert, confiance élevée. »
+     */
+    fun miniDescription(place: WidgetPlace, nowMs: Long, generatedAtMs: Long): String {
+        val now = place.now ?: return "${place.name} : pas de prévision pour cette heure."
+        val parts = mutableListOf(headline(now))
+        now.label?.let { parts += it.replaceFirstChar { c -> c.lowercase() } }
+        confidence(now)?.let { parts += it }
+        val alert = place.notes.firstOrNull()?.takeIf { it.level == "alert" }
+        val tail =
+            listOfNotNull(
+                alert?.let { "Alerte : ${it.short}." },
+                if (isStale(generatedAtMs, nowMs)) "Contenu ancien : ${updatedAt(generatedAtMs)}, ${age(generatedAtMs, nowMs)}." else null,
+            )
+        return (listOf("${place.name} : ${parts.joinToString(", ")}.") + tail).joinToString(" ")
+    }
+
     /** « 08:00 », heure de Paris : l'heure du dernier calcul. */
     fun clock(generatedAtMs: Long): String = CLOCK.format(Instant.ofEpochMilli(generatedAtMs))
 

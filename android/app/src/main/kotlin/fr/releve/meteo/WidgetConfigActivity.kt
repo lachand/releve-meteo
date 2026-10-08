@@ -11,7 +11,6 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -106,8 +105,7 @@ class WidgetConfigActivity : Activity() {
                     WidgetConfig.save(this@WidgetConfigActivity, appWidgetId, WidgetChoice(placeId, theme))
                     setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
                     scope.launch {
-                        SmallWidget().updateAll(applicationContext)
-                        MediumWidget().updateAll(applicationContext)
+                        WidgetStore.refreshWidgets(applicationContext)
                         finish()
                     }
                 }

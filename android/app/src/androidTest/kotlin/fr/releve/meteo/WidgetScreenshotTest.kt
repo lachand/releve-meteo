@@ -41,23 +41,35 @@ class WidgetScreenshotTest {
 
     private class Case(val name: String, val widget: () -> GlanceAppWidget, val widthDp: Int, val heightDp: Int)
 
-    private val cases =
+    private val classic =
         listOf(110 to 110, 110 to 230, 110 to 380, 160 to 230, 160 to 300, 160 to 380).map { (w, h) -> Case("petit-${w}x$h", { SmallWidget() }, w, h) } +
             listOf(300 to 110, 300 to 215, 300 to 285, 300 to 340, 300 to 400).map { (w, h) -> Case("grand-${w}x$h", { MediumWidget() }, w, h) }
 
+    // La vignette : une case fait en pratique 57 a 90 dp de cote selon le lanceur.
+    private val mini =
+        listOf(57 to 57, 72 to 72, 72 to 90, 90 to 90).map { (w, h) -> Case("mini-${w}x$h", { MiniWidget() }, w, h) }
+
     @Test
     fun theWidgetsComposeAtSeveralSizesInBothThemes() {
-        assertTrue("contenu illisible", WidgetStore.save(target, WidgetScreenshotFixture.json()))
         var rendered = 0
-        for (case in cases) {
-            for (night in listOf(true, false)) {
-                val bitmap = render(case, night)
-                assertTrue("rendu vide : ${case.name}", hasContent(bitmap))
-                save(bitmap, "${case.name}-${if (night) "sombre" else "clair"}.png")
-                rendered += 1
+        var expected = 0
+        for (variant in WidgetScreenshotFixture.Variant.values()) {
+            assertTrue("contenu illisible", WidgetStore.save(target, WidgetScreenshotFixture.json(variant)))
+            // Les deux grands widgets avec le contenu normal ; la vignette avec les trois (alerte, nom long
+            // et temperature negative ; contenu ancien), car c'est elle qui manque de place.
+            val cases = if (variant == WidgetScreenshotFixture.Variant.NORMAL) classic + mini else mini
+            for (case in cases) {
+                for (night in listOf(true, false)) {
+                    expected += 1
+                    val bitmap = render(case, night)
+                    assertTrue("rendu vide : ${case.name} (${variant.key})", hasContent(bitmap))
+                    val suffix = if (variant == WidgetScreenshotFixture.Variant.NORMAL) "" else "-${variant.key}"
+                    save(bitmap, "${case.name}$suffix-${if (night) "sombre" else "clair"}.png")
+                    rendered += 1
+                }
             }
         }
-        assertTrue(rendered == cases.size * 2)
+        assertTrue(rendered == expected)
     }
 
     private fun contextFor(night: Boolean): Context {
@@ -122,19 +134,27 @@ class WidgetScreenshotTest {
 object WidgetScreenshotFixture {
     private val PARIS = ZoneId.of("Europe/Paris")
 
-    fun json(): String {
+    /** Normal ; alerte (nom tres long, temperature negative, vigilance en cours) ; contenu ancien de cinq heures. */
+    enum class Variant(val key: String) {
+        NORMAL("normal"),
+        ALERT("alerte"),
+        STALE("ancien"),
+    }
+
+    fun json(variant: Variant = Variant.NORMAL): String {
         val today = LocalDate.now(PARIS)
+        val alert = variant == Variant.ALERT
         val now =
             WidgetNow(
                 time = "${today}T20:00",
                 model = "arome",
-                temperature = 14.2,
+                temperature = if (alert) -12.4 else 14.2,
                 others = 6,
                 meanGap = 0.4,
                 maxGap = 1.1,
                 confidence = "high",
-                icon = "cloudy",
-                label = "Couvert",
+                icon = if (alert) "snow" else "cloudy",
+                label = if (alert) "Neige" else "Couvert",
                 windSpeed = 14.0,
                 windGust = 26.0,
                 humidity = 82.0,
@@ -161,14 +181,15 @@ object WidgetScreenshotFixture {
                 WidgetForecastDay(today.plusDays(3).toString(), "icon_eu", 13.0, 17.0, 1.1, "drizzle", "Bruine"),
             )
         val notes =
-            listOf(
-                WidgetNote("rain", "info", "Pluie dès 23h, 1,2 mm sur 24 h, selon ICON-EU.", "Pluie à 23h"),
-                WidgetNote("reliability", "info", "AROME : 0,6 °C d’erreur moyenne ici, d’après les mesures de la station (300 heures).", "AROME : 0,6 °C d’erreur ici"),
-            )
+            (if (alert) listOf(WidgetNote("vigilance", "alert", "Vigilance orange neige-verglas (Isère) : de 18h à 6h. Source Météo-France.", "Vigilance orange neige-verglas")) else emptyList()) +
+                listOf(
+                    WidgetNote("rain", "info", "Pluie dès 23h, 1,2 mm sur 24 h, selon ICON-EU.", "Pluie à 23h"),
+                    WidgetNote("reliability", "info", "AROME : 0,6 °C d’erreur moyenne ici, d’après les mesures de la station (300 heures).", "AROME : 0,6 °C d’erreur ici"),
+                )
         val place =
             WidgetPlace(
                 id = "45.4900:5.4700",
-                name = "Virieu",
+                name = if (alert) "Saint-Étienne-de-Saint-Geoirs" else "Virieu",
                 link = "?lat=45.49&lon=5.47&nom=Virieu&alt=468",
                 now = now,
                 hours = hours,
@@ -178,6 +199,7 @@ object WidgetScreenshotFixture {
                 sun = WidgetSun("07:42", "19:21"),
                 track = track,
             )
-        return WidgetJson.encodeToString(WidgetPayload.serializer(), WidgetPayload(1, System.currentTimeMillis(), listOf(place)))
+        val generatedAt = System.currentTimeMillis() - if (variant == Variant.STALE) 5L * 60 * 60 * 1000 else 0L
+        return WidgetJson.encodeToString(WidgetPayload.serializer(), WidgetPayload(1, generatedAt, listOf(place)))
     }
 }

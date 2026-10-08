@@ -41,6 +41,8 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.text.FontStyle
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -130,22 +132,30 @@ val COLUMN_GAP: Dp = 8.dp
  * ouvre l'application sur le lieu du widget (`link`), ou sans lieu quand il n'y en a pas.
  */
 @Composable
-fun WidgetFrame(link: String, p: Palette, content: @Composable ColumnScope.() -> Unit) {
+fun WidgetFrame(
+    link: String,
+    p: Palette,
+    barWidth: Dp = 4.dp,
+    horizontal: Dp = 10.dp,
+    vertical: Dp = 6.dp,
+    /** Ce que le lecteur d'ecran dit de la feuille entiere ; sans valeur, il lit les textes un a un. */
+    description: String? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val context = LocalContext.current
     val intent =
         Intent(context, MainActivity::class.java).apply {
             if (link.isNotEmpty()) data = Uri.parse(WebAssets.APP_URL + link)
         }
-    Row(
-        modifier =
-            GlanceModifier
-                .fillMaxSize()
-                .background(p.paper)
-                .cornerRadius(16.dp)
-                .clickable(actionStartActivity(intent)),
-    ) {
-        Box(modifier = GlanceModifier.width(4.dp).fillMaxHeight().background(p.margin)) {}
-        Column(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp)) {
+    val sheet =
+        GlanceModifier
+            .fillMaxSize()
+            .background(p.paper)
+            .cornerRadius(16.dp)
+            .clickable(actionStartActivity(intent))
+    Row(modifier = if (description == null) sheet else sheet.semantics { contentDescription = description }) {
+        Box(modifier = GlanceModifier.width(barWidth).fillMaxHeight().background(p.margin)) {}
+        Column(modifier = GlanceModifier.fillMaxSize().padding(horizontal = horizontal, vertical = vertical)) {
             content()
         }
     }
