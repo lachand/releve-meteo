@@ -53,6 +53,21 @@ object MiniLayout {
     private const val LINE = 1.4f
     private const val NAME_EM = 0.66f
 
+    /** Largeur moyenne d'une capitale italique du nom du modele, en em (« AROME » mesure 0,68 em par lettre sur les captures). */
+    private const val MODEL_EM = 0.68f
+
+    /**
+     * Le nom du modele qui tient sur la ligne du bas : « AROME FR » si la place le permet, sinon « AROME » (le
+     * premier mot). Un nom sans espace est rendu tel quel : mieux vaut le voir coupe par « … » que change de nom.
+     * `dotOnLine` : le point d'alerte partage la ligne (la ligne du lieu est abandonnee).
+     */
+    fun modelText(modelId: String, widthDp: Float, dotOnLine: Boolean, fontScale: Float = 1f): String {
+        val full = WidgetFormat.modelShort(modelId)
+        val scale = fontScale.coerceIn(1f, MAX_FONT_SCALE)
+        val available = widthDp - BAR_DP - 2 * PADDING_H_DP - if (dotOnLine) DOT_DP * scale else 0f
+        return if (full.length * MODEL_EM * MODEL_SP * scale <= available) full else full.substringBefore(' ')
+    }
+
     /** Largeur d'une temperature (« 14° », « -12° », « – »), en em : le chiffre 0,56, le degre 0,40, le signe moins 0,36. */
     fun emWidth(text: String): Float {
         var total = 0f

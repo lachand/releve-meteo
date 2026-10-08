@@ -182,6 +182,19 @@ class MiniWidgetTest {
     }
 
     @Test
+    fun theModelNameLosesItsSuffixBeforeBeingCut() {
+        // « AROME FR » tient dans la plus petite case a l'echelle 1 ; a 130 %, il devient « AROME ».
+        assertEquals("AROME FR", MiniLayout.modelText("arome_france", 57f, dotOnLine = false))
+        assertEquals("AROME", MiniLayout.modelText("arome_france", 57f, dotOnLine = false, fontScale = 1.3f))
+        assertEquals("AROME FR", MiniLayout.modelText("arome_france", 72f, dotOnLine = false, fontScale = 1.3f))
+        // Le point d'alerte partage la ligne quand la ligne du lieu est abandonnee.
+        assertEquals("AROME", MiniLayout.modelText("arome_france", 57f, dotOnLine = true))
+        // Un nom sans espace reste entier : coupe par « … » plutot que change.
+        assertEquals("ICON-D2", MiniLayout.modelText("icon_d2", 40f, dotOnLine = true, fontScale = 2f))
+        assertEquals("AROME", MiniLayout.modelText("arome", 40f, dotOnLine = false))
+    }
+
+    @Test
     fun theModelIsShortenedOnlyWhenItDoesNotFit() {
         assertEquals("AROME FR", WidgetFormat.modelShort("arome_france"))
         assertEquals("AROME", WidgetFormat.modelShort("arome"))

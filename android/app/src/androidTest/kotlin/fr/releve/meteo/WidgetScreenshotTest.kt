@@ -197,7 +197,8 @@ object WidgetScreenshotFixture {
         val now =
             WidgetNow(
                 time = "${today}T20:00",
-                model = "arome",
+                // La variante d'alerte porte AROME France (« AROME FR »), plus large que AROME.
+                model = if (alert) "arome_france" else "arome",
                 temperature = if (alert) -12.4 else 14.2,
                 others = 6,
                 meanGap = 0.4,

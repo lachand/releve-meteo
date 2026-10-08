@@ -69,6 +69,7 @@ private fun MiniContent(view: WidgetView, widthDp: Float, heightDp: Float) {
             val stale = WidgetFormat.isStale(shown.generatedAtMs, nowMs)
             val alert = place.notes.firstOrNull()?.level == "alert"
             val temperature = WidgetFormat.degrees(now?.temperature)
+            val fontScale = LocalContext.current.resources.configuration.fontScale
             val plan =
                 MiniLayout.plan(
                     widthDp,
@@ -76,7 +77,7 @@ private fun MiniContent(view: WidgetView, widthDp: Float, heightDp: Float) {
                     temperature,
                     hasIcon = WidgetIcons.drawable(now?.icon) != null,
                     alert = alert,
-                    fontScale = LocalContext.current.resources.configuration.fontScale,
+                    fontScale = fontScale,
                 )
 
             if (plan.showName) {
@@ -125,7 +126,13 @@ private fun MiniContent(view: WidgetView, widthDp: Float, heightDp: Float) {
                         )
                     // Le modele, en italique : c'est une prevision, pas une mesure.
                     else ->
-                        Label(WidgetFormat.modelShort(now.model), MiniLayout.MODEL_SP.sp, p.faint, italic = true, modifier = GlanceModifier.defaultWeight())
+                        Label(
+                            MiniLayout.modelText(now.model, widthDp, dotOnLine = alert && !plan.showName, fontScale = fontScale),
+                            MiniLayout.MODEL_SP.sp,
+                            p.faint,
+                            italic = true,
+                            modifier = GlanceModifier.defaultWeight(),
+                        )
                 }
                 // Sans ligne du lieu (case minuscule), le point d'alerte passe sur la ligne du modele.
                 if (alert && !plan.showName) Label("●", MiniLayout.NAME_SP.sp, p.margin)
