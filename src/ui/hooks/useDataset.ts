@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { HttpFailure, HttpResult } from '../../data/clients/http';
 import type { DatasetResult } from '../../data/repository';
 
@@ -12,6 +12,10 @@ export type DatasetState<T> =
       readonly stale: boolean;
     }
   | { readonly status: 'error'; readonly failure: HttpFailure };
+
+// Etats sans valeur : un seul objet pour tous les rendus.
+const IDLE = { status: 'idle' } as const;
+const LOADING = { status: 'loading' } as const;
 
 interface Settled<T> {
   readonly key: string;
@@ -46,19 +50,23 @@ export function useDataset<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps -- le chargeur est recree a chaque rendu ; seule la cle identifie le jeu a charger.
   }, [key]);
 
-  if (key === null) {
-    return { status: 'idle' };
-  }
-  if (settled === null || settled.key !== key) {
-    return { status: 'loading' };
-  }
-  const { outcome } = settled;
-  return outcome.ok
-    ? {
-        status: 'ready',
-        value: outcome.value.value,
-        fetchedAt: outcome.value.fetchedAt,
-        stale: outcome.value.stale,
-      }
-    : { status: 'error', failure: outcome.failure };
+  // Memorise : un objet neuf a chaque rendu ferait recalculer tout ce qui en depend (selection des
+  // modeles, vue du jour) et recreer les graphiques a chaque rendu de l'application.
+  return useMemo((): DatasetState<T> => {
+    if (key === null) {
+      return IDLE;
+    }
+    if (settled === null || settled.key !== key) {
+      return LOADING;
+    }
+    const { outcome } = settled;
+    return outcome.ok
+      ? {
+          status: 'ready',
+          value: outcome.value.value,
+          fetchedAt: outcome.value.fetchedAt,
+          stale: outcome.value.stale,
+        }
+      : { status: 'error', failure: outcome.failure };
+  }, [key, settled]);
 }

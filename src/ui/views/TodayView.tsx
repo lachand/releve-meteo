@@ -85,6 +85,7 @@ export function TodayView({ vm }: { readonly vm: ForecastViewModel }) {
       <AlertBanner
         hits={vm.alertHits}
         spreadHits={vm.spreadHits}
+        probabilityHits={vm.probabilityHits}
         airHits={vm.airHits}
         windUnit={vm.windUnit}
       />

@@ -24,7 +24,24 @@ data class WidgetNow(
     val icon: String? = null,
     /** « Partiellement nuageux » : le nom du temps, a dire avec l'icone. */
     val label: String? = null,
+    /** Vent moyen (km/h), rafales (km/h) et humidite (%) du moment ; null quand le modele retenu n'en donne pas. */
+    val windSpeed: Double? = null,
+    val windGust: Double? = null,
+    val humidity: Double? = null,
 )
+
+/** Une heure de la courbe : la valeur du modele retenu cette heure-la, et son nom. */
+@Serializable
+data class WidgetTrackPoint(
+    val time: String,
+    val model: String,
+    val temperature: Double? = null,
+    val precipitation: Double? = null,
+)
+
+/** Lever et coucher du soleil d'aujourd'hui, « 07:42 », heure de Paris. */
+@Serializable
+data class WidgetSun(val sunrise: String? = null, val sunset: String? = null)
 
 @Serializable
 data class WidgetHour(
@@ -54,6 +71,19 @@ data class WidgetForecastDay(
     val label: String? = null,
 )
 
+/** Une note de la ligne du pied, choisie et redigee par la page : la plus importante d'abord. */
+@Serializable
+data class WidgetNote(
+    /** "alert", "vigilance", "phenomenon", "rain", "reliability" ou "spread". */
+    val kind: String,
+    /** "alert" : mise en avant ; "info" sinon. */
+    val level: String,
+    /** La phrase complete, source dite. */
+    val text: String,
+    /** Une version courte pour une ligne etroite. */
+    val short: String,
+)
+
 @Serializable
 data class WidgetPlace(
     val id: String,
@@ -64,6 +94,9 @@ data class WidgetPlace(
     val hours: List<WidgetHour> = emptyList(),
     val day: WidgetDay? = null,
     val days: List<WidgetForecastDay> = emptyList(),
+    val notes: List<WidgetNote> = emptyList(),
+    val sun: WidgetSun? = null,
+    val track: List<WidgetTrackPoint> = emptyList(),
 )
 
 @Serializable
@@ -83,6 +116,13 @@ data class StoredState(
     val order: List<String> = emptyList(),
     val places: Map<String, StoredPlace> = emptyMap(),
 )
+
+/**
+ * Aucun lieu n'a pu etre calcule alors qu'il y en avait a calculer : le reseau ou la source a manque.
+ * Attendre l'heure suivante laisserait le widget sur un contenu qui vieillit ; un nouvel essai, avec
+ * attente, est utile. Sans lieu du tout (rien a calculer), ce n'est pas un echec.
+ */
+fun noPlaceComputed(payload: WidgetPayload): Boolean = payload.places.isEmpty() && payload.unreachable.isNotEmpty()
 
 /** Version du contenu que ce code sait lire : un contenu d'une autre version est refuse, pas devine. */
 const val SUPPORTED_PAYLOAD_VERSION = 1

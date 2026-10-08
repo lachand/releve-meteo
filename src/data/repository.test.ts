@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../tests/msw';
 import { deleteDbForTests } from './cache/db';
 import { resetMemoryDatasetStore, setDataset } from './cache/datasetStore';
+import { loadCalibration } from './cache/calibrationStore';
 import { loadJournal } from './cache/journalStore';
+import { recordOutlook } from './cache/outlookStore';
 import { readDiagnostics, resetDiagnosticsForTests } from './cache/diagnostics';
 import { resetMemoryForecastStore, setCachedForecast } from './cache/forecastStore';
 import { resetMemoryGeocodingStore } from './cache/geocodingStore';
@@ -595,8 +597,31 @@ describe('getStationReport', () => {
       }),
     );
     expect(await loadJournal(place.id)).toEqual([]);
+    // Hier a midi (10 h UTC), Relevé avait annonce 21 / 14 °C avec confiance elevee, 24 h avant.
+    const issuedAt = new Date('2026-09-27T10:00:00Z').getTime() - 24 * 60 * 60 * 1000;
+    await recordOutlook(
+      place.id,
+      {
+        issuedAt,
+        days: [
+          {
+            date: '2026-09-27',
+            model: 'arome',
+            tempMax: 21,
+            tempMin: 14,
+            rain: 0,
+            confidence: 'high',
+          },
+        ],
+      },
+      new Date(issuedAt),
+    );
     const result = await getStationReport(place, ['arome']);
     expect(result.ok).toBe(true);
+    // La confiance dite la veille est rapprochee de l'erreur mesuree : |21 - 24,5| et |14 - 14|.
+    expect(await loadCalibration(place.id)).toEqual([
+      { date: '2026-09-27', level: 'high', error: 1.75, model: 'arome', issuedAt },
+    ]);
     const journal = await loadJournal(place.id);
     expect(journal).toHaveLength(1);
     expect(journal[0]).toMatchObject({

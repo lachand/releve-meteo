@@ -127,11 +127,14 @@ interface AlertRuleBase {
  * Regle sur une grandeur de prevision. 'value' (defaut, regles enregistrees
  * avant l'existence du champ) : la valeur du modele retenu franchit le seuil.
  * 'spread' : les modeles s'ecartent de plus que le seuil, dans l'unite de la
- * grandeur ; le sens est alors toujours 'gt'.
+ * grandeur ; le sens est alors toujours 'gt'. 'probability' : au moins
+ * `probability` % des membres de l'ensemble franchissent le seuil la meme heure.
  */
 export interface WeatherAlertRule extends AlertRuleBase {
-  readonly kind?: 'value' | 'spread';
+  readonly kind?: 'value' | 'spread' | 'probability';
   readonly variable: WeatherVariable;
+  /** Pourcentage de membres, ]0, 100], pour les regles 'probability' seulement. */
+  readonly probability?: number;
 }
 
 /** Grandeurs de qualite de l'air, de pollens et d'UV (CAMS Europe, prevues). */

@@ -3,10 +3,12 @@ import type { AlertHit } from '../domain/alerts';
 import type { SpreadCrossing, SpreadHit } from '../domain/spreadAlerts';
 import type { AlertRule } from '../domain/types';
 import type { AirHit } from '../domain/airAlerts';
+import type { ProbabilityHit } from '../domain/probabilityAlerts';
 import {
   airHitSentence,
   alertUnit,
   hitSentence,
+  probabilityHitSentence,
   ruleSentence,
   spreadHitSentence,
 } from './alertPresentation';
@@ -173,5 +175,58 @@ describe('regles et phrases d air, de pollens et d UV', () => {
         hours: 1,
       }),
     ).toContain('(cypres)');
+  });
+});
+
+describe('alerte en probabilite', () => {
+  const frostRule: AlertRule = {
+    id: 'proba',
+    placeId: 'lyon',
+    variable: 'temperature',
+    comparator: 'lt',
+    threshold: 0,
+    enabled: true,
+    kind: 'probability',
+    probability: 40,
+  };
+
+  it('dit la regle avec le pourcentage de scenarios, dans l unite choisie', () => {
+    expect(ruleSentence(frostRule, 'kmh')).toBe(
+      'Température sous 0\u00a0°C pour au moins 40\u00a0% des scénarios de l’ensemble',
+    );
+    expect(
+      ruleSentence(
+        { ...frostRule, variable: 'wind', comparator: 'gt', threshold: 60, probability: 25 },
+        'kt',
+      ),
+    ).toBe('Rafales au-dessus de 32,4\u00a0kt pour au moins 25\u00a0% des scénarios de l’ensemble');
+  });
+
+  const hit: ProbabilityHit = {
+    rule: frostRule,
+    first: { time: '2026-09-29T04:00', share: 0.41 },
+    peak: { time: '2026-09-29T06:00', share: 0.62 },
+    hours: 3,
+    anyTime: 0.82,
+    memberCount: 51,
+  };
+
+  it('dit quand, la part des scenarios, le pic, la duree et la part sur tout l horizon', () => {
+    expect(probabilityHitSentence(hit)).toBe(
+      'dès mardi 04h, jusqu’à 62\u00a0% des 51 scénarios de l’ensemble ECMWF mardi 06h, 3\u00a0h au total, et 82\u00a0% des scénarios au moins une fois sur 72\u00a0h',
+    );
+  });
+
+  it('abrege quand le pic est la premiere heure, et dit une heure seule', () => {
+    expect(
+      probabilityHitSentence({
+        ...hit,
+        peak: { time: hit.first.time, share: 0.41 },
+        hours: 1,
+        anyTime: 0.41,
+      }),
+    ).toBe(
+      'dès mardi 04h, 41\u00a0% des 51 scénarios de l’ensemble ECMWF, une heure, et 41\u00a0% des scénarios au moins une fois sur 72\u00a0h',
+    );
   });
 });

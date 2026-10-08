@@ -1,13 +1,18 @@
 import { briefingAt } from '../domain/briefing';
 import { confidenceAt } from '../domain/confidence';
 import { blendDaily } from '../domain/dailyBlend';
+import { leadHoursFrom, localIsoFromUtc } from '../domain/time';
 import { dayDigest } from '../domain/dayDigest';
 import type { ConfidenceLevel, LocalIsoHour, ModelId, WeatherVariable } from '../domain/types';
+import type { VigilanceWarning } from '../domain/vigilance';
 import type { WatchEntry } from '../domain/watch';
+import type { Preferences } from '../domain/types';
 import type { EntryForecast } from '../pwa/watchRun';
 import { sharedPlaceSearch } from '../ui/sharedPlace';
 import { weatherCodeLabel } from '../ui/weatherCodePresentation';
-import { weatherIcon } from './icon';
+import { mostSevereWeather, weatherIcon } from './icon';
+import { widgetNotes } from './notes';
+import type { WidgetNote } from './notes';
 import type { WidgetIconName } from './icon';
 
 /*
@@ -25,6 +30,8 @@ export const WIDGET_HOURS = 12;
 export const WIDGET_MAX_PLACES = 6;
 /** Jours montres par le grand widget, aujourd'hui compris. */
 export const WIDGET_DAYS = 4;
+/** Heures de la courbe du grand widget, a partir de l'heure en cours. */
+export const WIDGET_TRACK_HOURS = 24;
 
 export interface WidgetNow {
   readonly time: LocalIsoHour;
@@ -41,6 +48,20 @@ export interface WidgetNow {
   readonly icon: WidgetIconName | null;
   /** « Partiellement nuageux » : le nom du temps, accompagne toujours l'icone. */
   readonly label: string | null;
+  /** Vent moyen, km/h ; null quand le modele retenu n'en donne pas. */
+  readonly windSpeed: number | null;
+  /** Rafales, km/h. */
+  readonly windGust: number | null;
+  /** Humidite relative, %. */
+  readonly humidity: number | null;
+}
+
+/** Une heure de la courbe : la valeur du modele retenu cette heure-la, son nom, jamais un zero a la place d'une absence. */
+export interface WidgetTrackPoint {
+  readonly time: LocalIsoHour;
+  readonly model: ModelId;
+  readonly temperature: number | null;
+  readonly precipitation: number | null;
 }
 
 /** Un jour a venir : un modele retenu par jour, comme la vue « jours » de la page. */
@@ -80,6 +101,12 @@ export interface WidgetPlace {
   readonly day: WidgetDay | null;
   /** Aujourd'hui et les jours suivants, vide sans prevision quotidienne. */
   readonly days: readonly WidgetForecastDay[];
+  /** Lever et coucher du soleil d'aujourd'hui (HH:mm, heure de Paris), null sans prevision quotidienne. */
+  readonly sun: { readonly sunrise: string | null; readonly sunset: string | null } | null;
+  /** Les prochaines heures, une par heure, pour la courbe ; vide sans heure en cours. */
+  readonly track: readonly WidgetTrackPoint[];
+  /** La ligne du pied : des notes de la plus importante a la moins importante, vide s'il n'y en a pas. */
+  readonly notes: readonly WidgetNote[];
 }
 
 export interface WidgetPayload {
@@ -96,10 +123,14 @@ export function widgetPlace(input: {
   readonly entry: WatchEntry;
   readonly forecast: EntryForecast;
   readonly now: Date;
+  readonly windUnit?: Preferences['units']['wind'];
+  /** Vigilances Meteo-France du departement du lieu (jaunes a rouges), vide si inconnues. */
+  readonly vigilance?: readonly VigilanceWarning[];
 }): WidgetPlace {
   const { entry, forecast, now } = input;
   const { bundle, cascade } = forecast;
   const points = cascade.points.filter((point) => point !== null);
+  const today = localIsoFromUtc(now.getTime()).slice(0, 10);
   const nowPoint = cascade.nowIndex === -1 ? null : (cascade.points[cascade.nowIndex] ?? null);
   const briefing =
     nowPoint === null
@@ -129,6 +160,60 @@ export function widgetPlace(input: {
                   },
                 ],
           );
+  const blended = blendDaily({
+    bundle,
+    context: cascade.context,
+    now,
+    preferred: entry.preferred,
+  }).slice(0, WIDGET_DAYS);
+  const days = blended.map((day): WidgetForecastDay => {
+    // Aujourd'hui : le temps des heures restantes, comme la phrase « Sur 24 h » ; le resume du
+    // jour d'un modele couvre aussi des heures deja passees. Sans code, celui du modele.
+    const code =
+      day.date === today
+        ? (mostSevereWeather(
+            points
+              .filter(
+                (point) => point.time.startsWith(today) && leadHoursFrom(now, point.time) >= -1,
+              )
+              .map((point) => point.weatherCode),
+          ) ?? day.weatherCode)
+        : day.weatherCode;
+    return {
+      date: day.date,
+      model: day.model,
+      tempMin: day.tempMin.value,
+      tempMax: day.tempMax.value,
+      rainMm: day.precipitationSum.value,
+      icon: weatherIcon(code, true),
+      label: weatherCodeLabel(code),
+    };
+  });
+  const todayDay = blended.find((day) => day.date === today);
+  const sun =
+    todayDay === undefined
+      ? null
+      : {
+          sunrise: todayDay.sunrise === null ? null : todayDay.sunrise.slice(11, 16),
+          sunset: todayDay.sunset === null ? null : todayDay.sunset.slice(11, 16),
+        };
+  const track: WidgetTrackPoint[] =
+    cascade.nowIndex === -1
+      ? []
+      : cascade.points
+          .slice(cascade.nowIndex, cascade.nowIndex + WIDGET_TRACK_HOURS)
+          .flatMap((point): WidgetTrackPoint[] =>
+            point === null
+              ? []
+              : [
+                  {
+                    time: point.time,
+                    model: point.model,
+                    temperature: point.temperature.value,
+                    precipitation: point.precipitation.value,
+                  },
+                ],
+          );
   return {
     id: entry.place.id,
     name: entry.place.alias ?? entry.place.name,
@@ -147,20 +232,22 @@ export function widgetPlace(input: {
             drivers: briefing.drivers,
             icon: weatherIcon(nowPoint.weatherCode, nowPoint.isDay),
             label: weatherCodeLabel(nowPoint.weatherCode),
+            windSpeed: nowPoint.windSpeed.value,
+            windGust: nowPoint.windGust.value,
+            humidity: nowPoint.humidity.value,
           },
     hours,
     day: dayDigest({ points, now }),
-    days: blendDaily({ bundle, context: cascade.context, now, preferred: entry.preferred })
-      .slice(0, WIDGET_DAYS)
-      .map((day): WidgetForecastDay => ({
-        date: day.date,
-        model: day.model,
-        tempMin: day.tempMin.value,
-        tempMax: day.tempMax.value,
-        rainMm: day.precipitationSum.value,
-        icon: weatherIcon(day.weatherCode, true),
-        label: weatherCodeLabel(day.weatherCode),
-      })),
+    days,
+    sun,
+    track,
+    notes: widgetNotes({
+      entry,
+      forecast,
+      now,
+      windUnit: input.windUnit ?? 'kmh',
+      vigilance: input.vigilance ?? [],
+    }),
   };
 }
 
@@ -170,6 +257,9 @@ export function widgetPayload(input: {
   /** Prevision de chaque lieu, ou null quand elle n'a pas pu etre lue. */
   readonly forecasts: readonly (EntryForecast | null)[];
   readonly now: Date;
+  readonly windUnit?: Preferences['units']['wind'];
+  /** Vigilances de chaque lieu (meme ordre que `entries`), ou rien. */
+  readonly vigilances?: readonly (readonly VigilanceWarning[])[];
 }): WidgetPayload {
   const places: WidgetPlace[] = [];
   const unreachable: string[] = [];
@@ -178,7 +268,15 @@ export function widgetPayload(input: {
     if (forecast === null) {
       unreachable.push(entry.place.id);
     } else {
-      places.push(widgetPlace({ entry, forecast, now: input.now }));
+      places.push(
+        widgetPlace({
+          entry,
+          forecast,
+          now: input.now,
+          windUnit: input.windUnit,
+          vigilance: input.vigilances?.[index],
+        }),
+      );
     }
   });
   return {

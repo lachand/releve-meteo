@@ -206,6 +206,22 @@ describe('alertes', () => {
     expect(readPreferences().alerts).toEqual([frost, spread, value]);
   });
 
+  it('relit une regle en probabilite, et ecarte un pourcentage absent ou hors de 1 a 100', () => {
+    const proba: AlertRule = { ...frost, id: 'proba', kind: 'probability', probability: 40 };
+    const stored = {
+      ...defaultPreferences(),
+      alerts: [
+        proba,
+        { ...proba, id: 'sans', probability: undefined },
+        { ...proba, id: 'zero', probability: 0 },
+        { ...proba, id: 'trop', probability: 101 },
+        { ...proba, id: 'texte', probability: '40' },
+      ],
+    };
+    localStorage.setItem('meteo-fr:prefs', JSON.stringify(stored));
+    expect(readPreferences().alerts).toEqual([proba]);
+  });
+
   it('relit une regle d air, de pollens ou d UV, et ecarte une grandeur ou un sens invalide', () => {
     const air: AlertRule = {
       id: 'uv',

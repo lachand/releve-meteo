@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { AirHit } from '../../domain/airAlerts';
 import type { AlertHit } from '../../domain/alerts';
+import type { ProbabilityHit } from '../../domain/probabilityAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
 import type { AlertRule, NewAlertRule } from '../../domain/types';
 import { AlertBanner, AlertRulesEditor } from './Alerts';
@@ -34,6 +35,30 @@ describe('AlertBanner', () => {
     expect(banner).toHaveTextContent(
       'Température sous 2 °C : dès mardi 04h, jusqu’à 0,4 °C mardi 05h selon ARPEGE, 3 h au total.',
     );
+  });
+});
+
+describe('AlertBanner, probabilite', () => {
+  it('annonce la part des scenarios de l ensemble, source nommee', () => {
+    const rule: AlertRule = {
+      ...frost,
+      id: 'proba',
+      threshold: 0,
+      kind: 'probability',
+      probability: 40,
+    };
+    const hit: ProbabilityHit = {
+      rule,
+      first: { time: '2026-09-29T04:00', share: 0.45 },
+      peak: { time: '2026-09-29T04:00', share: 0.45 },
+      hours: 1,
+      anyTime: 0.6,
+      memberCount: 51,
+    };
+    render(<AlertBanner hits={[]} probabilityHits={[hit]} windUnit="kmh" />);
+    const banner = screen.getByRole('region', { name: 'Votre alerte est franchie' });
+    expect(banner).toHaveTextContent('pour au moins 40 % des scénarios de l’ensemble');
+    expect(banner).toHaveTextContent('45 % des 51 scénarios de l’ensemble ECMWF');
   });
 });
 
@@ -197,6 +222,45 @@ describe('AlertRulesEditor', () => {
       enabled: true,
       kind: 'spread',
     });
+  });
+
+  it('ajoute une regle en probabilite : un sens, un seuil et un pourcentage de scenarios', async () => {
+    const user = userEvent.setup();
+    const props = renderEditor({ rules: [] });
+    const form = within(screen.getByRole('form', { name: 'Nouvelle alerte' }));
+    await user.selectOptions(form.getByLabelText('Type'), 'probability');
+    const threshold = form.getByLabelText('Seuil (°C)');
+    await user.clear(threshold);
+    await user.type(threshold, '0');
+    const share = form.getByLabelText('Au moins (% des scénarios)');
+    await user.clear(share);
+    await user.type(share, '30');
+    await user.click(form.getByRole('button', { name: 'Ajouter' }));
+    expect(props.onAdd).toHaveBeenCalledWith({
+      placeId: 'lyon',
+      variable: 'temperature',
+      comparator: 'lt',
+      threshold: 0,
+      enabled: true,
+      kind: 'probability',
+      probability: 30,
+    });
+  });
+
+  it('refuse un pourcentage hors de 1 a 100', async () => {
+    const user = userEvent.setup();
+    const props = renderEditor({ rules: [] });
+    const form = within(screen.getByRole('form', { name: 'Nouvelle alerte' }));
+    await user.selectOptions(form.getByLabelText('Type'), 'probability');
+    const share = form.getByLabelText('Au moins (% des scénarios)');
+    for (const bad of ['0', '150', '']) {
+      await user.clear(share);
+      if (bad !== '') {
+        await user.type(share, bad);
+      }
+      expect(form.getByRole('button', { name: 'Ajouter' })).toBeDisabled();
+    }
+    expect(props.onAdd).not.toHaveBeenCalled();
   });
 
   it('ne met pas de type dans une regle de valeur, comme avant l alerte d ecart', async () => {

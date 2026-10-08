@@ -9,13 +9,19 @@ import {
   getVigilance,
   getVerifications,
 } from '../../data/repository';
+import { readLastPlace, writeLastPlace } from '../../data/cache/lastPlace';
+import { readPreferences } from '../../data/cache/preferences';
 import { evaluateAirAlerts } from '../../domain/airAlerts';
 import { evaluateAlerts } from '../../domain/alerts';
 import type { AlertHit } from '../../domain/alerts';
+import { evaluateProbabilityAlerts } from '../../domain/probabilityAlerts';
 import { evaluateSpreadAlerts } from '../../domain/spreadAlerts';
 import type { AirHit } from '../../domain/airAlerts';
+import type { ProbabilityHit } from '../../domain/probabilityAlerts';
 import type { SpreadHit } from '../../domain/spreadAlerts';
+import { temperatureConfidenceOn } from '../../domain/calibration';
 import { blendDaily } from '../../domain/dailyBlend';
+import { summarizeDays } from '../../domain/forecastDrift';
 import { dailyEnsemble, rainOutlook, temperatureSpaghetti } from '../../domain/ensemble';
 import { MODEL_ORDER } from '../../domain/models';
 import { detectPhenomena } from '../../domain/phenomena';
@@ -48,6 +54,7 @@ import { useBackgroundWatch } from '../hooks/useBackgroundWatch';
 import { DaysIcon, HoursIcon, MapIcon, ModelsIcon, ReliabilityIcon, TodayIcon } from '../tabIcons';
 import { useDataset } from '../hooks/useDataset';
 import { useForecast } from '../hooks/useForecast';
+import { useForecastDrift } from '../hooks/useForecastDrift';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import { useModelChoice } from '../hooks/useModelChoice';
@@ -56,7 +63,8 @@ import { useServiceWorkerUpdate } from '../hooks/useServiceWorkerUpdate';
 import { useTerrain } from '../hooks/useTerrain';
 import { TERRAIN_KIND_LABELS } from '../modelPresentation';
 import { explainSelection } from '../selectionExplanation';
-import { parseSharedPlace, sharedModel, sharedPlaceSearch, sharedView } from '../sharedPlace';
+import { sharedModel, sharedPlaceSearch, sharedView } from '../sharedPlace';
+import { startingPlace } from '../startingPlace';
 import styles from './App.module.css';
 import { PHENOMENA_HORIZON_HOURS, TodayView } from './TodayView';
 import { VIEW_KEYS } from './viewModel';
@@ -77,6 +85,7 @@ const ReliabilityView = lazy(() =>
 const NO_HITS: readonly AlertHit[] = [];
 const NO_SPREAD_HITS: readonly SpreadHit[] = [];
 const NO_AIR_HITS: readonly AirHit[] = [];
+const NO_PROBABILITY_HITS: readonly ProbabilityHit[] = [];
 
 const TABS: readonly TabItem<ViewKey>[] = [
   { key: 'jour', label: 'Aujourd’hui', short: 'Auj.', icon: <TodayIcon /> },
@@ -147,13 +156,23 @@ function coordinates(place: Place): string {
 }
 
 export function App() {
-  const [place, setPlace] = useState<Place | null>(() => parseSharedPlace(window.location.search));
+  // L'adresse (lien partage, clic sur un widget) d'abord, puis le dernier lieu ouvert, puis le
+  // premier favori : l'application ne s'ouvre sur la recherche que quand rien n'est connu.
+  const [place, setPlace] = useState<Place | null>(() =>
+    startingPlace(window.location.search, readLastPlace(), readPreferences().favourites),
+  );
   const [view, setView] = useState<ViewKey>(initialView);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate();
   const { available: installAvailable, promptInstall } = useInstallPrompt();
   const [installDismissed, setInstallDismissed] = useState(false);
   const preferences = usePreferences();
+  // Le lieu ouvert est retenu : l'application rouvrira dessus.
+  useEffect(() => {
+    if (place !== null) {
+      writeLastPlace(place);
+    }
+  }, [place]);
   const [preferred, setPreferred] = useModelChoice(place?.id ?? null);
   const forecastState = useForecast(place);
   const bundle = forecastState?.status === 'ready' ? forecastState.result.bundle : null;
@@ -375,6 +394,16 @@ export function App() {
         bundle,
         now,
       }),
+      // Sans ensemble charge, une regle en probabilite ne dit rien : jamais une part inventee.
+      probabilityHits:
+        ensembleValue === null
+          ? NO_PROBABILITY_HITS
+          : evaluateProbabilityAlerts({
+              rules: preferences.preferences.alerts,
+              placeId: place.id,
+              ensemble: ensembleValue,
+              now,
+            }),
       airHits:
         airQuality.status === 'ready'
           ? evaluateAirAlerts({
@@ -418,6 +447,19 @@ export function App() {
     preferences.toggleAlert,
     preferences.removeAlert,
   ]);
+
+  // Ce que la prevision a change depuis hier : gardee sur l'appareil, jamais envoyee.
+  // Chaque jour garde aussi la confiance dite pour sa temperature : elle sert a l'auditer.
+  const daySummaries = useMemo(
+    () =>
+      vm === null
+        ? null
+        : summarizeDays(vm.days, (date) =>
+            temperatureConfidenceOn(date, vm.bundle.timeline, vm.confidence ?? []),
+          ),
+    [vm],
+  );
+  const drift = useForecastDrift(vm?.place.id ?? null, vm?.bundle.fetchedAt ?? null, daySummaries);
 
   const watch = useBackgroundWatch({
     place: bundle?.place ?? null,
@@ -673,7 +715,7 @@ export function App() {
                 >
                   {view === 'jour' && <TodayView vm={vm} />}
                   {view === 'heures' && <HoursView vm={vm} />}
-                  {view === 'jours' && <DaysView vm={vm} />}
+                  {view === 'jours' && <DaysView vm={vm} drift={drift} />}
                   {view === 'carte' && <MapView vm={vm} />}
                   {view === 'modeles' && <ModelsView vm={vm} />}
                   {view === 'fiabilite' && <ReliabilityView vm={vm} />}

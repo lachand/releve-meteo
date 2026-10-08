@@ -1,6 +1,7 @@
 package fr.releve.meteo
 
 import android.content.Context
+import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.updateAll
 
 /** Ce que le widget montre pour un lieu : son contenu et l'instant de son calcul. */
@@ -29,6 +30,8 @@ object WidgetStore {
             .edit()
             .putString(KEY_STATE, WidgetJson.encodeToString(StoredState.serializer(), merged))
             .apply()
+        WidgetConfig.resetNotes(context)
+        WidgetRevision.bump()
         return true
     }
 
@@ -37,8 +40,10 @@ object WidgetStore {
         return state.order.mapNotNull { id -> state.places[id]?.let { ShownPlace(it.place, it.generatedAtMs) } }
     }
 
+    /** Tous les widgets de l'application : un widget ajoute ici est redessine par chaque calcul et chaque reglage. */
+    private fun widgets(): List<GlanceAppWidget> = listOf(SmallWidget(), MediumWidget(), MiniWidget())
+
     suspend fun refreshWidgets(context: Context) {
-        SmallWidget().updateAll(context)
-        MediumWidget().updateAll(context)
+        widgets().forEach { it.updateAll(context) }
     }
 }

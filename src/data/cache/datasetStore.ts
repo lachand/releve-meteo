@@ -19,7 +19,10 @@ export type DatasetKind =
   | 'snapshots'
   | 'normals'
   | 'marine'
-  | 'journal';
+  | 'journal'
+  | 'outlooks'
+  | 'calibration'
+  | 'previousDay';
 
 export interface CachedDataset<T> {
   readonly value: T;
@@ -53,6 +56,12 @@ const DATASET_SCHEMA: Readonly<Record<DatasetKind, number>> = {
   marine: 1,
   // Journal des previsions : le bilan d'hier de chaque jour, par lieu (domain/journal.ts).
   journal: 1,
+  // Previsions gardees par lieu, pour dire ce qui a bouge depuis hier (domain/forecastDrift.ts).
+  outlooks: 1,
+  // Confiance dite contre erreur mesuree, un enregistrement par jour verifie (domain/calibration.ts).
+  calibration: 1,
+  // Previsions horaires de la veille de chaque modele au point du lieu, 30 jours (Mon relevé).
+  previousDay: 1,
 };
 
 function keyOf(kind: DatasetKind, placeId: string): string {

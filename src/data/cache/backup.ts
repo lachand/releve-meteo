@@ -1,3 +1,5 @@
+import { isOwnReading } from '../../domain/ownReadings';
+import type { OwnReading } from '../../domain/ownReadings';
 import { isWithinMetropolitanFrance } from '../../domain/terrain';
 import type { AlertRule, ModelId, Place, Preferences } from '../../domain/types';
 import { normalizeNotify } from '../../domain/weatherNotices';
@@ -10,6 +12,7 @@ import {
   validPeakKwp,
   writePreferences,
 } from './preferences';
+import { readOwnReadings, writeOwnReadings } from './ownReadingsStore';
 import { readWatchState, saveWatchDigest, saveWatchNotify } from './watchStore';
 
 /*
@@ -31,12 +34,15 @@ export interface BackupFile {
   readonly preferences: Omit<Preferences, 'apiKeys'>;
   readonly modelChoices: Readonly<Record<string, ModelId>>;
   readonly watch: { readonly digest: boolean; readonly notify: NotifyPrefs };
+  /** Vos mesures saisies (Mon relevé) : rien ne peut les recalculer. */
+  readonly ownReadings: readonly OwnReading[];
 }
 
 export function buildBackup(input: {
   readonly preferences: Preferences;
   readonly modelChoices: Readonly<Record<string, ModelId>>;
   readonly watch: { readonly digest: boolean; readonly notify: NotifyPrefs };
+  readonly ownReadings?: readonly OwnReading[];
   readonly now: Date;
 }): BackupFile {
   const { apiKeys: _secrets, ...preferences } = input.preferences;
@@ -47,6 +53,7 @@ export function buildBackup(input: {
     preferences,
     modelChoices: input.modelChoices,
     watch: input.watch,
+    ownReadings: input.ownReadings ?? [],
   };
 }
 
@@ -56,6 +63,7 @@ export interface ParsedBackup {
   readonly preferences: Preferences;
   readonly modelChoices: Readonly<Record<string, ModelId>>;
   readonly watch: { readonly digest: boolean; readonly notify: NotifyPrefs };
+  readonly ownReadings: readonly OwnReading[];
   /** Elements du fichier ecartes parce qu'invalides (lieux, alertes, choix). */
   readonly dropped: number;
 }
@@ -154,6 +162,11 @@ export function parseBackup(
     }
   }
 
+  // Un fichier d'avant Mon relevé n'a pas ce champ : la liste reste vide, sans rien ecarter.
+  const rawReadings: unknown[] = Array.isArray(file.ownReadings) ? file.ownReadings : [];
+  const ownReadings = rawReadings.filter(isOwnReading);
+  dropped += rawReadings.length - ownReadings.length;
+
   const watch = record(file.watch);
   return {
     ok: true,
@@ -161,6 +174,7 @@ export function parseBackup(
       preferences,
       modelChoices,
       watch: { digest: watch?.digest === true, notify: normalizeNotify(watch?.notify) },
+      ownReadings,
       dropped,
     },
   };
@@ -170,6 +184,7 @@ export interface BackupSummary {
   readonly favourites: number;
   readonly alerts: number;
   readonly modelChoices: number;
+  readonly ownReadings: number;
 }
 
 export function summarizeBackup(backup: ParsedBackup): BackupSummary {
@@ -177,6 +192,7 @@ export function summarizeBackup(backup: ParsedBackup): BackupSummary {
     favourites: backup.preferences.favourites.length,
     alerts: backup.preferences.alerts.length,
     modelChoices: Object.keys(backup.modelChoices).length,
+    ownReadings: backup.ownReadings.length,
   };
 }
 
@@ -187,6 +203,7 @@ export async function collectBackup(now: Date): Promise<BackupFile> {
     preferences: readPreferences(),
     modelChoices: readAllModelChoices(),
     watch: { digest: state.digest, notify: state.notify },
+    ownReadings: readOwnReadings(),
     now,
   });
 }
@@ -199,6 +216,7 @@ export async function restoreBackup(backup: ParsedBackup, now: Date): Promise<vo
   const current = readPreferences();
   writePreferences({ ...backup.preferences, apiKeys: current.apiKeys });
   writeAllModelChoices(backup.modelChoices);
+  writeOwnReadings(backup.ownReadings);
   await saveWatchDigest(backup.watch.digest, now);
   await saveWatchNotify(backup.watch.notify, now);
 }

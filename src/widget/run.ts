@@ -1,4 +1,7 @@
+import { fetchVigilance } from '../data/clients/vigilance';
 import { readWatchState } from '../data/cache/watchStore';
+import { summarizeVigilance } from '../domain/vigilance';
+import type { VigilanceWarning } from '../domain/vigilance';
 import type { Place } from '../domain/types';
 import type { WatchEntry } from '../domain/watch';
 import { loadEntryForecast } from '../pwa/watchRun';
@@ -48,12 +51,40 @@ function entryFor(place: Place): WatchEntry {
   };
 }
 
+/** Un bulletin par departement et par calcul, meme pour plusieurs lieux ; un bulletin illisible ou perime ne dit rien. */
+async function warningsOf(
+  entry: WatchEntry,
+  now: Date,
+  bulletins: Map<string, Promise<readonly VigilanceWarning[]>>,
+): Promise<readonly VigilanceWarning[]> {
+  const department = entry.department;
+  if (department === null) {
+    return [];
+  }
+  let pending = bulletins.get(department.code);
+  if (pending === undefined) {
+    pending = fetchVigilance(department.code).then((result) => {
+      if (!result.ok) {
+        return [];
+      }
+      const summary = summarizeVigilance(result.value, now);
+      return summary.stale ? [] : summary.warnings;
+    });
+    bulletins.set(department.code, pending);
+  }
+  return pending;
+}
+
 export async function runWidget(search: string, now: Date): Promise<WidgetPayload> {
   const state = await readWatchState();
   const fallback = placeFromSearch(search);
   const entries = (
     state.entries.length > 0 || fallback === null ? state.entries : [entryFor(fallback)]
   ).slice(0, WIDGET_MAX_PLACES);
-  const forecasts = await Promise.all(entries.map((entry) => loadEntryForecast(entry, now)));
-  return widgetPayload({ entries, forecasts, now });
+  const bulletins = new Map<string, Promise<readonly VigilanceWarning[]>>();
+  const [forecasts, vigilances] = await Promise.all([
+    Promise.all(entries.map((entry) => loadEntryForecast(entry, now))),
+    Promise.all(entries.map((entry) => warningsOf(entry, now, bulletins))),
+  ]);
+  return widgetPayload({ entries, forecasts, now, windUnit: state.windUnit, vigilances });
 }

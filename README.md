@@ -100,8 +100,9 @@ navigateur avant toute autre investigation, ou lancer `npm run sw:reset`
 ## Application Android et widgets
 
 Un habillage Android (dossier `android/`) embarque le build web dans une
-WebView et ajoute deux widgets (petit et moyen) qui disent le modèle retenu,
-la confiance et l'âge de leur contenu. Le contenu est calculé par la même
+WebView et ajoute trois widgets (une vignette 1×1, un petit et un moyen) qui
+disent le modèle retenu, la confiance (hors vignette, qui la dit à l'oreille)
+et l'âge de leur contenu. Le contenu est calculé par la même
 logique TypeScript que la page, dans une WebView sans interface lancée par
 WorkManager : rien n'est récrit en Kotlin. APK de test : artefact
 `releve-debug-apk` du workflow « Android ». Détails, limites et suite dans

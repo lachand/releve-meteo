@@ -40,3 +40,17 @@ test('l URL partagee ouvre directement le releve, sans recherche', async ({ page
   await expect(page.getByText('Modèle retenu', { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-model]').first()).toContainText('AROME');
 });
+
+test('relancer l application sans adresse rouvre le dernier lieu, pas la recherche', async ({
+  page,
+}) => {
+  await stubApis(page);
+  await openLyon(page);
+  await expect(page.getByRole('heading', { level: 1, name: 'Lyon' })).toBeVisible();
+
+  // Comme un lancement depuis l'icone de l'application : aucune adresse de lieu.
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Lyon' })).toBeVisible();
+  await expect(page.getByText('Aucun lieu au carnet.')).toHaveCount(0);
+});

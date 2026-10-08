@@ -5,12 +5,19 @@ name: Android
 on:
   push:
     branches: [main, 'claude/**']
+    # L'APK embarque tout le build web : un changement de l'application (interface, donnees, dependances)
+    # doit le reconstruire et le republier, sinon « apk-latest » garde une version perimee (il gardait
+    # ainsi une boucle de rendu corrigee depuis). Les tests seuls ne changent pas l'APK.
     paths:
       - 'android/**'
-      - 'src/widget/**'
-      - 'src/domain/**'
-      - 'src/pwa/watchRun.ts'
+      - 'src/**'
+      - '!src/**/*.test.ts'
+      - '!src/**/*.test.tsx'
+      - 'public/**'
+      - 'index.html'
       - 'widget.html'
+      - 'package.json'
+      - 'package-lock.json'
       - 'vite.config.ts'
       - '.github/workflows/android.yml'
   pull_request:
@@ -25,6 +32,9 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      # Pour publier l'APK en pre-publication (voir l'etape « Publish the APK »).
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -57,6 +67,23 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
+      # L'application GitHub du telephone n'affiche pas les artefacts des Actions, et un artefact
+      # est un zip : l'APK est aussi publie comme piece d'une pre-publication « apk-latest »,
+      # remplacee a chaque envoi, que l'application GitHub affiche et telecharge directement.
+      - name: Publish the APK as the apk-latest pre-release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk releve-debug.apk
+          gh release delete apk-latest --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true
+          gh release create apk-latest releve-debug.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "APK de test (debug)" \
+            --notes "APK de debug de Relevé, non signe pour la publication. Branche : $GITHUB_REF_NAME. Commit : ${GITHUB_SHA::7}. Remplace par chaque nouvel envoi."
+
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -71,11 +98,21 @@ jobs:
           target: google_apis
           disable-animations: true
           working-directory: android
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          # Les rendus des widgets (WidgetScreenshotTest) sont enregistres dans Pictures/releve-widgets
+          # de l'emulateur : on les recupere avant son arret, meme si un test echoue.
+          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest ; status=$? ; mkdir -p widget-screens ; adb pull /sdcard/Pictures/releve-widgets widget-screens || true ; exit $status
 
       - name: Show the trial timing
         if: always()
         run: grep -rh "RELEVE_SPIKE\|testcase " android/app/build/outputs/androidTest-results 2>/dev/null | head -20 || true
+
+      - name: Upload the widget renderings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: widget-screens
+          path: android/widget-screens
+          if-no-files-found: warn
 
       - name: Upload the emulator test reports
         if: always()

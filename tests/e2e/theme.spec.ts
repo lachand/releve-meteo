@@ -1,6 +1,12 @@
 import { stubApis } from './apiStub';
 import { expect, openLyon, test } from './fixtures';
 
+// Service worker bloque : il relaie les tuiles de carte (TILE_HOSTS dans src/pwa/sw.ts) avec ses
+// propres requetes, que `page.route` n'intercepte pas. Quand il controle la page, ces requetes
+// partent vers le vrai serveur RainViewer, qui repond 404 au chemin factice du bouchon : erreur
+// console intermittente (observee en CI sur plusieurs runs). Ce test n'a pas besoin du service worker.
+test.use({ serviceWorkers: 'block' });
+
 test('theme sombre : le releve de Lyon s affiche sans erreur console', async ({ page }) => {
   // L emulation doit preceder la navigation : le theme "auto" (par defaut,
   // localStorage vierge dans un nouveau contexte de test) suit uniquement

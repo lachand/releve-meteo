@@ -15,10 +15,12 @@ import { takeSnapshot } from '../domain/leadScores';
 import type { ForecastSnapshot } from '../domain/leadScores';
 import type { StationModelSeries, StationRecord } from '../domain/stationCheck';
 import type { StationMatch } from '../domain/stations';
+import type { PreviousDaySeries } from '../domain/ownReadings';
 import { yesterdayReview } from '../domain/yesterdayReview';
 import type { ForecastBundle, ModelId, Place } from '../domain/types';
 import type { VigilanceBulletin } from '../domain/vigilance';
 import { fetchAirQuality } from './clients/airQuality';
+import { fetchPreviousDay } from './clients/previousDay';
 import type { AirQualitySeries } from './clients/airQuality';
 import { fetchEnsemble } from './clients/ensemble';
 import { fetchForecastGrid } from './clients/forecastGrid';
@@ -42,6 +44,7 @@ import { getDataset, setDataset } from './cache/datasetStore';
 import type { DatasetKind } from './cache/datasetStore';
 import { getCachedPlaces, normalizeQuery, setCachedPlaces } from './cache/geocodingStore';
 import { getCachedForecast, setCachedForecast } from './cache/forecastStore';
+import { recordCalibration } from './cache/calibrationStore';
 import { recordJournal } from './cache/journalStore';
 import { loadSnapshots, recordSnapshot } from './cache/snapshotStore';
 import { mapNowcast } from './mappers/nowcastMapper';
@@ -212,6 +215,25 @@ export function getEnsemble(place: Place): Promise<HttpResult<DatasetResult<Ense
     placeId: place.id,
     ttlMs: CACHE_TTL_MS.ensemble,
     fetcher: () => fetchEnsemble(place.latitude, place.longitude),
+  });
+}
+
+/** Ce que chaque modele annoncait la veille au point du lieu, 30 jours : la reference de Mon relevé. */
+export function getPreviousDay(
+  place: Place,
+  models: readonly ModelId[],
+): Promise<HttpResult<DatasetResult<PreviousDaySeries>>> {
+  return throughCache({
+    kind: 'previousDay',
+    placeId: `${place.id}|${[...models].sort().join(',')}`,
+    ttlMs: CACHE_TTL_MS.previousDay,
+    fetcher: () =>
+      fetchPreviousDay({
+        latitude: place.latitude,
+        longitude: place.longitude,
+        elevation: place.elevation,
+        models,
+      }),
   });
 }
 
@@ -400,7 +422,10 @@ export async function getStationReport(
         now: new Date(now),
       });
       if (review !== null) {
-        await recordJournal(place.id, journalEntryFrom(review, match.station.name), new Date(now));
+        const entry = journalEntryFrom(review, match.station.name);
+        await recordJournal(place.id, entry, new Date(now));
+        // La confiance dite la veille face a l'erreur mesuree : la confiance s'audite.
+        await recordCalibration(place.id, entry, new Date(now));
       }
       return {
         ok: true,

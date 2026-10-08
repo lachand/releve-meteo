@@ -44,4 +44,6 @@ export const CACHE_TTL_MS = {
   normals: 30 * 24 * 60 * 60 * 1000,
   /** Les modeles de vagues tournent toutes les 6 a 12 h. */
   marine: 3 * 60 * 60 * 1000,
+  /** Les executions de la veille ne changent plus : six heures suffisent. */
+  previousDay: 6 * 60 * 60 * 1000,
 } as const;

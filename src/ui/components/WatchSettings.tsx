@@ -1,5 +1,6 @@
 import { localIsoFromUtc } from '../../domain/time';
-import { androidApp } from '../../pwa/androidApp';
+import { useEffect, useState } from 'react';
+import { androidApp, androidNotificationsState } from '../../pwa/androidApp';
 import { formatDayHour } from '../format';
 import type { BackgroundWatch } from '../hooks/useBackgroundWatch';
 import styles from './Settings.module.css';
@@ -148,6 +149,13 @@ function NoticeSettings({ watch }: { readonly watch: BackgroundWatch }) {
  * widgets qui rechargent la prevision. Le dire, plutot que renvoyer a un navigateur.
  */
 function AndroidSettings() {
+  const [notifications, setNotifications] = useState(androidNotificationsState);
+  // L'application previent la page quand l'autorisation d'Android change.
+  useEffect(() => {
+    const reread = () => setNotifications(androidNotificationsState());
+    window.addEventListener('releve-notifications', reread);
+    return () => window.removeEventListener('releve-notifications', reread);
+  }, []);
   return (
     <section className={styles.section} aria-labelledby="veille-titre">
       <p className="eyebrow" id="veille-titre">
@@ -156,9 +164,10 @@ function AndroidSettings() {
       <p className={styles.explanation} role="status">
         Dans l’application Android, ce sont les widgets de l’écran d’accueil qui rechargent la
         prévision de vos favoris, environ toutes les heures : Android choisit le moment, jamais sans
-        réseau ni en économie d’énergie, et un widget qui n’a pas pu se mettre à jour le dit. La
-        veille par notification n’existe pas dans l’application : vos alertes sont évaluées à chaque
-        ouverture.
+        réseau ni en économie d’énergie, et un widget qui n’a pas pu se mettre à jour le dit.
+        {notifications === null
+          ? ' La veille par notification n’existe pas dans cette version : vos alertes sont évaluées à chaque ouverture.'
+          : ' Sans notification, vos alertes sont évaluées à chaque ouverture.'}
       </p>
       <button
         type="button"
@@ -167,6 +176,30 @@ function AndroidSettings() {
       >
         Mettre à jour les widgets
       </button>
+      {notifications !== null && (
+        <>
+          <p className={styles.explanation} role="status">
+            {notifications === 'on' &&
+              'Notifications actives : à chaque recalcul des widgets, une règle d’alerte franchie, une vigilance orange ou rouge ou un phénomène violent est signalé une seule fois, application fermée.'}
+            {notifications === 'off' &&
+              'Notifications coupées : rien n’est signalé application fermée.'}
+            {notifications === 'denied' &&
+              'Notifications demandées, mais refusées par Android : autorisez-les dans les réglages du téléphone, puis réactivez ce réglage.'}
+          </p>
+          <button
+            type="button"
+            className={styles.purgeButton}
+            onClick={() => androidApp()?.setNotifications?.(notifications !== 'on')}
+          >
+            {notifications === 'on' ? 'Couper les notifications' : 'Activer les notifications'}
+          </button>
+          <p className={styles.hint}>
+            Ce n’est pas du temps réel : le calcul se fait environ toutes les heures, quand Android
+            le permet. Pour un risque vital, la vigilance officielle de Météo-France reste la
+            référence.
+          </p>
+        </>
+      )}
     </section>
   );
 }

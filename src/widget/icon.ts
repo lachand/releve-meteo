@@ -49,3 +49,38 @@ export function weatherIcon(code: number | null, isDay: boolean | null): WidgetI
   }
   return null;
 }
+
+/** Du plus doux au plus marquant : le temps d'une periode est celui de son heure la plus marquante. */
+const SEVERITY: Readonly<Record<WidgetIconName, number>> = {
+  clearNight: 0,
+  clear: 0,
+  partlyNight: 1,
+  partly: 1,
+  cloudy: 2,
+  fog: 3,
+  drizzle: 4,
+  rain: 5,
+  snow: 6,
+  thunder: 7,
+};
+
+/**
+ * Le code de temps le plus marquant parmi des heures, ou null sans code connu. A gravite egale,
+ * la premiere heure l'emporte. Sert au temps du reste de la journee : le resume quotidien d'un
+ * modele couvre aussi les heures deja passees.
+ */
+export function mostSevereWeather(codes: readonly (number | null)[]): number | null {
+  let best: number | null = null;
+  let bestRank = -1;
+  for (const code of codes) {
+    const icon = weatherIcon(code, true);
+    if (code === null || icon === null) {
+      continue;
+    }
+    if (SEVERITY[icon] > bestRank) {
+      best = code;
+      bestRank = SEVERITY[icon];
+    }
+  }
+  return best;
+}

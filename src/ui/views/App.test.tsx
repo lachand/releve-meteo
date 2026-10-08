@@ -9,7 +9,17 @@ import { resetMemoryDatasetStore } from '../../data/cache/datasetStore';
 import { resetMemoryForecastStore } from '../../data/cache/forecastStore';
 import { resetMemoryGeocodingStore } from '../../data/cache/geocodingStore';
 import { clearModelChoices } from '../../data/cache/modelChoice';
-import { resetMemoryPreferencesForTests } from '../../data/cache/preferences';
+import {
+  readLastPlace,
+  resetMemoryLastPlaceForTests,
+  writeLastPlace,
+} from '../../data/cache/lastPlace';
+import {
+  defaultPreferences,
+  resetMemoryPreferencesForTests,
+  writePreferences,
+} from '../../data/cache/preferences';
+import { recordOutlook } from '../../data/cache/outlookStore';
 import { recordSnapshot } from '../../data/cache/snapshotStore';
 import type { ForecastSnapshot } from '../../domain/leadScores';
 import type { LocalIsoHour } from '../../domain/types';
@@ -123,6 +133,7 @@ beforeEach(async () => {
   clearModelChoices();
   localStorage.clear();
   resetMemoryPreferencesForTests();
+  resetMemoryLastPlaceForTests();
   window.history.replaceState(null, '', '/');
 });
 
@@ -136,6 +147,54 @@ describe('App', { timeout: 30000 }, () => {
     render(<App />);
     expect(screen.getByText('Aucun lieu au carnet.')).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  it('retient le lieu ouvert et le rouvre au lancement suivant, sans adresse', async () => {
+    server.use(...liveHandlers({ failVerification: true }));
+    await openLyon();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+    expect(readLastPlace()?.name).toBe('Lyon');
+
+    // L'application est relancee : plus d'adresse, plus d'etat, seul le stockage reste.
+    cleanup();
+    window.history.replaceState(null, '', '/');
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+    expect(screen.queryByText('Aucun lieu au carnet.')).not.toBeInTheDocument();
+  });
+
+  it('ouvre le premier favori quand aucun lieu n a encore ete ouvert', async () => {
+    server.use(...liveHandlers({ failVerification: true }));
+    const lyon = {
+      id: '45.7578:4.8320',
+      name: 'Lyon',
+      latitude: 45.7578,
+      longitude: 4.832,
+      elevation: 170,
+      admin: 'Rhône',
+      alias: null,
+    };
+    writePreferences({ ...defaultPreferences(), favourites: [lyon] });
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+  });
+
+  it('laisse l adresse l emporter sur le dernier lieu : lien partage, clic sur un widget', async () => {
+    server.use(...liveHandlers({ failVerification: true }));
+    writeLastPlace({
+      id: '48.8566:2.3522',
+      name: 'Paris',
+      latitude: 48.8566,
+      longitude: 2.3522,
+      elevation: 35,
+      admin: 'Paris',
+      alias: null,
+    });
+    window.history.replaceState(null, '', '/?lat=45.7578&lon=4.832&nom=Lyon&alt=170');
+    render(<App />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lyon' })).toBeInTheDocument();
+    // Et le lieu de l'adresse devient le dernier lieu.
+    expect(readLastPlace()?.name).toBe('Lyon');
   });
 
   it('explique en trois lignes, avant tout lieu, d ou vient chaque valeur', () => {
@@ -272,6 +331,40 @@ describe('App', { timeout: 30000 }, () => {
     // Fleche droite : onglet suivant, motif ARIA des onglets.
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: 'Cartes' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('garde la prevision sur l appareil et dit qu elle compare des demain', async () => {
+    server.use(...liveHandlers());
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('tab', { name: '15 jours' }));
+    expect(
+      await screen.findByText(/la comparaison apparaîtra dès qu’une prévision aura été gardée/),
+    ).toBeInTheDocument();
+  });
+
+  it('dit ce que la prevision a change depuis hier, d apres la prevision gardee', async () => {
+    server.use(...liveHandlers());
+    // Hier a la meme heure, Relevé annoncait un tout autre temps pour demain.
+    await recordOutlook(
+      '45.7485:4.8467',
+      {
+        issuedAt: FIXTURE_NOW.getTime() - 24 * 60 * 60 * 1000,
+        days: [{ date: '2026-09-29', model: 'arome', tempMax: -20, tempMin: -30, rain: 0 }],
+      },
+      FIXTURE_NOW,
+    );
+    const user = await openLyon();
+    await screen.findByText('Modèle retenu', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('tab', { name: '15 jours' }));
+    const section = (await screen.findByText('La prévision a bougé')).closest('section');
+    expect(section).not.toBeNull();
+    expect(
+      await within(section as HTMLElement).findByText(
+        /(a|ont) bougé depuis la prévision gardée hier/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(section as HTMLElement).getByText(/mardi : maximum/)).toBeInTheDocument();
   });
 
   it('ouvre les cartes : radar observe et prevision du modele retenu sur la grille', async () => {
@@ -587,10 +680,18 @@ describe('App', { timeout: 30000 }, () => {
       { timeout: 8000 },
     );
     const section = heading.closest('section') as HTMLElement;
+    // Le titre est la, le panneau non : il arrive avec son module (Chart.js compris), charge a la
+    // demande. Meme delai que le titre : la seconde par defaut echouait une fois sur trois, meme seul.
     expect(
-      await within(section).findByText(/Aujourd’hui : environ .* kWh estimés/),
+      await within(section).findByText(
+        /Aujourd’hui : environ .* kWh estimés/,
+        {},
+        { timeout: 8000 },
+      ),
     ).toBeInTheDocument();
-    expect(await within(section).findByText(/Estimation, pas une mesure/)).toBeInTheDocument();
+    expect(
+      await within(section).findByText(/Estimation, pas une mesure/, {}, { timeout: 8000 }),
+    ).toBeInTheDocument();
   }, 20000);
 
   it('imprime le releve en feuille de registre, avec sa date et ce que les valeurs sont', async () => {

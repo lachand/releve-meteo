@@ -101,7 +101,10 @@ export function BackupPanel({ onRestored }: BackupPanelProps) {
           <p className={styles.explanation}>
             Cette sauvegarde contient {plural(summary.favourites, 'favori', 'favoris')},{' '}
             {plural(summary.alerts, 'alerte', 'alertes')} et{' '}
-            {plural(summary.modelChoices, 'choix de modèle', 'choix de modèle')}.
+            {plural(summary.modelChoices, 'choix de modèle', 'choix de modèle')}
+            {summary.ownReadings > 0 &&
+              `, plus ${plural(summary.ownReadings, 'saisie de Mon relevé', 'saisies de Mon relevé')}`}
+            .
             {pending.dropped > 0 &&
               ` ${plural(pending.dropped, 'élément invalide a été ignoré', 'éléments invalides ont été ignorés')}.`}{' '}
             La restaurer remplace vos favoris, alertes, réglages et choix actuels.
